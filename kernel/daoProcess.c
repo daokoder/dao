@@ -2546,6 +2546,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return self->topFrame->codes + vmc->b;
 }
+
 int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 {
 	if( ! DaoValue_Move( A, C, t ) ){
@@ -2565,6 +2566,21 @@ int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 	return 1;
 }
 
+DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid )
+{
+	DaoType *type = self->activeTypes[ vmc->c ];
+
+	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+
+	if( type == NULL || type->tid != tid ){
+		if( self->activeCode->code == DVM_CALL || self->activeCode->code == DVM_MCALL ){
+			type = (DaoType*) self->topFrame->routine->routType->aux;
+			if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+		}
+	}
+	return type;
+}
+
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 {
 	DaoType *tp = self->activeTypes[reg];
@@ -2572,20 +2588,13 @@ DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 	if( res ) return self->activeValues[ reg ];
 	return NULL;
 }
+
 DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 {
-	DaoType *type;
+	DaoType *type = self->activeTypes[self->activeCode->c];
 	DaoValue *ret;
 
-	/* For user defined function only: */
-	if( self->topFrame->routine->body == NULL && self->topFrame->retmode == DVM_RET_PROCESS ){
-		int res = DaoValue_Move( value, self->stackValues, NULL );
-		self->stackReturn = 0;
-		if( res ) return self->stackValues[0];
-		return NULL;
-	}
 	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
-	type = self->activeTypes[self->activeCode->c];
 	if( value == NULL ){
 		if( type != NULL && (type->tid & DAO_ANY) == 0 ){
 			int tm = type->tid == DAO_NONE;
@@ -2602,6 +2611,7 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 	if( ret == NULL && type ) DaoProcess_RaiseError( self, "Value", "invalid return" );
 	return ret;
 }
+
 DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {
 	DaoProcess_PutValue( self, dao_none_value );
@@ -2685,24 +2695,27 @@ DaoArray* DaoProcess_PutArray( DaoProcess *self )
 DaoCstruct* DaoProcess_PutCstruct( DaoProcess *self, DaoType *type )
 {
 	daoint offset = self->activeValues - self->stackValues;
+	DaoType *CT = self->activeTypes[ self->activeCode->c ];
 	DaoValue *C = self->activeValues[ self->activeCode->c ];
 	DaoValue *O = NULL;
 
-	if( type->core->Copy == NULL ) return NULL;
+	if( type->core->Create == NULL ){
+		DAO_DEBUG_WARN( "Method Create() is not defined in the type core!" );
+		return NULL;
+	}
 
 	if( C && C->type == DAO_CSTRUCT && C->xCstruct.ctype == type && C->xBase.refCount == 1 ){
 		self->stackReturn = offset + self->activeCode->c;
 		return (DaoCstruct*) C;
 	}
 
-	O = type->core->Copy( NULL, NULL );
+	if( CT == NULL && DaoType_ChildOf( type, CT ) == 0 ) return NULL;
+
+	O = type->core->Create( type );
 	if( O == NULL ) return NULL;
 
-	C = DaoProcess_PutValue( self, O );
-	if( C == O ) return (DaoCstruct*) O;
-
-	DaoGC_TryDelete( O );
-	return NULL;
+	GC_Assign( & self->activeValues[ self->activeCode->c ], O );
+	return (DaoCstruct*) O;
 }
 
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
@@ -2712,6 +2725,7 @@ DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
+
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
@@ -2719,6 +2733,7 @@ DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
+
 DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
 {
 	DaoCdata *cdt;
@@ -2727,20 +2742,7 @@ DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
 	cdt = DaoProcess_PutCdata( self, d2, t );
 	return cdt;
 }
-DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid )
-{
-	DaoType *type = self->activeTypes[ vmc->c ];
 
-	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
-
-	if( type == NULL || type->tid != tid ){
-		if( self->activeCode->code == DVM_CALL || self->activeCode->code == DVM_MCALL ){
-			type = (DaoType*) self->topFrame->routine->routType->aux;
-			if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
-		}
-	}
-	return type;
-}
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ENUM );
@@ -5345,8 +5347,11 @@ DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type )
 {
 	DaoCstruct *res;
 
-	if( type->core == NULL || type->core->Copy == NULL ) return NULL;
-	res = (DaoCstruct*) type->core->Copy( NULL, NULL );
+	if( type->core == NULL || type->core->Create == NULL ){
+		DAO_DEBUG_WARN( "Method Create() is not defined in the type core!" );
+		return NULL;
+	}
+	res = (DaoCstruct*) type->core->Create( type );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
@@ -5363,6 +5368,7 @@ DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int 
 DaoTypeCore daoProcessCore =
 {
 	"process",              /* name */
+	sizeof(DaoProcess),     /* size */
 	{ NULL },               /* bases */
 	NULL,                   /* numbers */
 	NULL,                   /* methods */
@@ -5378,6 +5384,7 @@ DaoTypeCore daoProcessCore =
 	NULL,                   /* Slice */
 	NULL,                   /* Compare */
 	NULL,                   /* Hash */
+	NULL,                   /* Create */
 	NULL,                   /* Copy */
 	(DaoDeleteFunction) DaoProcess_Delete,  /* Delete */
 	NULL                    /* HandleGC */

@@ -549,6 +549,7 @@ static DaoFunctionEntry daoFileStreamMeths[] =
 DaoTypeCore daoFileStreamCore =
 {
 	"FileStream",                                    /* name */
+	sizeof(DaoFileStream),                           /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	daoFileStreamMeths,                              /* methods */
@@ -564,6 +565,7 @@ DaoTypeCore daoFileStreamCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoFileStream_Delete,        /* Delete */
 	NULL                                             /* HandleGC */
@@ -581,6 +583,7 @@ static DaoFunctionEntry daoPipeStreamMeths[] =
 DaoTypeCore daoPipeStreamCore =
 {
 	"PipeStream",                                    /* name */
+	sizeof(DaoPipeStream),                           /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	daoPipeStreamMeths,                              /* methods */
@@ -596,6 +599,7 @@ DaoTypeCore daoPipeStreamCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoPipeStream_Delete,        /* Delete */
 	NULL                                             /* HandleGC */
@@ -614,6 +618,7 @@ static DaoFunctionEntry daoStringStreamMeths[] =
 DaoTypeCore daoStringStreamCore =
 {
 	"StringStream",                                  /* name */
+	sizeof(DaoStringStream),                         /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	daoStringStreamMeths,                            /* methods */
@@ -629,6 +634,7 @@ DaoTypeCore daoStringStreamCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoStringStream_Delete,      /* Delete */
 	NULL                                             /* HandleGC */
@@ -644,6 +650,7 @@ static DaoFunctionEntry daoSeekableDeviceMeths[] =
 DaoTypeCore daoSeekableDeviceCore =
 {
 	"SeekableDevice",        /* name */
+	0,                       /* size */
 	{ NULL },                /* bases */
 	NULL,                    /* numbers */
 	daoSeekableDeviceMeths,  /* methods */
@@ -659,6 +666,7 @@ DaoTypeCore daoSeekableDeviceCore =
 	NULL,                    /* Slice */
 	NULL,                    /* Compare */
 	NULL,                    /* Hash */
+	NULL,                    /* Create */
 	NULL,                    /* Copy */
 	NULL,                    /* Delete */
 	NULL                     /* HandleGC */

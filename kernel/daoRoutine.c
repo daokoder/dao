@@ -172,6 +172,7 @@ static DaoValue* DaoRoutine_DoConversion( DaoValue *self, DaoType *type, int cop
 DaoTypeCore daoRoutineCore =
 {
 	"routine",                                             /* name */
+	sizeof(DaoRoutine),                                    /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -187,6 +188,7 @@ DaoTypeCore daoRoutineCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	(DaoDeleteFunction) DaoRoutine_Delete,                 /* Delete */
 	NULL                                                   /* HandleGC */

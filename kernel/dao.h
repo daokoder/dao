@@ -325,6 +325,12 @@ struct DaoTypeCore
 	// Type name;
 	*/
 
+	int  size;
+	/*
+	// Data structure size;
+	// Mainly used by DaoCstruct_CopyPOD() for Plain Old Data;
+	*/
+
 	DaoTypeCore  *bases[8];
 	/*
 	// Type core for the base types:
@@ -432,14 +438,19 @@ struct DaoTypeCore
 	// hashing function (MurmurHash3) to compute the final hash value.
 	*/
 
+	DaoValue* (*Create)( DaoType *self );
+	/*
+	// Function to create new objects:
+	// Mainly for C data types;
+	*/
+
 	DaoValue* (*Copy)( DaoValue *self, DaoValue *target );
 	/*
-	// Function for creating and/or copying objects:
-	// Mainly for user defined types;
-	// If there is a copying target, the data of self will be copied to the target;
-	// Otherwise, a new object is created; And if the self object is not null,
-	// the data of self will be copied to the new object.
-	// On success, the target or the new object will be returned; Otherwise null.
+	// Function to copy objects:
+	// Mainly for C data types;
+	// If a copying target is present in the parameter, data will be copied from
+	// self to the target object; Otherwise, a new object is created and data is
+	// copied to the new object.
 	*/
 
 	void (*Delete)( DaoValue *self );
@@ -881,6 +892,10 @@ DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
 DAO_DLL void DaoCstruct_Delete( DaoCstruct *self );
 
+
+/*
+// Default implementations of DaoTypeCore member functions for C data types:
+*/
 DAO_DLL DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx );
 DAO_DLL DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc );
 DAO_DLL int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx );
@@ -900,7 +915,15 @@ DAO_DLL int DaoCstruct_CheckComparison( DaoType *self, DaoType *other, DaoRoutin
 DAO_DLL int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc );
 DAO_DLL DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx );
 DAO_DLL DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
+
+DAO_DLL DaoType* DaoCstruct_CheckForEach( DaoType *self, DaoRoutine *ctx );
+DAO_DLL void DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
+
 DAO_DLL void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc );
+
+DAO_DLL size_t DaoCstruct_HashPOD( DaoValue *self );
+DAO_DLL DaoValue* DaoCstruct_CreatePOD( DaoType *self );
+DAO_DLL DaoValue* DaoCstruct_CopyPOD( DaoValue *self, DaoValue *target );
 
 
 

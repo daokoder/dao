@@ -2151,6 +2151,7 @@ InvalidField:
 DaoTypeCore daoNamespaceCore =
 {
 	"namespace",                                           /* name */
+	sizeof(DaoNamespace),                                  /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -2166,6 +2167,7 @@ DaoTypeCore daoNamespaceCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	(DaoDeleteFunction) DaoNamespace_Delete,               /* Delete */
 	NULL                                                   /* HandleGC */

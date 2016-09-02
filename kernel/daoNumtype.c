@@ -2751,6 +2751,7 @@ extern DaoValue* DaoValue_DoGetField( DaoValue *self, DString *field, DaoProcess
 DaoTypeCore daoArrayCore =
 {
 	"array<@T<none|bool|int|float|complex>=none>",     /* name */
+	sizeof(DaoArray),                                  /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	daoArrayMeths,                                     /* methods */
@@ -2766,6 +2767,7 @@ DaoTypeCore daoArrayCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoArray_Delete,               /* Delete */
 	NULL                                               /* HandleGC */

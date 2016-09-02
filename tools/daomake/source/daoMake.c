@@ -2339,6 +2339,7 @@ static DaoFunctionEntry daoMakeUnitMeths[] =
 static DaoTypeCore daoMakeUnitCore =
 {
 	"Unit",                                      /* name */
+	sizeof(DaoMakeUnit),                         /* size */
 	{ NULL },                                    /* bases */
 	NULL,                                        /* numbers */
 	daoMakeUnitMeths,                            /* methods */
@@ -2354,6 +2355,7 @@ static DaoTypeCore daoMakeUnitCore =
 	NULL,                                        /* Slice */
 	NULL,                                        /* Compare */
 	NULL,                                        /* Hash */
+	NULL,                                        /* Create */
 	NULL,                                        /* Copy */
 	NULL,                                        /* Delete */
 	NULL                                         /* HandleGC */
@@ -2413,6 +2415,7 @@ static DaoFunctionEntry daoMakeObjectsMeths[]=
 static DaoTypeCore daoMakeObjectsCore =
 {
 	"Objects",                                   /* name */
+	sizeof(DaoMakeObjects),                      /* size */
 	{ & daoMakeUnitCore, NULL },                 /* bases */
 	NULL,                                        /* numbers */
 	daoMakeObjectsMeths,                         /* methods */
@@ -2428,6 +2431,7 @@ static DaoTypeCore daoMakeObjectsCore =
 	NULL,                                        /* Slice */
 	NULL,                                        /* Compare */
 	NULL,                                        /* Hash */
+	NULL,                                        /* Create */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeObjects_Delete,   /* Delete */
 	NULL                                         /* HandleGC */
@@ -2601,6 +2605,7 @@ static void DaoMakeTarget_HandleGC( DaoValue *p, DList *values, DList *arrays, D
 static DaoTypeCore daoMakeTargetCore =
 {
 	"Target",                                    /* name */
+	sizeof(DaoMakeTarget),                       /* size */
 	{ & daoMakeUnitCore, NULL },                 /* bases */
 	NULL,                                        /* numbers */
 	daoMakeTargetMeths,                          /* methods */
@@ -2616,6 +2621,7 @@ static DaoTypeCore daoMakeTargetCore =
 	NULL,                                        /* Slice */
 	NULL,                                        /* Compare */
 	NULL,                                        /* Hash */
+	NULL,                                        /* Create */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeTarget_Delete,    /* Delete */
 	DaoMakeTarget_HandleGC                       /* HandleGC */
@@ -2918,6 +2924,7 @@ static void DaoMakeProject_HandleGC( DaoValue *p, DList *values, DList *arrays, 
 static DaoTypeCore daoMakeProjectCore =
 {
 	"Project",                                   /* name */
+	sizeof(DaoMakeProject),                      /* size */
 	{ & daoMakeUnitCore, NULL },                 /* bases */
 	NULL,                                        /* numbers */
 	daoMakeProjectMeths,                         /* methods */
@@ -2933,6 +2940,7 @@ static DaoTypeCore daoMakeProjectCore =
 	NULL,                                        /* Slice */
 	NULL,                                        /* Compare */
 	NULL,                                        /* Hash */
+	NULL,                                        /* Create */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeProject_Delete,   /* Delete */
 	DaoMakeProject_HandleGC                      /* HandleGC */
@@ -2979,6 +2987,7 @@ static DaoFunctionEntry daoMakeVariablesMeths[]=
 static DaoTypeCore daoMakeVariablesCore =
 {
 	"Variables",                                 /* name */
+	0,                                           /* size */
 	{ NULL },                                    /* bases */
 	NULL,                                        /* numbers */
 	daoMakeVariablesMeths,                       /* methods */
@@ -2994,6 +3003,7 @@ static DaoTypeCore daoMakeVariablesCore =
 	NULL,                                        /* Slice */
 	NULL,                                        /* Compare */
 	NULL,                                        /* Hash */
+	NULL,                                        /* Create */
 	NULL,                                        /* Copy */
 	NULL,                                        /* Delete */
 	NULL                                         /* HandleGC */

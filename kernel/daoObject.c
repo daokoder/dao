@@ -675,6 +675,7 @@ void DaoObject_CoreDelete( DaoValue *self )
 DaoTypeCore daoObjectCore =
 {
 	"object",                                            /* name */
+	sizeof(DaoObject),                                   /* size */
 	{ NULL },                                            /* bases */
 	NULL,                                                /* numbers */
 	NULL,                                                /* methods */
@@ -690,6 +691,7 @@ DaoTypeCore daoObjectCore =
 	NULL,                                                /* Slice */
 	NULL,                                                /* Compare */
 	NULL,                                                /* Hash */
+	NULL,                                                /* Create */
 	NULL,                                                /* Copy */
 	DaoObject_CoreDelete,                                /* Delete */
 	NULL                                                 /* HandleGC */

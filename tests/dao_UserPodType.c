@@ -252,28 +252,11 @@ int DaoxUserPodType_Compare( DaoValue *self, DaoValue *other, DMap *cycmap )
 	return left->value < right->value ? -1 : 1;
 }
 
-size_t DaoxUserPodType_Hash( DaoValue *self )
-{
-	DaoxUserPodType *pod = (DaoxUserPodType*) self;
-	return pod->value;
-}
-
-DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
-{
-	DaoxUserPodType *src = (DaoxUserPodType*) self;
-	DaoxUserPodType *dest = (DaoxUserPodType*) target;
-	if( target ){
-		if( src ) dest->value = src->value;
-		return target;
-	}
-	dest = DaoxUserPodType_New();
-	if( src ) dest->value = src->value;
-	return (DaoValue*) dest;
-}
 
 static DaoTypeCore daoUserPodTypeCore =
 {
 	"UserPodType",                                              /* name */
+	sizeof(DaoxUserPodType),                                    /* size */
 	{ NULL },                                                   /* bases */
 	NULL,                                                       /* numbers */
 	userPodTypeMeths,                                           /* methods */
@@ -288,8 +271,9 @@ static DaoTypeCore daoUserPodTypeCore =
 	DaoxUserPodType_Print,                                      /* Print */
 	NULL,                                                       /* Slice */
 	DaoxUserPodType_Compare,                                    /* Compare */
-	DaoxUserPodType_Hash,                                       /* Hash */
-	DaoxUserPodType_Copy,                                       /* Copy */
+	DaoCstruct_HashPOD,                                         /* Hash */
+	DaoCstruct_CreatePOD,                                       /* Create */
+	DaoCstruct_CopyPOD,                                         /* Copy */
 	(DaoDeleteFunction) DaoxUserPodType_Delete,                 /* Delete */
 	NULL                                                        /* HandleGC */
 };

@@ -1399,6 +1399,7 @@ void DaoClass_CoreDelete( DaoValue *self )
 DaoTypeCore daoClassCore =
 {
 	"class",                                           /* name */
+	sizeof(DaoClass),                                  /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
@@ -1414,6 +1415,7 @@ DaoTypeCore daoClassCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	DaoClass_CoreDelete,                               /* Delete */
 	NULL                                               /* HandleGC */

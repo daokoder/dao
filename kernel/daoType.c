@@ -1871,6 +1871,7 @@ static void DaoType_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 DaoTypeCore daoTypeCore =
 {
 	"type",              /* name */
+	sizeof(DaoType),     /* size */
 	{ NULL },            /* bases */
 	NULL,                /* numbers */
 	NULL,                /* methods */
@@ -1886,6 +1887,7 @@ DaoTypeCore daoTypeCore =
 	NULL,                /* Slice */
 	NULL,                /* Compare */
 	NULL,                /* Hash */
+	NULL,                /* Create */
 	NULL,                /* Copy */
 	(DaoDeleteFunction) DaoType_Delete,  /* Delete */
 	NULL                 /* HandleGC */
@@ -1933,6 +1935,7 @@ void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType 
 DaoTypeCore daoTypeKernelCore =
 {
 	"kernel",                  /* name */
+	sizeof(DaoTypeKernel),     /* size */
 	{ NULL },                  /* bases */
 	NULL,                      /* numbers */
 	NULL,                      /* methods */
@@ -1948,6 +1951,7 @@ DaoTypeCore daoTypeKernelCore =
 	NULL,                      /* Slice */
 	NULL,                      /* Compare */
 	NULL,                      /* Hash */
+	NULL,                      /* Create */
 	NULL,                      /* Copy */
 	(DaoDeleteFunction) DaoTypeKernel_Delete,  /* Delete */
 	NULL                       /* HandleGC */

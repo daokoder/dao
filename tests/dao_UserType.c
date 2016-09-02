@@ -257,6 +257,7 @@ DaoValue* DaoxUserType_Copy( DaoValue *self, DaoValue *target )
 static DaoTypeCore daoUserTypeCore =
 {
 	"UserType",                                            /* name */
+	sizeof(DaoxUserType),                                  /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	userTypeMeths,                                         /* methods */
@@ -271,8 +272,9 @@ static DaoTypeCore daoUserTypeCore =
 	DaoCstruct_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
 	DaoxUserType_Compare,                                  /* Compare */
-	DaoxUserType_Hash,                                     /* Hash */
-	NULL,                                                  /* Copy */
+	DaoCstruct_HashPOD,                                    /* Hash */
+	DaoCstruct_CreatePOD,                                  /* Create */
+	DaoCstruct_CopyPOD,                                    /* Copy */
 	(DaoDeleteFunction) DaoxUserType_Delete,               /* Delete */
 	NULL                                                   /* HandleGC */
 };

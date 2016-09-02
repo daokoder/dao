@@ -528,6 +528,7 @@ void DaoInterface_CoreDelete( DaoValue *self )
 DaoTypeCore daoInterfaceCore =
 {
 	"interface",                                               /* name */
+	sizeof(DaoInterface),                                      /* size */
 	{ NULL },                                                  /* bases */
 	NULL,                                                      /* numbers */
 	NULL,                                                      /* methods */
@@ -543,6 +544,7 @@ DaoTypeCore daoInterfaceCore =
 	NULL,                                                      /* Slice */
 	NULL,                                                      /* Compare */
 	NULL,                                                      /* Hash */
+	NULL,                                                      /* Create */
 	NULL,                                                      /* Copy */
 	DaoInterface_CoreDelete,                                   /* Delete */
 	NULL                                                       /* HandleGC */
@@ -656,6 +658,7 @@ void DaoCinType_CoreDelete( DaoValue *self )
 DaoTypeCore daoCinTypeCore =
 {
 	"CinType",                                         /* name */
+	sizeof(DaoCinType),                                /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
@@ -671,6 +674,7 @@ DaoTypeCore daoCinTypeCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	DaoCinType_CoreDelete,                             /* Delete */
 	NULL                                               /* HandleGC */
@@ -1043,6 +1047,7 @@ void DaoCinValue_CoreDelete( DaoValue *self )
 DaoTypeCore daoCinValueCore =
 {
 	"CinValue",                                              /* name */
+	sizeof(DaoCinValue),                                     /* size */
 	{ NULL },                                                /* bases */
 	NULL,                                                    /* numbers */
 	NULL,                                                    /* methods */
@@ -1058,6 +1063,7 @@ DaoTypeCore daoCinValueCore =
 	NULL,                                                    /* Slice */
 	NULL,                                                    /* Compare */
 	NULL,                                                    /* Hash */
+	NULL,                                                    /* Create */
 	NULL,                                                    /* Copy */
 	DaoCinValue_CoreDelete,                                  /* Delete */
 	NULL                                                     /* HandleGC */

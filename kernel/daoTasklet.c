@@ -1204,6 +1204,7 @@ static void DaoChannel_HandleGC( DaoValue *p, DList *vs, DList *lists, DList *ms
 DaoTypeCore daoChannelCore =
 {
 	"Channel<@V>",                                     /* name */
+	sizeof(DaoChannel),                                /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	daoChannelMeths,                                   /* methods */
@@ -1219,6 +1220,7 @@ DaoTypeCore daoChannelCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoChannel_Delete,             /* Delete */
 	DaoChannel_HandleGC                                /* HandleGC */
@@ -1348,6 +1350,7 @@ static void DaoFuture_HandleGC( DaoValue *p, DList *values, DList *lists, DList 
 DaoTypeCore daoFutureCore =
 {
 	"Future<@V=none>",                                 /* name */
+	sizeof(DaoFuture),                                 /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	daoFutureMeths,                                    /* methods */
@@ -1363,8 +1366,9 @@ DaoTypeCore daoFutureCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoFuture_Delete,              /* Delete */
-	DaoFuture_HandleGC                              /* HandleGC */
+	DaoFuture_HandleGC                                 /* HandleGC */
 };
 

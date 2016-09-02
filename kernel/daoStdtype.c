@@ -184,8 +184,7 @@ static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoType *type, int s
 DaoNone* DaoNone_New()
 {
 	DaoNone *self = (DaoNone*) dao_malloc( sizeof(DaoNone) );
-	memset( self, 0, sizeof(DaoNone) );
-	self->type = DAO_NONE;
+	DaoValue_Init( (DaoValue*) self, DAO_NONE );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -235,6 +234,7 @@ static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 DaoTypeCore daoNoneCore =
 {
 	"none",                                          /* name */
+	sizeof(DaoNone),                                 /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	NULL,                                            /* methods */
@@ -250,6 +250,7 @@ DaoTypeCore daoNoneCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	DaoNone_Delete,                                  /* Delete */
 	NULL                                             /* HandleGC */
@@ -401,6 +402,7 @@ static void DaoBoolean_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, D
 DaoTypeCore daoBooleanCore =
 {
 	"bool",                                                /* name */
+	sizeof(DaoBoolean),                                    /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -416,6 +418,7 @@ DaoTypeCore daoBooleanCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoBoolean_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -612,6 +615,7 @@ static void DaoInteger_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, D
 DaoTypeCore daoIntegerCore =
 {
 	"int",                                                 /* name */
+	sizeof(DaoInteger),                                    /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -627,6 +631,7 @@ DaoTypeCore daoIntegerCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoInteger_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -798,6 +803,7 @@ static void DaoFloat_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Dao
 DaoTypeCore daoFloatCore =
 {
 	"float",                                           /* name */
+	sizeof(DaoFloat),                                  /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
@@ -813,6 +819,7 @@ DaoTypeCore daoFloatCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	DaoFloat_Delete,                                   /* Delete */
 	NULL                                               /* HandleGC */
@@ -1181,6 +1188,7 @@ static void DaoComplex_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, D
 DaoTypeCore daoComplexCore =
 {
 	"complex",                                             /* name */
+	sizeof(DaoComplex),                                    /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -1196,6 +1204,7 @@ DaoTypeCore daoComplexCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoComplex_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -2301,6 +2310,7 @@ static DaoFunctionEntry daoStringMeths[] =
 DaoTypeCore daoStringCore =
 {
 	"string",                                            /* name */
+	sizeof(DaoString),                                   /* size */
 	{ NULL },                                            /* bases */
 	NULL,                                                /* numbers */
 	daoStringMeths,                                      /* methods */
@@ -2316,6 +2326,7 @@ DaoTypeCore daoStringCore =
 	NULL,                                                /* Slice */
 	NULL,                                                /* Compare */
 	NULL,                                                /* Hash */
+	NULL,                                                /* Create */
 	NULL,                                                /* Copy */
 	(DaoDeleteFunction) DaoString_Delete,                /* Delete */
 	NULL                                                 /* HandleGC */
@@ -2757,6 +2768,7 @@ static void DaoEnum_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 DaoTypeCore daoEnumCore =
 {
 	"enum",                                          /* name */
+	sizeof(DaoEnum),                                 /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	NULL,                                            /* methods */
@@ -2772,6 +2784,7 @@ DaoTypeCore daoEnumCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoEnum_Delete,              /* Delete */
 	NULL                                             /* HandleGC */
@@ -4087,6 +4100,7 @@ static DaoFunctionEntry daoListMeths[] =
 DaoTypeCore daoListCore =
 {
 	"list<@T=any>",                                  /* name */
+	sizeof(DaoList),                                 /* size */
 	{ NULL },                                        /* bases */
 	NULL,                                            /* numbers */
 	daoListMeths,                                    /* methods */
@@ -4102,6 +4116,7 @@ DaoTypeCore daoListCore =
 	NULL,                                            /* Slice */
 	NULL,                                            /* Compare */
 	NULL,                                            /* Hash */
+	NULL,                                            /* Create */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoList_Delete,              /* Delete */
 	NULL                                             /* HandleGC */
@@ -5036,6 +5051,7 @@ static DaoFunctionEntry daoMapMeths[] =
 DaoTypeCore daoMapCore =
 {
 	"map<@K=any,@V=any>",                           /* name */
+	sizeof(DaoMap),                                 /* size */
 	{ NULL },                                       /* bases */
 	NULL,                                           /* numbers */
 	daoMapMeths,                                    /* methods */
@@ -5051,6 +5067,7 @@ DaoTypeCore daoMapCore =
 	NULL,                                           /* Slice */
 	NULL,                                           /* Compare */
 	NULL,                                           /* Hash */
+	NULL,                                           /* Create */
 	NULL,                                           /* Copy */
 	(DaoDeleteFunction) DaoMap_Delete,              /* Delete */
 	NULL                                            /* HandleGC */
@@ -5574,6 +5591,7 @@ static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Dao
 DaoTypeCore daoTupleCore =
 {
 	"tuple",                                           /* name */
+	sizeof(DaoTuple),                                  /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
@@ -5589,6 +5607,7 @@ DaoTypeCore daoTupleCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoTuple_Delete,               /* Delete */
 	NULL                                               /* HandleGC */
@@ -5633,25 +5652,27 @@ static void DaoNameValue_Print( DaoValue *selfv, DaoStream *stream, DMap *cycmap
 
 DaoTypeCore daoNameValueCore =
 {
-	"NameValue",          /* name */
-	{ NULL },             /* bases */
-	NULL,                 /* numbers */
-	NULL,                 /* methods */
-	NULL,  NULL,          /* GetField */
-	NULL,  NULL,          /* SetField */
-	NULL,  NULL,          /* GetItem */
-	NULL,  NULL,          /* SetItem */
-	NULL,  NULL,          /* Unary */
-	NULL,  NULL,          /* Binary */
-	NULL,  NULL,          /* Conversion */
-	NULL,  NULL,          /* ForEach */
-	DaoNameValue_Print,   /* Print */
-	NULL,                 /* Slice */
-	NULL,                 /* Compare */
-	NULL,                 /* Hash */
-	NULL,                 /* Copy */
+	"NameValue",           /* name */
+	sizeof(DaoNameValue),  /* size */
+	{ NULL },              /* bases */
+	NULL,                  /* numbers */
+	NULL,                  /* methods */
+	NULL,  NULL,           /* GetField */
+	NULL,  NULL,           /* SetField */
+	NULL,  NULL,           /* GetItem */
+	NULL,  NULL,           /* SetItem */
+	NULL,  NULL,           /* Unary */
+	NULL,  NULL,           /* Binary */
+	NULL,  NULL,           /* Conversion */
+	NULL,  NULL,           /* ForEach */
+	DaoNameValue_Print,    /* Print */
+	NULL,                  /* Slice */
+	NULL,                  /* Compare */
+	NULL,                  /* Hash */
+	NULL,                  /* Create */
+	NULL,                  /* Copy */
 	(DaoDeleteFunction) DaoNameValue_Delete,  /* Delete */
-	NULL                  /* HandleGC */
+	NULL                   /* HandleGC */
 };
 
 
@@ -5805,6 +5826,7 @@ static void DaoCtype_CoreDelete( DaoValue *self )
 DaoTypeCore daoCtypeCore =
 {
 	"ctype",                                           /* name */
+	sizeof(DaoCtype),                                  /* size */
 	{ NULL },                                          /* bases */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
@@ -5820,6 +5842,7 @@ DaoTypeCore daoCtypeCore =
 	NULL,                                              /* Slice */
 	NULL,                                              /* Compare */
 	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
 	NULL,                                              /* Copy */
 	DaoCtype_CoreDelete,                               /* Delete */
 	NULL                                               /* HandleGC */
@@ -6132,6 +6155,30 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	return NULL;
 }
 
+DaoType* DaoCstruct_CheckForEach( DaoType *self, DaoRoutine *ctx )
+{
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "for" );
+	if( rout != NULL ){
+		DaoType *type, *itype;
+		if( rout->routType->args->size != 2 ) return NULL;
+		type = rout->routType->args->items.pType[1];
+		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TUPLE || type->args->size != 2 ) return NULL;
+		itype = type->args->items.pType[0];
+		if( itype->tid != DAO_BOOLEAN ) return NULL;
+		return DaoNamespace_MakeIteratorType( ctx->nameSpace, type->args->items.pType[1] );
+	}
+	return NULL;
+}
+
+void DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+{
+	DaoRoutine *rout = DaoType_FindFunctionChars( self->xCstruct.ctype, "for" );
+	if( rout != NULL ){
+		DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & iterator, 1 );
+	}
+}
+
 void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	int ec = 0;
@@ -6178,9 +6225,37 @@ void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProce
 	if( inmap == NULL ) DMap_Delete( cycmap );
 }
 
+size_t DaoCstruct_HashPOD( DaoValue *self )
+{
+	DaoCstruct *cstruct = (DaoCstruct*) self;
+	return Dao_Hash( cstruct + 1, cstruct->ctype->core->size - sizeof(DaoCstruct), 0 );
+}
+
+DaoValue* DaoCstruct_CreatePOD( DaoType *self )
+{
+	return (DaoValue*) DaoCstruct_New( self, self->core->size );
+}
+
+DaoValue* DaoCstruct_CopyPOD( DaoValue *self, DaoValue *target )
+{
+	DaoCstruct *src = (DaoCstruct*) self;
+	DaoCstruct *dest = (DaoCstruct*) target;
+	if( target ){
+		if( dest->ctype != src->ctype ) DAO_DEBUG_WARN( "Copying between different types!" );
+		memmove( dest + 1, src + 1, src->ctype->core->size - sizeof(DaoCstruct) );
+		return target;
+	}
+	dest = DaoCstruct_New( src->ctype, src->ctype->core->size );
+	memmove( dest + 1, src + 1, src->ctype->core->size - sizeof(DaoCstruct) );
+	return (DaoValue*) dest;
+}
+
+
+
 static DaoTypeCore daoCstructCore =
 {
 	"cstruct",                                             /* name */
+	sizeof(DaoCstruct),                                    /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
@@ -6196,6 +6271,7 @@ static DaoTypeCore daoCstructCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	NULL,                                                  /* Delete */
 	NULL                                                   /* HandleGC */
@@ -6300,6 +6376,7 @@ void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 DaoTypeCore daoCdataCore =
 {
 	"cdata",              /* name */
+	sizeof(DaoCdata),     /* size */
 	{ NULL },             /* bases */
 	NULL,                 /* numbers */
 	NULL,                 /* methods */
@@ -6315,6 +6392,7 @@ DaoTypeCore daoCdataCore =
 	NULL,                 /* Slice */
 	NULL,                 /* Compare */
 	NULL,                 /* Hash */
+	NULL,                 /* Create */
 	NULL,                 /* Copy */
 	DaoCdata_CoreDelete,  /* Delete */
 	NULL                  /* HandleGC */
@@ -6614,6 +6692,7 @@ static DaoFunctionEntry daoExceptionMeths[] =
 static DaoTypeCore daoExceptionCore =
 {
 	"Exception",                                           /* name */
+	sizeof(DaoException),                                  /* size */
 	{ NULL },                                              /* bases */
 	NULL,                                                  /* numbers */
 	daoExceptionMeths,                                     /* methods */
@@ -6629,6 +6708,7 @@ static DaoTypeCore daoExceptionCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */
@@ -6646,6 +6726,7 @@ static DaoFunctionEntry daoExceptionWarningMeths[] =
 static DaoTypeCore daoExceptionWarningCore =
 {
 	"Exception::Warning",                                  /* name */
+	sizeof(DaoException),                                  /* size */
 	{ & daoExceptionCore, NULL },                          /* bases */
 	NULL,                                                  /* numbers */
 	daoExceptionWarningMeths,                              /* methods */
@@ -6661,6 +6742,7 @@ static DaoTypeCore daoExceptionWarningCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */
@@ -6679,6 +6761,7 @@ static DaoFunctionEntry daoExceptionErrorMeths[] =
 static DaoTypeCore daoExceptionErrorCore =
 {
 	"Exception::Error",                                    /* name */
+	sizeof(DaoException),                                  /* size */
 	{ & daoExceptionCore, NULL },                          /* bases */
 	NULL,                                                  /* numbers */
 	daoExceptionErrorMeths,                                /* methods */
@@ -6694,6 +6777,7 @@ static DaoTypeCore daoExceptionErrorCore =
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */
 	NULL,                                                  /* Hash */
+	NULL,                                                  /* Create */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */
