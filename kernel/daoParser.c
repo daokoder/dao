@@ -2605,9 +2605,11 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	if( self->isInterBody ){
 		DaoInterface *inter = self->hostInter;
 		rout = DaoRoutine_New( self->nameSpace, inter->abtype, 0 );
+		rout->attribs |= attribs;
 	}else if( self->isCinTypeBody ){
 		DaoCinType *cintype = self->hostCinType;
 		rout = DaoRoutine_New( self->nameSpace, cintype->vatype, 1 );
+		rout->attribs |= attribs;
 	}else if( self->isClassBody ){
 		rout = DaoRoutine_New( self->nameSpace, self->hostClass->objType, 1 );
 		rout->attribs |= attribs;

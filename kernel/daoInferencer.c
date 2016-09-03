@@ -2445,6 +2445,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	DaoRoutine *rout, *rout2;
 	DaoType *at = types[opa];
 	DaoType *ct = types[opc];
+	int callOper = 0;
 	int N = self->inodes->size;
 	int j, k, m, K;
 	int checkfast = 0;
@@ -2529,10 +2530,12 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindMethod( & at->aux->xClass, "()", hostClass );
 		if( rout == NULL ) goto NotCallable;
+		callOper = 1;
 		bt = at;
 	}else if( at->tid >= DAO_CSTRUCT && at->tid <= DAO_CTYPE ){
 		rout = DaoType_FindFunctionChars( at, "()" );
 		if( rout == NULL ) goto NotCallable;
+		callOper = 1;
 		bt = at;
 	}else if( at->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) at->aux;
@@ -2542,6 +2545,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	}else if( at->tid == DAO_CINVALUE ){
 		rout = DaoType_FindFunctionChars( at, "()" );
 		if( rout == NULL ) goto NotCallable;
+		callOper = 1;
 		bt = at;
 	}else if( at->tid == DAO_TYPE ){
 		at = at->args->items.pType[0];
@@ -2585,17 +2589,17 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}else if( rout->attribs & DAO_ROUT_PROTECTED ){
 			if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
 		}
-		if( vmc->code == DVM_CALL && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
+		if( vmc->code == DVM_CALL && rout->routHost ){
 			int staticCallee = rout->attribs & DAO_ROUT_STATIC;
 			int invarCallee = rout->attribs & DAO_ROUT_INVAR;
 			int initorCallee = rout->attribs & DAO_ROUT_INITOR;
 			if( DaoType_ChildOf( routine->routHost, rout->routHost ) ){
 				int invarCaller = routine->attribs & DAO_ROUT_INVAR;
 				int staticCaller = routine->attribs & DAO_ROUT_STATIC;
-				if( staticCaller && ! staticCallee && ! initorCallee ) goto CallWithoutInst;
+				if( staticCaller && ! staticCallee && ! initorCallee && ! callOper ) goto CallWithoutInst;
 				if( invarCaller && ! invarCallee && ! initorCallee ) goto CallNonInvar;
 			}else{
-				if( ! staticCallee && ! initorCallee ) goto CallWithoutInst;
+				if( ! staticCallee && ! initorCallee && ! callOper ) goto CallWithoutInst;
 			}
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
