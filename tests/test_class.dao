@@ -542,9 +542,13 @@ class Klass
 		io.writeln( self.index )
 		io.writeln( self.name.size() )
 		io.writeln( self.property )
+		io.writeln( self.arbitrary )
 	}
 	routine .property(){
 		return "def"
+	}
+	routine .( field: string ){
+		return field
 	}
 }
 k = Klass()
@@ -554,6 +558,7 @@ k.Meth()
 456
 5
 def
+arbitrary
 @[test(code_01)]
 
 

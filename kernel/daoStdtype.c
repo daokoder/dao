@@ -5893,76 +5893,28 @@ void DaoCstruct_Delete( DaoCstruct *self )
 }
 
 
-/*
-// Note:
-// Operator .( field: string ) is no longer supported;
-// Overload [] instead;
-*/
 DaoType* DaoCstruct_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoRoutine *rout;
-	DaoValue *value = DaoType_FindValue( self, name->value );
-	DaoType *res = NULL;
+	DaoValue *value = DaoType_FindValueOnly( self, name->value );
 
-	if( value && value->type == DAO_ROUTINE ){
-		rout = (DaoRoutine*) value;
-		res = rout->routType;
-	}else if( value ){
-		res = DaoNamespace_GetType( ctx->nameSpace, value );
-	}else{
-		DString *buffer = DString_NewChars( "." );
-		DString_Append( buffer, name->value );
-		rout = DaoType_FindFunction( self, buffer );
-		DString_Delete( buffer );
-		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
-		if( rout == NULL ) return NULL;
-		res = (DaoType*) rout->routType->aux;
-	}
-	return res;
+	if( value ) return DaoNamespace_GetType( ctx->nameSpace, value );
+
+	return DaoType_CheckGetField( self, name );
 }
 
 DaoValue* DaoCstruct_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
-	DaoType *type = self->xCstruct.ctype;
-	DaoValue *value = DaoType_FindValue( type, name->value );
-	DaoRoutine *rout = NULL;
-
-	if( value != NULL ) return value;
-
-	DString_SetChars( proc->string, "." );
-	DString_Append( proc->string, name->value );
-	rout = DaoType_FindFunction( type, proc->string );
-	if( rout == NULL ) return NULL;
-	DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
-	return NULL;
+	return DaoType_DoGetField( self->xCstruct.ctype, self, name, proc );
 }
 
 int DaoCstruct_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
-	DaoRoutine *rout;
-	DString *buffer = DString_NewChars( "." );
-	DString_Append( buffer, name->value );
-	DString_AppendChars( buffer, "=" );
-	rout = DaoType_FindFunction( self, buffer );
-	DString_Delete( buffer );
-	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
-	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
-	if( rout == NULL ) return DAO_ERROR_VALUE;
-	return DAO_OK;
+	return DaoType_CheckSetField( self, name, value );
 }
 
 int DaoCstruct_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
-    DaoRoutine *rout = NULL;
-	DaoType *type = self->xCstruct.ctype;
-
-    DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name->value );
-    DString_AppendChars( proc->string, "=" );
-    rout = DaoType_FindFunction( type, proc->string );
-    if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
-    DaoProcess_PushCallable( proc, rout, self, & value, 1 );
-	return DAO_OK;
+	return DaoType_DoSetField( self->xCstruct.ctype, self, name, value, proc );
 }
 
 DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
