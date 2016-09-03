@@ -6305,21 +6305,18 @@ DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
 	return self;
 }
 
-static void DaoCdata_CoreDelete( DaoValue *self )
-{
-	DaoTypeCore *core = self->xCdata.ctype->core;
-	if( core->Delete != NULL && core->Delete != DaoCdata_CoreDelete ){
-		core->Delete( self );
-		return;
-	}
-	DaoCstruct_Free( (DaoCstruct*)self );
-	dao_free( self );
-}
-
 void DaoCdata_Delete( DaoCdata *self )
 {
-	DaoCdata_CoreDelete( (DaoValue*) self );
+	DaoTypeCore *core = self->ctype->core;
+	if( self->subtype != DAO_CDATA_PTR && self->data != NULL && core != NULL ){
+		if( core->Delete != NULL && core->Delete != (void*) DaoCdata_Delete ){
+			core->Delete( (DaoValue*) self );
+			return;
+		}
+	}
+	DaoCstruct_Delete( (DaoCstruct*)self );
 }
+
 
 int DaoCdata_IsType( DaoCdata *self, DaoType *type )
 {
@@ -6394,7 +6391,7 @@ DaoTypeCore daoCdataCore =
 	NULL,                 /* Hash */
 	NULL,                 /* Create */
 	NULL,                 /* Copy */
-	DaoCdata_CoreDelete,  /* Delete */
+	NULL,                 /* Delete */
 	NULL                  /* HandleGC */
 };
 
