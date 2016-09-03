@@ -61,17 +61,17 @@ void DaoValue_Init( void *value, char type )
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
 }
 
-DaoType* DaoValue_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx )
+DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx )
 {
-	DaoValue *value = DaoType_FindValue( self, field );
+	DaoValue *value = DaoType_FindValue( self, field->value );
 	if( value ) return DaoNamespace_GetType( ctx->nameSpace, value );
 	return NULL;
 }
 
-DaoValue* DaoValue_DoGetField( DaoValue *self, DString *field, DaoProcess *proc )
+DaoValue* DaoValue_DoGetField( DaoValue *self, DaoString *field, DaoProcess *proc )
 {
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	return DaoType_FindValue( type, field );
+	return DaoType_FindValue( type, field->value );
 }
 
 static int DaoType_CheckTypeRange( DaoType *self, int min, int max )
@@ -870,37 +870,37 @@ static void DaoComplex_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static DaoType* DaoComplex_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx )
+static DaoType* DaoComplex_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx )
 {
-	if( strcmp( field->chars, "real" ) == 0 ){
+	if( strcmp( field->value->chars, "real" ) == 0 ){
 		return dao_type_float;
-	}else if( strcmp( field->chars, "imag" ) == 0 ){
+	}else if( strcmp( field->value->chars, "imag" ) == 0 ){
 		return dao_type_float;
 	}
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoGetField( DaoValue *self, DString *field, DaoProcess *proc )
+static DaoValue* DaoComplex_DoGetField( DaoValue *self, DaoString *field, DaoProcess *proc )
 {
 	dao_complex value = self->xComplex.value;
-	if( strcmp( field->chars, "real" ) == 0 ){
+	if( strcmp( field->value->chars, "real" ) == 0 ){
 		DaoProcess_PutFloat( proc, value.real );
-	}else if( strcmp( field->chars, "imag" ) == 0 ){
+	}else if( strcmp( field->value->chars, "imag" ) == 0 ){
 		DaoProcess_PutFloat( proc, value.imag );
 	}
 	return NULL;
 }
 
-static int DaoComplex_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoRoutine *ctx )
+static int DaoComplex_CheckSetField( DaoType *self, DaoString *field, DaoType *value, DaoRoutine *ctx )
 {
-	if( strcmp( field->chars, "real" ) != 0 && strcmp( field->chars, "imag" ) != 0 ){
+	if( strcmp( field->value->chars, "real" ) != 0 && strcmp( field->value->chars, "imag" ) != 0 ){
 		return DAO_ERROR_FIELD;
 	}
 	if( value->tid > DAO_FLOAT ) return DAO_ERROR_VALUE;
 	return DAO_OK;
 }
 
-static int DaoComplex_DoSetField( DaoValue *self, DString *field, DaoValue *value, DaoProcess *proc )
+static int DaoComplex_DoSetField( DaoValue *self, DaoString *field, DaoValue *value, DaoProcess *proc )
 {
 	double A = 0.0;
 
@@ -911,9 +911,9 @@ static int DaoComplex_DoSetField( DaoValue *self, DString *field, DaoValue *valu
 	case DAO_FLOAT   : A = value->xFloat.value;   break;
 	default: return 0;
 	}
-	if( strcmp( field->chars, "real" ) == 0 ){
+	if( strcmp( field->value->chars, "real" ) == 0 ){
 		self->xComplex.value.real = A;
-	}else if( strcmp( field->chars, "imag" ) == 0 ){
+	}else if( strcmp( field->value->chars, "imag" ) == 0 ){
 		self->xComplex.value.imag = A;
 	}else{
 		return 1;
@@ -5241,32 +5241,32 @@ static DaoType* DaoTuple_GetFieldType( DaoType *self, DString *field )
 	return type;
 }
 
-static DaoType* DaoTuple_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx )
+static DaoType* DaoTuple_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx )
 {
-	return DaoTuple_GetFieldType( self, field );
+	return DaoTuple_GetFieldType( self, field->value );
 }
 
-static DaoValue* DaoTuple_DoGetField( DaoValue *selfv, DString *field, DaoProcess *proc )
+static DaoValue* DaoTuple_DoGetField( DaoValue *selfv, DaoString *field, DaoProcess *proc )
 {
 	DaoTuple *self = (DaoTuple*) selfv;
-	int id = DaoTuple_CheckIndex( self, field, proc );
+	int id = DaoTuple_CheckIndex( self, field->value, proc );
 	if( id < 0 ) return NULL;
 	return self->values[id];
 }
 
-static int DaoTuple_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoRoutine *ctx )
+static int DaoTuple_CheckSetField( DaoType *self, DaoString *field, DaoType *value, DaoRoutine *ctx )
 {
-	DaoType *type = DaoTuple_GetFieldType( self, field );
+	DaoType *type = DaoTuple_GetFieldType( self, field->value );
 	if( type == NULL ) return DAO_ERROR_FIELD;
 	if( DaoType_MatchTo( value, type, NULL ) == 0 ) return DAO_ERROR_VALUE;
 	return DAO_OK;
 }
 
-static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value, DaoProcess *proc )
+static int DaoTuple_DoSetField( DaoValue *selfv, DaoString *field, DaoValue *value, DaoProcess *proc )
 {
 	DaoTuple *self = (DaoTuple*) selfv;
 	DaoType *itype, **types = self->ctype->args->items.pType;
-	int id = DaoTuple_CheckIndex( self, field, proc );
+	int id = DaoTuple_CheckIndex( self, field->value, proc );
 	if( id < 0 ) return DAO_ERROR_FIELD;
 	itype = types[id];
 	if( itype->tid == DAO_PAR_NAMED || itype->tid == DAO_PAR_VALIST ) itype = (DaoType*)itype->aux;
@@ -5715,9 +5715,9 @@ void DaoCtype_Delete( DaoCtype *self )
 
 
 
-DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+DaoType* DaoCtype_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoValue *value = DaoType_FindValue( self->aux->xCtype.valueType, name );
+	DaoValue *value = DaoType_FindValue( self->aux->xCtype.valueType, name->value );
 	DaoType *res = NULL;
 
 	if( value && value->type == DAO_ROUTINE ){
@@ -5728,17 +5728,17 @@ DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 	return res;
 }
 
-DaoValue* DaoCtype_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+DaoValue* DaoCtype_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xCtype.classType;
-	return DaoType_FindValue( type, name );
+	return DaoType_FindValue( type, name->value );
 }
 
-int DaoCtype_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+int DaoCtype_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
@@ -5748,13 +5748,13 @@ int DaoCtype_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRou
 	return DAO_OK;
 }
 
-int DaoCtype_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+int DaoCtype_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
     DaoRoutine *rout = NULL;
 	DaoType *type = self->xCtype.classType;
 
     DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
+    DString_Append( proc->string, name->value );
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( type, proc->string );
     if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
@@ -5898,10 +5898,10 @@ void DaoCstruct_Delete( DaoCstruct *self )
 // Operator .( field: string ) is no longer supported;
 // Overload [] instead;
 */
-DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+DaoType* DaoCstruct_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
-	DaoValue *value = DaoType_FindValue( self, name );
+	DaoValue *value = DaoType_FindValue( self, name->value );
 	DaoType *res = NULL;
 
 	if( value && value->type == DAO_ROUTINE ){
@@ -5911,7 +5911,7 @@ DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx
 		res = DaoNamespace_GetType( ctx->nameSpace, value );
 	}else{
 		DString *buffer = DString_NewChars( "." );
-		DString_Append( buffer, name );
+		DString_Append( buffer, name->value );
 		rout = DaoType_FindFunction( self, buffer );
 		DString_Delete( buffer );
 		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
@@ -5921,27 +5921,27 @@ DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx
 	return res;
 }
 
-DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+DaoValue* DaoCstruct_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xCstruct.ctype;
-	DaoValue *value = DaoType_FindValue( type, name );
+	DaoValue *value = DaoType_FindValue( type, name->value );
 	DaoRoutine *rout = NULL;
 
 	if( value != NULL ) return value;
 
 	DString_SetChars( proc->string, "." );
-	DString_Append( proc->string, name );
+	DString_Append( proc->string, name->value );
 	rout = DaoType_FindFunction( type, proc->string );
 	if( rout == NULL ) return NULL;
 	DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	return NULL;
 }
 
-int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+int DaoCstruct_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
@@ -5951,13 +5951,13 @@ int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoR
 	return DAO_OK;
 }
 
-int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+int DaoCstruct_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
     DaoRoutine *rout = NULL;
 	DaoType *type = self->xCstruct.ctype;
 
     DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
+    DString_Append( proc->string, name->value );
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( type, proc->string );
     if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;

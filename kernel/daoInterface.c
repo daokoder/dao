@@ -279,15 +279,15 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 
 
 
-static DaoType* DaoInterface_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoInterface_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoRoutine *rout = DaoType_FindFunction( self, name );
+	DaoRoutine *rout = DaoType_FindFunction( self, name->value );
 	DString *buffer;
 
 	if( rout != NULL ) return rout->routType;
 
 	buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
@@ -295,27 +295,27 @@ static DaoType* DaoInterface_CheckGetField( DaoType *self, DString *name, DaoRou
 	return (DaoType*) rout->routType->aux;
 }
 
-static DaoValue* DaoInterface_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoInterface_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xInterface.abtype;
-	DaoValue *value = DaoType_FindValue( type, name );
+	DaoValue *value = DaoType_FindValue( type, name->value );
 	DaoRoutine *rout;
 
 	if( value != NULL ) return value;
 
 	DString_SetChars( proc->string, "." );
-	DString_Append( proc->string, name );
+	DString_Append( proc->string, name->value );
 	rout = DaoType_FindFunction( type, proc->string );
 	if( rout == NULL ) return NULL;
 	DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	return NULL;
 }
 
-static int DaoInterface_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+static int DaoInterface_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
@@ -325,13 +325,13 @@ static int DaoInterface_CheckSetField( DaoType *self, DString *name, DaoType *va
 	return DAO_OK;
 }
 
-static int DaoInterface_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoInterface_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
 	DaoType *type = self->xInterface.abtype;
     DaoRoutine *rout;
 
     DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
+    DString_Append( proc->string, name->value );
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( type, proc->string );
     if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
@@ -636,18 +636,18 @@ void DaoCinType_DeriveMethods( DaoCinType *self )
 
 
 
-static DaoType* DaoCinType_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoCinType_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoRoutine *rout = DaoType_FindFunction( self, name );
+	DaoRoutine *rout = DaoType_FindFunction( self, name->value );
 
 	if( rout != NULL ) return rout->routType;
 	return NULL;
 }
 
-static DaoValue* DaoCinType_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoCinType_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xCinType.vatype;
-	return DaoType_FindValue( type, name );
+	return DaoType_FindValue( type, name->value );
 }
 
 void DaoCinType_CoreDelete( DaoValue *self )
@@ -711,15 +711,15 @@ void DaoCinValue_Delete( DaoCinValue *self )
 
 
 
-static DaoType* DaoCinValue_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoCinValue_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoRoutine *rout = DaoType_FindFunction( self, name );
+	DaoRoutine *rout = DaoType_FindFunction( self, name->value );
 	DString *buffer;
 
 	if( rout != NULL ) return rout->routType;
 
 	buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
@@ -727,27 +727,27 @@ static DaoType* DaoCinValue_CheckGetField( DaoType *self, DString *name, DaoRout
 	return (DaoType*) rout->routType->aux;
 }
 
-static DaoValue* DaoCinValue_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoCinValue_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xCinValue.cintype->vatype;
-	DaoValue *value = DaoType_FindValue( type, name );
+	DaoValue *value = DaoType_FindValue( type, name->value );
 	DaoRoutine *rout;
 
 	if( value != NULL ) return value;
 
 	DString_SetChars( proc->string, "." );
-	DString_Append( proc->string, name );
+	DString_Append( proc->string, name->value );
 	rout = DaoType_FindFunction( type, proc->string );
 	if( rout == NULL ) return NULL;
 	DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	return NULL;
 }
 
-static int DaoCinValue_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+static int DaoCinValue_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
-	DString_Append( buffer, name );
+	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
@@ -757,13 +757,13 @@ static int DaoCinValue_CheckSetField( DaoType *self, DString *name, DaoType *val
 	return DAO_OK;
 }
 
-static int DaoCinValue_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoCinValue_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
 	DaoType *type = self->xCinValue.cintype->vatype;
     DaoRoutine *rout;
 
     DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
+    DString_Append( proc->string, name->value );
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( type, proc->string );
     if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;

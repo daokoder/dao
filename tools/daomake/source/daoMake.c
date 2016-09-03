@@ -2141,46 +2141,6 @@ void DaoMakeProject_MakeFinderPath( DaoMakeProject *self, DString *path )
 
 
 
-static DaoType* DaoMake_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
-{
-	return DaoCstruct_GetDefaultCore()->CheckGetField( self, name, ctx );
-}
-
-static DaoValue* DaoMake_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
-{
-	return DaoCstruct_GetDefaultCore()->DoGetField( self, name, proc );
-}
-
-static int DaoMake_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
-{
-	return DaoCstruct_GetDefaultCore()->CheckSetField( self, name, value, ctx );
-}
-
-static int DaoMake_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
-{
-	return DaoCstruct_GetDefaultCore()->DoSetField( self, name, value, proc );
-}
-
-static DaoType* DaoMake_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
-{
-	return DaoCstruct_GetDefaultCore()->CheckGetItem( self, index, N, ctx );
-}
-
-static DaoValue* DaoMake_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
-{
-	return DaoCstruct_GetDefaultCore()->DoGetItem( self, index, N, proc );
-}
-
-static int DaoMake_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
-{
-	return DaoCstruct_GetDefaultCore()->CheckSetItem( self, index, N, value, ctx );
-}
-
-static int DaoMake_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
-{
-	return DaoCstruct_GetDefaultCore()->DoSetItem( self, index, N, value, proc );
-}
-
 
 
 
@@ -2338,27 +2298,27 @@ static DaoFunctionEntry daoMakeUnitMeths[] =
 
 static DaoTypeCore daoMakeUnitCore =
 {
-	"Unit",                                      /* name */
-	sizeof(DaoMakeUnit),                         /* size */
-	{ NULL },                                    /* bases */
-	NULL,                                        /* numbers */
-	daoMakeUnitMeths,                            /* methods */
-	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
-	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
-	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
-	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
-	NULL,                   NULL,                /* Unary */
-	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Conversion */
-	NULL,                   NULL,                /* ForEach */
-	NULL,                                        /* Print */
-	NULL,                                        /* Slice */
-	NULL,                                        /* Compare */
-	NULL,                                        /* Hash */
-	NULL,                                        /* Create */
-	NULL,                                        /* Copy */
-	NULL,                                        /* Delete */
-	NULL                                         /* HandleGC */
+	"Unit",                                            /* name */
+	sizeof(DaoMakeUnit),                               /* size */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoMakeUnitMeths,                                  /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	NULL,                                              /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 
@@ -2414,27 +2374,27 @@ static DaoFunctionEntry daoMakeObjectsMeths[]=
 
 static DaoTypeCore daoMakeObjectsCore =
 {
-	"Objects",                                   /* name */
-	sizeof(DaoMakeObjects),                      /* size */
-	{ & daoMakeUnitCore, NULL },                 /* bases */
-	NULL,                                        /* numbers */
-	daoMakeObjectsMeths,                         /* methods */
-	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
-	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
-	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
-	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
-	NULL,                   NULL,                /* Unary */
-	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Conversion */
-	NULL,                   NULL,                /* ForEach */
-	NULL,                                        /* Print */
-	NULL,                                        /* Slice */
-	NULL,                                        /* Compare */
-	NULL,                                        /* Hash */
-	NULL,                                        /* Create */
-	NULL,                                        /* Copy */
-	(DaoDeleteFunction) DaoMakeObjects_Delete,   /* Delete */
-	NULL                                         /* HandleGC */
+	"Objects",                                         /* name */
+	sizeof(DaoMakeObjects),                            /* size */
+	{ & daoMakeUnitCore, NULL },                       /* bases */
+	NULL,                                              /* numbers */
+	daoMakeObjectsMeths,                               /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoMakeObjects_Delete,         /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 
@@ -2604,27 +2564,27 @@ static void DaoMakeTarget_HandleGC( DaoValue *p, DList *values, DList *arrays, D
 
 static DaoTypeCore daoMakeTargetCore =
 {
-	"Target",                                    /* name */
-	sizeof(DaoMakeTarget),                       /* size */
-	{ & daoMakeUnitCore, NULL },                 /* bases */
-	NULL,                                        /* numbers */
-	daoMakeTargetMeths,                          /* methods */
-	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
-	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
-	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
-	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
-	NULL,                   NULL,                /* Unary */
-	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Conversion */
-	NULL,                   NULL,                /* ForEach */
-	NULL,                                        /* Print */
-	NULL,                                        /* Slice */
-	NULL,                                        /* Compare */
-	NULL,                                        /* Hash */
-	NULL,                                        /* Create */
-	NULL,                                        /* Copy */
-	(DaoDeleteFunction) DaoMakeTarget_Delete,    /* Delete */
-	DaoMakeTarget_HandleGC                       /* HandleGC */
+	"Target",                                          /* name */
+	sizeof(DaoMakeTarget),                             /* size */
+	{ & daoMakeUnitCore, NULL },                       /* bases */
+	NULL,                                              /* numbers */
+	daoMakeTargetMeths,                                /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoMakeTarget_Delete,          /* Delete */
+	DaoMakeTarget_HandleGC                             /* HandleGC */
 };
 
 
@@ -2923,27 +2883,27 @@ static void DaoMakeProject_HandleGC( DaoValue *p, DList *values, DList *arrays, 
 
 static DaoTypeCore daoMakeProjectCore =
 {
-	"Project",                                   /* name */
-	sizeof(DaoMakeProject),                      /* size */
-	{ & daoMakeUnitCore, NULL },                 /* bases */
-	NULL,                                        /* numbers */
-	daoMakeProjectMeths,                         /* methods */
-	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
-	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
-	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
-	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
-	NULL,                   NULL,                /* Unary */
-	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Conversion */
-	NULL,                   NULL,                /* ForEach */
-	NULL,                                        /* Print */
-	NULL,                                        /* Slice */
-	NULL,                                        /* Compare */
-	NULL,                                        /* Hash */
-	NULL,                                        /* Create */
-	NULL,                                        /* Copy */
-	(DaoDeleteFunction) DaoMakeProject_Delete,   /* Delete */
-	DaoMakeProject_HandleGC                      /* HandleGC */
+	"Project",                                         /* name */
+	sizeof(DaoMakeProject),                            /* size */
+	{ & daoMakeUnitCore, NULL },                       /* bases */
+	NULL,                                              /* numbers */
+	daoMakeProjectMeths,                               /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoMakeProject_Delete,         /* Delete */
+	DaoMakeProject_HandleGC                            /* HandleGC */
 };
 
 
@@ -2986,27 +2946,27 @@ static DaoFunctionEntry daoMakeVariablesMeths[]=
 
 static DaoTypeCore daoMakeVariablesCore =
 {
-	"Variables",                                 /* name */
-	0,                                           /* size */
-	{ NULL },                                    /* bases */
-	NULL,                                        /* numbers */
-	daoMakeVariablesMeths,                       /* methods */
-	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
-	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
-	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
-	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
-	NULL,                   NULL,                /* Unary */
-	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Conversion */
-	NULL,                   NULL,                /* ForEach */
-	NULL,                                        /* Print */
-	NULL,                                        /* Slice */
-	NULL,                                        /* Compare */
-	NULL,                                        /* Hash */
-	NULL,                                        /* Create */
-	NULL,                                        /* Copy */
-	NULL,                                        /* Delete */
-	NULL                                         /* HandleGC */
+	"Variables",                                       /* name */
+	0,                                                 /* size */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoMakeVariablesMeths,                             /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	NULL,                                              /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 

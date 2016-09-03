@@ -1837,14 +1837,16 @@ DaoValue* DaoType_FindValue( DaoType *self, DString *name )
 }
 DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 {
-	/* Values are not specialized. */
-	/* Get the original type kernel for template-like cdata type: */
+	/*
+	// Values are not specialized.
+	// Get the original type kernel for template-like cdata type:
+	*/
 	DaoTypeKernel *kernel = self->kernel;
 	DaoValue *value = NULL;
 	DNode *node;
 
 	if( kernel == NULL ) return NULL;
-	/* mainly for C data type: */
+	/* Mainly for C data type: */
 	if( kernel->abtype && kernel->abtype->aux ){
 		if( DString_EQ( name, kernel->abtype->name ) ) value = kernel->abtype->aux;
 	}

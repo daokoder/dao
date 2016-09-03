@@ -2052,10 +2052,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 
 
 
-static DaoType* DaoNamespace_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoNamespace_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
 	DaoNamespace *NS = (DaoNamespace*) self->aux;
-	DNode *node = DMap_Find( NS->lookupTable, name );
+	DNode *node = DMap_Find( NS->lookupTable, name->value );
 	int st, pm, id;
 
 	if( node == NULL ) return NULL;
@@ -2071,10 +2071,10 @@ static DaoType* DaoNamespace_CheckGetField( DaoType *self, DString *name, DaoRou
 	return NULL;
 }
 
-static DaoValue* DaoNamespace_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoNamespace_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoNamespace *NS = (DaoNamespace*) self;
-	DNode *node = DMap_Find( NS->lookupTable, name );
+	DNode *node = DMap_Find( NS->lookupTable, name->value );
 	int st, pm, id;
 
 	if( node == NULL ) goto FieldNotExist;
@@ -2089,21 +2089,21 @@ static DaoValue* DaoNamespace_DoGetField( DaoValue *self, DString *name, DaoProc
 	}
 	return NULL;
 FieldNotExist:
-	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->value->chars );
 	return NULL;
 FieldNoPermit:
-	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->value->chars );
 	return NULL;
 InvalidField:
-	DaoProcess_RaiseError( proc, "Field", name->chars );
+	DaoProcess_RaiseError( proc, "Field", name->value->chars );
 	return NULL;
 }
 
-static int DaoNamespace_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+static int DaoNamespace_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoVariable *dest;
 	DaoNamespace *NS = (DaoNamespace*) self->aux;
-	DNode *node = DMap_Find( NS->lookupTable, name );
+	DNode *node = DMap_Find( NS->lookupTable, name->value );
 	int st, pm, id;
 
 	if( node == NULL ) return DAO_ERROR_FIELD_ABSENT;
@@ -2117,11 +2117,11 @@ static int DaoNamespace_CheckSetField( DaoType *self, DString *name, DaoType *va
 	return DAO_OK;
 }
 
-static int DaoNamespace_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoNamespace_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
 	DaoVariable *dest;
 	DaoNamespace *NS = (DaoNamespace*) self;
-	DNode *node = DMap_Find( NS->lookupTable, name );
+	DNode *node = DMap_Find( NS->lookupTable, name->value );
 	int st, pm, id;
 
 	if( node == NULL ) goto FieldNotExist;
@@ -2134,16 +2134,16 @@ static int DaoNamespace_DoSetField( DaoValue *self, DString *name, DaoValue *val
 	if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) goto TypeNotMatching;
 	return 0;
 FieldNotExist:
-	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->value->chars );
 	return DAO_ERROR_FIELD_ABSENT;
 FieldNoPermit:
-	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->value->chars );
 	return DAO_ERROR_FIELD_HIDDEN;
 TypeNotMatching:
 	DaoProcess_RaiseError( proc, "Type", "not matching" );
 	return DAO_ERROR_TYPE;
 InvalidField:
-	DaoProcess_RaiseError( proc, "Field", name->chars );
+	DaoProcess_RaiseError( proc, "Field", name->value->chars );
 	return DAO_ERROR_FIELD;
 }
 

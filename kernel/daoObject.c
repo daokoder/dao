@@ -281,12 +281,12 @@ DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 
 
 
-static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoObject_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( klass, name, host );
+	DaoValue *data = DaoClass_GetData( klass, name->value, host );
 	DaoRoutine *rout;
 	int error = DAO_OK;
 
@@ -303,7 +303,7 @@ static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoRoutin
 	}
 	if( error ){
 		DString *field = DString_NewChars( "." );
-		DString_Append( field, name );
+		DString_Append( field, name->value );
 		rout = DaoClass_FindMethod( klass, field->chars, host );
 		DString_Delete( field );
 		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
@@ -313,41 +313,41 @@ static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoRoutin
 	return NULL;
 }
 
-static DaoValue* DaoObject_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoObject_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoObject *host = proc->activeObject;
 	DaoClass *hostClass = host ? host->defClass : NULL;
 	DaoValue *value = NULL;
-	int rc = DaoObject_GetData( object, name, & value, host );
+	int rc = DaoObject_GetData( object, name->value, & value, host );
 	if( rc ){
 		DaoRoutine *rout;
 		DString *field = proc->string;
 
 		DString_SetChars( field, "." );
-		DString_Append( field, name );
+		DString_Append( field, name->value );
 		rout = DaoClass_FindMethod( object->defClass, field->chars, hostClass );
 		if( rout == NULL ) return NULL;
 		rc = DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	}else{
 		DaoProcess_PutValue( proc, value );
 	}
-	if( rc ) DaoProcess_RaiseError( proc, daoExceptionNames[rc], name->chars );
+	if( rc ) DaoProcess_RaiseError( proc, daoExceptionNames[rc], name->value->chars );
 	return NULL;
 }
 
-static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+static int DaoObject_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( klass, name, host );
+	DaoValue *data = DaoClass_GetData( klass, name->value, host );
 	DaoRoutine *rout;
 	int error = DAO_OK;
 
 	error = 0;
 
-	if( strcmp( name->chars, "self" ) ==0 ) return DAO_ERROR_FIELD_HIDDEN;
+	if( strcmp( name->value->chars, "self" ) ==0 ) return DAO_ERROR_FIELD_HIDDEN;
 	if( data == NULL ){
 		error = DAO_ERROR_FIELD_ABSENT;
 	}else if( data->type == DAO_NONE ){
@@ -360,7 +360,7 @@ static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value
 	}
 	if( error ){
 		DString *field = DString_NewChars( "." );
-		DString_Append( field, name );
+		DString_Append( field, name->value );
 		DString_AppendChars( field, "=" );
 		rout = DaoClass_FindMethod( klass, field->chars, host );
 		DString_Delete( field );
@@ -370,24 +370,24 @@ static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value
 	return DAO_OK;
 }
 
-static int DaoObject_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoObject_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoObject *host = proc->activeObject;
 	DaoClass *hostClass = host ? host->defClass : NULL;
-	int ec = DaoObject_SetData( object, name, value, host );
+	int ec = DaoObject_SetData( object, name->value, value, host );
 	if( ec != DAO_ERROR ){
 		DString *field = proc->string;
 		DaoRoutine *rout;
 
 		DString_SetChars( field, "." );
-		DString_Append( field, name );
+		DString_Append( field, name->value );
 		DString_AppendChars( field, "=" );
 		rout = DaoClass_FindMethod( object->defClass, field->chars, hostClass );
 		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
 		ec = DaoProcess_PushCallable( proc, rout, self, & value, 1 );
 	}
-	if( ec ) DaoProcess_RaiseError( proc, daoExceptionNames[ec], name->chars );
+	if( ec ) DaoProcess_RaiseError( proc, daoExceptionNames[ec], name->value->chars );
 	return ec;
 }
 

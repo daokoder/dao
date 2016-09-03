@@ -1301,12 +1301,12 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 /*
 // Not very useful to support operator overloading for class;
 */
-static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+static DaoType* DaoClass_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( klass, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name->value, host );;
 
 	//ctx->error = DAO_OK;
 	if( data == NULL ){
@@ -1323,17 +1323,17 @@ static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine
 	return NULL;
 }
 
-static DaoValue* DaoClass_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+static DaoValue* DaoClass_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoClass *klass = (DaoClass*) self;
 	DaoType *type = proc->activeRoutine->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( klass, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name->value, host );;
 	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
 		int rc = data == NULL ? DAO_ERROR_FIELD_ABSENT : DAO_ERROR_FIELD_HIDDEN;
 		DString_SetChars( proc->string, klass->className->chars );
 		DString_AppendChars( proc->string, "." );
-		DString_Append( proc->string, name );
+		DString_Append( proc->string, name->value );
 		DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
 	}else{
 		DaoProcess_PutValue( proc, data->xConst.value );
@@ -1341,12 +1341,12 @@ static DaoValue* DaoClass_DoGetField( DaoValue *self, DString *name, DaoProcess 
 	return NULL;
 }
 
-static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+static int DaoClass_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( klass, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name->value, host );;
 
 	if( data == NULL ){
 		return DAO_ERROR_FIELD_ABSENT;
@@ -1362,10 +1362,10 @@ static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value,
 	return DAO_OK;
 }
 
-static int DaoClass_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoClass_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
 	DaoClass *klass = (DaoClass*) self;
-	DNode *node = DMap_Find( klass->lookupTable, name );
+	DNode *node = DMap_Find( klass->lookupTable, name->value );
 	if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
 		int up = LOOKUP_UP( node->value.pInt );
 		int id = LOOKUP_ID( node->value.pInt );

@@ -347,14 +347,14 @@ struct DaoTypeCore
 	// Method definitions: should end with a null item;
 	*/
 
-	DaoType* (*CheckGetField)( DaoType *self, DString *field, DaoRoutine *rout );
-	DaoValue* (*DoGetField)( DaoValue *self, DString *field, DaoProcess *proc );
+	DaoType* (*CheckGetField)( DaoType *self, DaoString *field, DaoRoutine *rout );
+	DaoValue* (*DoGetField)( DaoValue *self, DaoString *field, DaoProcess *proc );
 	/*
 	// Functions for GETF:
 	*/
 
-	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value, DaoRoutine *rout );
-	int (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *proc );
+	int (*CheckSetField)( DaoType *self, DaoString *field, DaoType *value, DaoRoutine *rout );
+	int (*DoSetField)( DaoValue *self, DaoString *field, DaoValue *value, DaoProcess *proc );
 	/*
 	// Functions for SETF:
 	*/
@@ -896,10 +896,10 @@ DAO_DLL void DaoCstruct_Delete( DaoCstruct *self );
 /*
 // Default implementations of DaoTypeCore member functions for C data types:
 */
-DAO_DLL DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx );
-DAO_DLL DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc );
-DAO_DLL int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx );
-DAO_DLL int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc );
+DAO_DLL DaoType* DaoCstruct_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc );
+DAO_DLL int DaoCstruct_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx );
+DAO_DLL int DaoCstruct_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc );
 
 DAO_DLL DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx );
 DAO_DLL DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc );

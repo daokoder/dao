@@ -1518,7 +1518,8 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
 	DaoType *at = types[opa];
 	DaoType *ct = types[opc];
-	DString *str;
+	DaoString *field; 
+	DString *name;
 	DNode *node;
 	int k;
 	DaoType **pars = NULL;
@@ -1528,22 +1529,23 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	ct = NULL;
 	value = routConsts->items.pValue[opb];
 	if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
-	str = value->xString.value;
+	field = (DaoString*) value;
+	name = value->xString.value;
 	ak = at->tid == DAO_CLASS;
 	self->type_source = at;
 	if( DaoType_LooseChecking( at ) ){
 		/* allow less strict typing: */
 		ct = dao_type_udf;
 	}else if( at->tid == DAO_COMPLEX ){
-		ct = at->core->CheckGetField( at, str, self->routine );
+		ct = at->core->CheckGetField( at, field, self->routine );
 		if( ct == NULL ) goto InvalidField;
 		inode->code = DVM_GETF_CX;
-		inode->b = strcmp( str->chars, "imag" ) == 0;
+		inode->b = strcmp( name->chars, "imag" ) == 0;
 	}else if( at->tid == DAO_TYPE ){
 		self->type_source = at;
 		at = at->args->items.pType[0];
 		if( at->tid == DAO_ENUM && at->mapNames ){
-			if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist;
+			if( DMap_Find( at->mapNames, name ) == NULL ) goto NotExist;
 			ct = at;
 		}else{
 			goto NotExist;
@@ -1552,10 +1554,10 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		ct = dao_type_any;
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		DaoClass *klass = (DaoClass*) at->aux;
-		DaoValue *data = DaoClass_GetData( klass, str, hostClass );
+		DaoValue *data = DaoClass_GetData( klass, name, hostClass );
 		int j, k;
 
-		ct = at->core->CheckGetField( at, str, self->routine );
+		ct = at->core->CheckGetField( at, field, self->routine );
 		if( ct == NULL ) goto InvalidField;
 
 		if( data != NULL && data->type != DAO_NONE ){
@@ -1564,7 +1566,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			}
 
 			/* specialize instructions for finalized class/instance: */
-			j = DaoClass_GetDataIndex( klass, str );
+			j = DaoClass_GetDataIndex( klass, name );
 			k = LOOKUP_ST( j );
 			vmc->b = LOOKUP_ID( j );
 			if( ct && ct->tid >= DAO_BOOLEAN && ct->tid <= DAO_COMPLEX ){
@@ -1584,10 +1586,10 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			vmc->code = code;
 		}
 	}else if( at->tid == DAO_TUPLE ){
-		ct = at->core->CheckGetField( at, str, self->routine );
+		ct = at->core->CheckGetField( at, field, self->routine );
 		if( ct == NULL ) goto InvalidField;
 
-		node = MAP_Find( at->mapNames, str );
+		node = MAP_Find( at->mapNames, name );
 		k = node->value.pInt;
 		if( k < 0xffff ){
 			if( ct->tid >= DAO_BOOLEAN && ct->tid <= DAO_COMPLEX ){
@@ -1603,11 +1605,11 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		ct = dao_type_any;
 		if( consts[opa] && consts[opa]->type == DAO_NAMESPACE ){
 			DaoNamespace *ans = & consts[opa]->xNamespace;
-			k = DaoNamespace_FindVariable( ans, str );
+			k = DaoNamespace_FindVariable( ans, name );
 			if( k >=0 ){
 				ct = DaoNamespace_GetVariableType( ans, k );
 			}else{
-				k = DaoNamespace_FindConst( ans, str );
+				k = DaoNamespace_FindConst( ans, name );
 				value = DaoNamespace_GetConst( ans, k );
 				if( value ) ct = DaoNamespace_GetType( ans, value );
 			}
@@ -1615,11 +1617,11 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 	}else if( at->core ){
 		if( at->core->CheckGetField == NULL ) goto InvalidField;
-		ct = at->core->CheckGetField( at, str, self->routine );
+		ct = at->core->CheckGetField( at, field, self->routine );
 		if( ct == NULL ) goto InvalidField;
 
 		if( at->tid != DAO_INTERFACE ){
-			value = DaoType_FindValue( at, str );
+			value = DaoType_FindValue( at, name );
 			if( value ){
 				GC_Assign( & consts[opc], value );
 			}
@@ -1862,7 +1864,8 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	DaoRoutine *meth, *rout;
 	DaoType *at = types[opa];
 	DaoType *ct = types[opc];
-	DString *str;
+	DaoString *field;
+	DString *name;
 	DNode *node;
 	int j = 0;
 	int npar = 1;
@@ -1875,8 +1878,9 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 #endif
 	value = routConsts->items.pValue[opb];
 	if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
+	field = (DaoString*) value;
+	name = value->xString.value;
 	self->type_source = ct;
-	str = value->xString.value;
 	switch( ct->tid ){
 	case DAO_UDT :
 	case DAO_ANY :
@@ -1884,23 +1888,23 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		/* allow less strict typing: */
 		break;
 	case DAO_COMPLEX :
-		K = ct->core->CheckSetField( ct, str, at, self->routine );
+		K = ct->core->CheckSetField( ct, field, at, self->routine );
 		if( K ) goto InvalidField;
 		if( at->realnum ){
 			if( at->tid != DAO_FLOAT )
 				DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_float );
 			inode->code = DVM_SETF_CX;
-			inode->b = strcmp( str->chars, "imag" ) == 0;
+			inode->b = strcmp( name->chars, "imag" ) == 0;
 		}
 		break;
 	case DAO_CLASS :
 	case DAO_OBJECT :
-		K = ct->core->CheckSetField( ct, str, at, self->routine );
+		K = ct->core->CheckSetField( ct, field, at, self->routine );
 		if( K ) goto InvalidField;
 
 		ck = ct->tid ==DAO_CLASS;
 		klass = (DaoClass*) ct->aux;
-		data = DaoClass_GetData( klass, str, hostClass );
+		data = DaoClass_GetData( klass, name, hostClass );
 		if( data == NULL || data->type == DAO_NONE ) break;
 
 		if( data->xVar.dtype && data->xVar.dtype->invar ){
@@ -1910,7 +1914,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			GC_Assign( & data->xVar.dtype, at );
 		}
 		AssertTypeMatching( types[opa], data->xVar.dtype, defs );
-		j = DaoClass_GetDataIndex( klass, str );
+		j = DaoClass_GetDataIndex( klass, name );
 
 		k = LOOKUP_ST( j );
 		type = data->xVar.dtype;
@@ -1934,10 +1938,10 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 		break;
 	case DAO_TUPLE :
-		K = ct->core->CheckSetField( ct, str, at, self->routine );
+		K = ct->core->CheckSetField( ct, field, at, self->routine );
 		if( K ) goto InvalidField;
 
-		node = MAP_Find( ct->mapNames, str );
+		node = MAP_Find( ct->mapNames, name );
 		k = node->value.pInt;
 		if( k <0 || k >= (int)ct->args->size ) goto InvalidField;
 
@@ -1969,11 +1973,11 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		{
 			if( consts[opc] && consts[opc]->type == DAO_NAMESPACE ){
 				DaoNamespace *ans = & consts[opc]->xNamespace;
-				k = DaoNamespace_FindVariable( ans, str );
+				k = DaoNamespace_FindVariable( ans, name );
 				if( k >=0 ){
 					ct = DaoNamespace_GetVariableType( ans, k );
 				}else{
-					k = DaoNamespace_FindConst( ans, str );
+					k = DaoNamespace_FindConst( ans, name );
 					value = DaoNamespace_GetConst( ans, k );
 					if( value ) ct = DaoNamespace_GetType( ans, value );
 				}
@@ -1985,7 +1989,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 	default:
 		if( ct->core == NULL || ct->core->CheckSetField == NULL ) goto InvalidField;
-		K = ct->core->CheckSetField( ct, str, at, self->routine );
+		K = ct->core->CheckSetField( ct, field, at, self->routine );
 		if( K ) goto InvalidField;
 		break;
 	}

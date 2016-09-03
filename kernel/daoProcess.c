@@ -3248,7 +3248,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *C, *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( A );
-	DString *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ]->xString.value;
+	DaoValue *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ];
 	int errors = self->exceptions->size;
 
 	self->activeCode = vmc;
@@ -3258,7 +3258,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
-	C = core->DoGetField( A, name, self );
+	C = core->DoGetField( A, (DaoString*) name, self );
 	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
 		if( C != NULL ){
 			DaoProcess_PutValue( self, C );
@@ -3324,7 +3324,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
-	ret = core->DoSetField( C, name->xString.value, A, self );
+	ret = core->DoSetField( C, (DaoString*) name, A, self );
 	if( ret != 0 && self->status != DAO_PROCESS_STACKED ){
 		if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );

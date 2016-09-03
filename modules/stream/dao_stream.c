@@ -507,15 +507,6 @@ static void DaoIOS_Tell( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutInteger( proc, self->offset );
 }
 
-static DaoType* DaoStream_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
-{
-	return DaoCstruct_GetDefaultCore()->CheckGetField( self, name, ctx );
-}
-
-static DaoValue* DaoStream_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
-{
-	return DaoCstruct_GetDefaultCore()->DoGetField( self, name, proc );
-}
 
 
 static DaoFunctionEntry dao_io_methods[] =
@@ -548,27 +539,27 @@ static DaoFunctionEntry daoFileStreamMeths[] =
 
 DaoTypeCore daoFileStreamCore =
 {
-	"FileStream",                                    /* name */
-	sizeof(DaoFileStream),                           /* size */
-	{ NULL },                                        /* bases */
-	NULL,                                            /* numbers */
-	daoFileStreamMeths,                              /* methods */
-	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
-	NULL,                     NULL,                  /* SetField */
-	NULL,                     NULL,                  /* GetItem */
-	NULL,                     NULL,                  /* SetItem */
-	NULL,                     NULL,                  /* Unary */
-	NULL,                     NULL,                  /* Binary */
-	NULL,                     NULL,                  /* Conversion */
-	NULL,                     NULL,                  /* ForEach */
-	NULL,                                            /* Print */
-	NULL,                                            /* Slice */
-	NULL,                                            /* Compare */
-	NULL,                                            /* Hash */
-	NULL,                                            /* Create */
-	NULL,                                            /* Copy */
-	(DaoDeleteFunction) DaoFileStream_Delete,        /* Delete */
-	NULL                                             /* HandleGC */
+	"FileStream",                                      /* name */
+	sizeof(DaoFileStream),                             /* size */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoFileStreamMeths,                                /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoFileStream_Delete,          /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 
@@ -582,27 +573,27 @@ static DaoFunctionEntry daoPipeStreamMeths[] =
 
 DaoTypeCore daoPipeStreamCore =
 {
-	"PipeStream",                                    /* name */
-	sizeof(DaoPipeStream),                           /* size */
-	{ NULL },                                        /* bases */
-	NULL,                                            /* numbers */
-	daoPipeStreamMeths,                              /* methods */
-	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
-	NULL,                     NULL,                  /* SetField */
-	NULL,                     NULL,                  /* GetItem */
-	NULL,                     NULL,                  /* SetItem */
-	NULL,                     NULL,                  /* Unary */
-	NULL,                     NULL,                  /* Binary */
-	NULL,                     NULL,                  /* Conversion */
-	NULL,                     NULL,                  /* ForEach */
-	NULL,                                            /* Print */
-	NULL,                                            /* Slice */
-	NULL,                                            /* Compare */
-	NULL,                                            /* Hash */
-	NULL,                                            /* Create */
-	NULL,                                            /* Copy */
-	(DaoDeleteFunction) DaoPipeStream_Delete,        /* Delete */
-	NULL                                             /* HandleGC */
+	"PipeStream",                                      /* name */
+	sizeof(DaoPipeStream),                             /* size */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoPipeStreamMeths,                                /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoPipeStream_Delete,          /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 
@@ -617,27 +608,27 @@ static DaoFunctionEntry daoStringStreamMeths[] =
 
 DaoTypeCore daoStringStreamCore =
 {
-	"StringStream",                                  /* name */
-	sizeof(DaoStringStream),                         /* size */
-	{ NULL },                                        /* bases */
-	NULL,                                            /* numbers */
-	daoStringStreamMeths,                            /* methods */
-	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
-	NULL,                     NULL,                  /* SetField */
-	NULL,                     NULL,                  /* GetItem */
-	NULL,                     NULL,                  /* SetItem */
-	NULL,                     NULL,                  /* Unary */
-	NULL,                     NULL,                  /* Binary */
-	NULL,                     NULL,                  /* Conversion */
-	NULL,                     NULL,                  /* ForEach */
-	NULL,                                            /* Print */
-	NULL,                                            /* Slice */
-	NULL,                                            /* Compare */
-	NULL,                                            /* Hash */
-	NULL,                                            /* Create */
-	NULL,                                            /* Copy */
-	(DaoDeleteFunction) DaoStringStream_Delete,      /* Delete */
-	NULL                                             /* HandleGC */
+	"StringStream",                                    /* name */
+	sizeof(DaoStringStream),                           /* size */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoStringStreamMeths,                              /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Create */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoStringStream_Delete,        /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 static DaoFunctionEntry daoSeekableDeviceMeths[] =

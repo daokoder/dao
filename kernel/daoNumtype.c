@@ -2744,8 +2744,8 @@ static DaoFunctionEntry daoArrayMeths[] =
 
 
 
-extern DaoType* DaoValue_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx );
-extern DaoValue* DaoValue_DoGetField( DaoValue *self, DString *field, DaoProcess *proc );
+extern DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx );
+extern DaoValue* DaoValue_DoGetField( DaoValue *self, DaoString *field, DaoProcess *proc );
 
 
 DaoTypeCore daoArrayCore =
