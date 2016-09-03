@@ -3802,7 +3802,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			}
 		}
 	}else if( caller->type >= DAO_CSTRUCT && caller->type <= DAO_CDATA ){
-		rout = rout2 = DaoType_FindFunctionChars( caller->xCdata.ctype, "()" );
+		rout = rout2 = DaoType_FindFunctionChars( caller->xCstruct.ctype, "()" );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "C object not callable" );
 			return;
@@ -3810,6 +3810,19 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+	}else if( caller->type == DAO_CINVALUE ){
+		rout = rout2 = DaoType_FindFunctionChars( caller->xCinValue.cintype->vatype, "()" );
+		if( rout == NULL ){
+			DaoProcess_RaiseError( self, "Type", "C object not callable" );
+			return;
+		}
+		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
+		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
+		if( rout->pFunc ){
+			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+		}else if( rout->type == DAO_ROUTINE ){
+			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
+		}
 	}else if( caller->type == DAO_TYPE ){
 		DaoType *type = (DaoType*) caller;
 		rout = rout2 = DaoType_GetInitor( type );

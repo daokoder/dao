@@ -997,12 +997,11 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			}
 		}
 		if( type->subtid == DAO_ROUTINES ) return 0;
-		if( self->name->chars[0] != type->name->chars[0] ) return 0; /* @routine */
 		if( type->aux == NULL ){
 			int hascb1 = self->cbtype != NULL;
 			int hascb2 = type->cbtype != NULL;
 			/* match to "routine" or "routine[...]"; */
-			return DAO_MT_SIM * (hascb1 == hascb2);
+			return DAO_MT_SUB * (hascb1 == hascb2);
 		}
 		if( self->args->size < type->args->size ) return DAO_MT_NOT;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
@@ -1169,7 +1168,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		return mt;
 	case DAO_CINVALUE :
 		mt = DaoType_MatchValue( self->aux->xCinType.target, value, NULL );
-		if( mt >= DAO_MT_EQ ) return DAO_MT_SIM;
+		if( mt >= DAO_MT_CIV ) return DAO_MT_SIM;
 		break;
 	case DAO_INTERFACE :
 		/* Matching to "interface": */

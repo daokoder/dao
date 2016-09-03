@@ -2539,6 +2539,10 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		DNode *it = DMap_Find( inter->methods, inter->abtype->name );
 		if( it == NULL ) goto NotCallable;
 		rout = it->value.pRoutine;
+	}else if( at->tid == DAO_CINVALUE ){
+		rout = DaoType_FindFunctionChars( at, "()" );
+		if( rout == NULL ) goto NotCallable;
+		bt = at;
 	}else if( at->tid == DAO_TYPE ){
 		at = at->args->items.pType[0];
 		rout = DaoType_FindFunction( at, at->name );
@@ -2581,7 +2585,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}else if( rout->attribs & DAO_ROUT_PROTECTED ){
 			if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
 		}
-		if( vmc->code == DVM_CALL && rout->routHost ){
+		if( vmc->code == DVM_CALL && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
 			int staticCallee = rout->attribs & DAO_ROUT_STATIC;
 			int invarCallee = rout->attribs & DAO_ROUT_INVAR;
 			int initorCallee = rout->attribs & DAO_ROUT_INITOR;
