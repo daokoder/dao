@@ -478,6 +478,23 @@ const char* DaoVmCode_GetOperator( int opcode )
 	return name;
 }
 
+const char* DaoVmCode_GetCompoundOperator( int opcode )
+{
+	const char *name = NULL;
+	switch( opcode ){
+	case DVM_ADD    : name = "+="; break;
+	case DVM_SUB    : name = "-="; break;
+	case DVM_MUL    : name = "*="; break;
+	case DVM_DIV    : name = "/="; break;
+	case DVM_MOD    : name = "%="; break;
+	case DVM_BITAND : name = "&="; break;
+	case DVM_BITOR  : name = "|="; break;
+	case DVM_BITXOR : name = "^="; break;
+	default: return NULL;
+	}
+	return name;
+}
+
 void DaoVmCode_Print( DaoVmCode self, char *buffer )
 {
 	const char *name = DaoVmCode_GetOpcodeName( self.code );

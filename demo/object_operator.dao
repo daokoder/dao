@@ -30,10 +30,10 @@ class Integer
 		C.value = A.value + B.value;
 		return C;
 	}
-	static routine +=( C : Integer, B : Integer ){
+	routine +=( B : Integer ){
 		io.writeln( "Integer += Integer" );
-		C.value += B.value;
-		return C;
+		value += B.value;
+		return self;
 	}
 	static routine -( A : Integer ){
 		io.writeln( "- Integer" );
@@ -43,10 +43,9 @@ class Integer
 		io.writeln( "Integer - Integer" );
 		return Integer( A.value - B.value );
 	}
-	static routine >( A : Integer, B : Integer ){
-		io.writeln( "Integer > Integer" );
-		#b = A > B;
-		return Integer( A.value > B.value );
+	static routine <( A : Integer, B : Integer ){
+		io.writeln( "Integer < Integer" );
+		return Integer( A.value < B.value );
 	}
 	static routine !( C : Integer, A : Integer ){
 		io.writeln( "routine !( C : Integer, A : Integer )" );

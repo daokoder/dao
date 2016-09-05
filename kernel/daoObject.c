@@ -539,8 +539,22 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		const char *name = DaoVmCode_GetCompoundOperator( op->code );
+		rout = DaoClass_FindMethod( (DaoClass*) self->aux, name, host );
+		if( rout != NULL ){
+			rout = DaoRoutine_MatchByType( rout, self, args+1, 1, DVM_CALL );
+			if( rout == NULL ) return NULL;
+			return (DaoType*) rout->routType->aux;
+		}
+	}
+
 	rout = DaoClass_FindMethod( (DaoClass*) self->aux, DaoVmCode_GetOperator( op->code ), host );
-	if( rout == NULL ) return NULL;
+	if( rout == NULL ){
+		if( op->code == DVM_EQ || op->code == DVM_NE ) return dao_type_bool;
+		return NULL;
+	}
 
 	if( op->c == op->a && self == args[0] ) selftype = self;
 	if( op->c == op->b && self == args[1] ) selftype = self;
@@ -568,8 +582,25 @@ DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], 
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		const char *name = DaoVmCode_GetCompoundOperator( op->code );
+		rout = DaoClass_FindMethod( self->xObject.defClass, name, host );
+		if( rout != NULL ){
+			DaoProcess_PushCallable( proc, rout, self, args+1, 1 );
+			return NULL;
+		}
+	}
+
 	rout = DaoClass_FindMethod( self->xObject.defClass, DaoVmCode_GetOperator( op->code ), host );
-	if( rout == NULL ) return NULL;
+	if( rout == NULL ){
+		switch( op->code ){
+		case DVM_EQ : DaoProcess_PutBoolean( proc, args[0] == args[1] ); break;
+		case DVM_NE : DaoProcess_PutBoolean( proc, args[0] != args[1] ); break;
+		default: break;
+		}
+		return NULL;
+	}
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
 	if( op->c == op->b && self == args[1] ) selfvalue = self;

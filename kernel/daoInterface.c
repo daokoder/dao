@@ -284,19 +284,9 @@ static DaoType* DaoInterface_CheckGetField( DaoType *self, DaoString *name, DaoR
 	return DaoType_CheckGetField( self, name );
 }
 
-static DaoValue* DaoInterface_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
-{
-	return DaoType_DoGetField( self->xInterface.abtype, self, name, proc );
-}
-
 static int DaoInterface_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	return DaoType_CheckSetField( self, name, value );
-}
-
-static int DaoInterface_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
-{
-	return DaoType_DoSetField( self->xInterface.abtype, self, name, value, proc );
 }
 
 static DaoType* DaoInterface_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
@@ -305,14 +295,6 @@ static DaoType* DaoInterface_CheckGetItem( DaoType *self, DaoType *index[], int 
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
-}
-
-static DaoValue* DaoInterface_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
-{
-	DaoType *type = self->xInterface.abtype;
-	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
-	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
-	return NULL;
 }
 
 static int DaoInterface_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
@@ -325,18 +307,6 @@ static int DaoInterface_CheckSetItem( DaoType *self, DaoType *index[], int N, Da
 
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, args, N+1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_INDEX;
-	return DAO_OK;
-}
-
-static int DaoInterface_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
-{
-	DaoType *type = self->xInterface.abtype;
-	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]=" );
-	DaoValue *args[ DAO_MAX_PARAM ];
-	if( rout == NULL ) return DAO_ERROR_INDEX;
-	args[0] = value;
-	memcpy( args+1, index, N*sizeof(DaoValue*) );
-	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
 	return DAO_OK;
 }
 
@@ -362,30 +332,6 @@ DaoType* DaoInterface_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx 
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoValue* DaoInterface_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
-{
-	DaoType *type = self->xInterface.abtype;
-	DaoRoutine *rout = NULL;
-	int retc = 0;
-
-	switch( op->code ){
-	case DVM_NOT   :
-	case DVM_MINUS :
-	case DVM_TILDE :
-	case DVM_SIZE  : break;
-	default: return NULL;
-	}
-	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
-	if( rout == NULL ) return NULL;
-	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
-	}else{
-		retc = DaoProcess_PushCallable( proc, rout, NULL, & self, 1 );
-	}
-	// TODO: retc;
-	return NULL;
-}
-
 DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
@@ -402,6 +348,16 @@ DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		rout = DaoType_FindFunctionChars( self, DaoVmCode_GetCompoundOperator( op->code ) );
+		if( rout != NULL ){
+			rout = DaoRoutine_MatchByType( rout, self, args+1, 1, DVM_CALL );
+			if( rout == NULL ) return NULL;
+			return (DaoType*) rout->routType->aux;
+		}
+	}
+
 	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
@@ -410,32 +366,6 @@ DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2
 	rout = DaoRoutine_MatchByType( rout, selftype, args, 2, DVM_CALL );
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
-}
-
-DaoValue* DaoInterface_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
-{
-	DaoRoutine *rout = NULL;
-	DaoValue *selfvalue = NULL;
-
-	switch( op->code ){
-	case DVM_ADD : case DVM_SUB :
-	case DVM_MUL : case DVM_DIV :
-	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
-	case DVM_AND : case DVM_OR :
-	case DVM_LT  : case DVM_LE :
-	case DVM_EQ  : case DVM_NE :
-		break;
-	default: return NULL;
-	}
-	rout = DaoType_FindFunctionChars( self->xInterface.abtype, DaoVmCode_GetOperator( op->code ) );
-	if( rout == NULL ) return NULL;
-
-	if( op->c == op->a && self == args[0] ) selfvalue = self;
-	if( op->c == op->b && self == args[1] ) selfvalue = self;
-	DaoProcess_PushCallable( proc, rout, selfvalue, args, 2 );
-	// TODO: retc;
-	return NULL;
 }
 
 DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
@@ -455,11 +385,6 @@ DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine 
 	return NULL;
 }
 
-DaoValue* DaoInterface_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
-{
-	return NULL;  /* The core method of the actual value will be used; */
-}
-
 DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "for" );
@@ -476,10 +401,6 @@ DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return NULL;
 }
 
-void DaoInterface_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
-{
-}
-
 void DaoInterface_CoreDelete( DaoValue *self )
 {
 	DaoInterface_Delete( (DaoInterface*) self );
@@ -487,27 +408,27 @@ void DaoInterface_CoreDelete( DaoValue *self )
 
 DaoTypeCore daoInterfaceCore =
 {
-	"interface",                                               /* name */
-	sizeof(DaoInterface),                                      /* size */
-	{ NULL },                                                  /* bases */
-	NULL,                                                      /* numbers */
-	NULL,                                                      /* methods */
-	DaoInterface_CheckGetField,    DaoInterface_DoGetField,    /* GetField */
-	DaoInterface_CheckSetField,    DaoInterface_DoSetField,    /* SetField */
-	DaoInterface_CheckGetItem,     DaoInterface_DoGetItem,     /* GetItem */
-	DaoInterface_CheckSetItem,     DaoInterface_DoSetItem,     /* SetItem */
-	DaoInterface_CheckUnary,       DaoInterface_DoUnary,       /* Unary */
-	DaoInterface_CheckBinary,      DaoInterface_DoBinary,      /* Binary */
-	DaoInterface_CheckConversion,  DaoInterface_DoConversion,  /* Conversion */
-	DaoInterface_CheckForEach,     DaoInterface_DoForEach,     /* ForEach */
-	NULL,                                                      /* Print */
-	NULL,                                                      /* Slice */
-	NULL,                                                      /* Compare */
-	NULL,                                                      /* Hash */
-	NULL,                                                      /* Create */
-	NULL,                                                      /* Copy */
-	DaoInterface_CoreDelete,                                   /* Delete */
-	NULL                                                       /* HandleGC */
+	"interface",                          /* name */
+	sizeof(DaoInterface),                 /* size */
+	{ NULL },                             /* bases */
+	NULL,                                 /* numbers */
+	NULL,                                 /* methods */
+	DaoInterface_CheckGetField,    NULL,  /* GetField */
+	DaoInterface_CheckSetField,    NULL,  /* SetField */
+	DaoInterface_CheckGetItem,     NULL,  /* GetItem */
+	DaoInterface_CheckSetItem,     NULL,  /* SetItem */
+	DaoInterface_CheckUnary,       NULL,  /* Unary */
+	DaoInterface_CheckBinary,      NULL,  /* Binary */
+	DaoInterface_CheckConversion,  NULL,  /* Conversion */
+	DaoInterface_CheckForEach,     NULL,  /* ForEach */
+	NULL,                                 /* Print */
+	NULL,                                 /* Slice */
+	NULL,                                 /* Compare */
+	NULL,                                 /* Hash */
+	NULL,                                 /* Create */
+	NULL,                                 /* Copy */
+	DaoInterface_CoreDelete,              /* Delete */
+	NULL                                  /* HandleGC */
 };
 
 
@@ -795,6 +716,16 @@ DaoType* DaoCinValue_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2]
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		rout = DaoType_FindFunctionChars( self, DaoVmCode_GetCompoundOperator( op->code ) );
+		if( rout != NULL ){
+			rout = DaoRoutine_MatchByType( rout, self, args+1, 1, DVM_CALL );
+			if( rout == NULL ) return NULL;
+			return (DaoType*) rout->routType->aux;
+		}
+	}
+
 	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
@@ -824,6 +755,15 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 	default: return NULL;
 	}
 	type = self->xCinValue.cintype->vatype;
+
+	if( op->c == op->a ){
+		rout = DaoType_FindFunctionChars( type, DaoVmCode_GetCompoundOperator( op->code ) );
+		if( rout != NULL ){
+			DaoProcess_PushCallable( proc, rout, self, args+1, 1 );
+			return NULL;
+		}
+	}
+
 	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 

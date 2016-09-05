@@ -159,7 +159,7 @@ static void DaoValue_QuotedPrint( DaoValue *self, DaoStream *stream, DMap *cycma
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
 	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
-	if( core->Print ) core->Print( self, stream, cycmap, proc );
+	DaoValue_Print( self, stream, cycmap, proc );
 	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 }
 
@@ -6022,6 +6022,16 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		rout = DaoType_FindFunctionChars( self, DaoVmCode_GetCompoundOperator( op->code ) );
+		if( rout != NULL ){
+			rout = DaoRoutine_MatchByType( rout, self, args+1, 1, DVM_CALL );
+			if( rout == NULL ) return NULL;
+			return (DaoType*) rout->routType->aux;
+		}
+	}
+
 	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
@@ -6050,6 +6060,16 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 		break;
 	default: return NULL;
 	}
+
+	if( op->c == op->a ){
+		DaoType *type = self->xCstruct.ctype;
+		rout = DaoType_FindFunctionChars( type, DaoVmCode_GetCompoundOperator( op->code ) );
+		if( rout != NULL ){
+			DaoProcess_PushCallable( proc, rout, self, args+1, 1 );
+			return NULL;
+		}
+	}
+
 	rout = DaoType_FindFunctionChars( self->xCstruct.ctype, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 

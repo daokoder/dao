@@ -673,7 +673,7 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *values[], DaoT
 			// self parameter will be passed by reference, const self argument
 			// should not be passed to non-const self parameter;
 			*/
-			if( DaoType_CheckInvarMatch( argtype, parnode->type, 1 ) == 0 ) continue;
+			if( argtype && DaoType_CheckInvarMatch( argtype, parnode->type, 1 ) == 0 ) continue;
 		}
 		if( defs && clear ) DMap_Reset( defs );
 

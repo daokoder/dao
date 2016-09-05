@@ -453,6 +453,7 @@ DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 DAO_DLL int         DaoVmCode_MayCreateReference( int code );
 
 DAO_DLL const char* DaoVmCode_GetOperator( int opcode );
+DAO_DLL const char* DaoVmCode_GetCompoundOperator( int opcode );
 
 DAO_DLL DaoVmCode*  DArray_PushCode( DArray *self, DaoVmCode code );
 

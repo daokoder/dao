@@ -3629,6 +3629,7 @@ SkipChecking:
 			if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
 			ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 			if( ct == NULL ) goto InvalidOper;
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeMatching( at, ct, defs );
 			if( DaoType_LooseChecking( at ) ) continue;
 			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
@@ -3645,6 +3646,7 @@ SkipChecking:
 				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
 				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				AssertTypeMatching( at, ct, defs );
 				if( at->realnum && ct->realnum ){
 					if( at->tid != DAO_INTEGER )

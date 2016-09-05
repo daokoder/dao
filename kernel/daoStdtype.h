@@ -40,7 +40,7 @@
 #define DAO_GENERIC_COMMON  DAO_VALUE_COMMON; DaoType *ctype
 #define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object
 
-void DaoValue_Init( void *dbase, char type );
+void DaoValue_Init( void *value, char type );
 
 
 
