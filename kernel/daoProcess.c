@@ -2709,11 +2709,12 @@ DaoCstruct* DaoProcess_PutCstruct( DaoProcess *self, DaoType *type )
 		return (DaoCstruct*) C;
 	}
 
-	if( CT == NULL && DaoType_ChildOf( type, CT ) == 0 ) return NULL;
+	if( CT != NULL && DaoType_MatchTo( type, CT, NULL ) == 0 ) return NULL;
 
 	O = type->core->Create( type );
 	if( O == NULL ) return NULL;
 
+	self->stackReturn = offset + self->activeCode->c;
 	GC_Assign( & self->activeValues[ self->activeCode->c ], O );
 	return (DaoCstruct*) O;
 }
