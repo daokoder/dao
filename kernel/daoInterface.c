@@ -624,7 +624,7 @@ static DaoValue* DaoCinValue_DoGetItem( DaoValue *self, DaoValue *index[], int N
 {
 	DaoType *type = self->xCinValue.cintype->vatype;
 	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
-	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
+	if( rout != NULL ) DaoProcess_PushCall( proc, rout, self, index, N );
 	return NULL;
 }
 
@@ -649,7 +649,7 @@ static int DaoCinValue_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoV
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	args[0] = value;
 	memcpy( args+1, index, N*sizeof(DaoValue*) );
-	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
+	DaoProcess_PushCall( proc, rout, self, args, N+1 );
 	return DAO_OK;
 }
 
@@ -678,6 +678,7 @@ DaoType* DaoCinValue_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 {
 	DaoType *type = self->xCinValue.cintype->vatype;
+	DaoType *argtype = proc->activeTypes[op->a];;
 	DaoRoutine *rout = NULL;
 	int retc = 0;
 
@@ -691,9 +692,9 @@ DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
+		retc = DaoProcess_PushCallWithTypes( proc, rout, self, & self, & argtype, 1 );
 	}else{
-		retc = DaoProcess_PushCallable( proc, rout, NULL, & self, 1 );
+		retc = DaoProcess_PushCallWithTypes( proc, rout, NULL, & self, & argtype, 1 );
 	}
 	// TODO: retc;
 	return NULL;
@@ -741,6 +742,7 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
 	DaoType *type;
+	DaoType *argtypes[2];
 
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
@@ -754,12 +756,15 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 		break;
 	default: return NULL;
 	}
+
 	type = self->xCinValue.cintype->vatype;
+	argtypes[0] = proc->activeTypes[ op->a ];
+	argtypes[1] = proc->activeTypes[ op->b ];
 
 	if( op->c == op->a ){
 		rout = DaoType_FindFunctionChars( type, DaoVmCode_GetCompoundOperator( op->code ) );
 		if( rout != NULL ){
-			DaoProcess_PushCallable( proc, rout, self, args+1, 1 );
+			DaoProcess_PushCallWithTypes( proc, rout, self, args+1, argtypes+1, 1 );
 			return NULL;
 		}
 	}
@@ -769,7 +774,7 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
 	if( op->c == op->b && self == args[1] ) selfvalue = self;
-	DaoProcess_PushCallable( proc, rout, selfvalue, args, 2 );
+	DaoProcess_PushCallWithTypes( proc, rout, selfvalue, args, argtypes, 2 );
 	// TODO: retc;
 	return NULL;
 }
@@ -825,7 +830,7 @@ DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, int copy, Dao
 	rout = DaoType_FindFunction( cintype->vatype, buffer );
 	DString_Delete( buffer );
 	if( rout != NULL ){
-		int rc = DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & type, 1 );
+		int rc = DaoProcess_PushCall( proc, rout, self, (DaoValue**) & type, 1 );
 		if( rc == 0 ) return NULL;
 	}
 	return DaoValue_Convert( self->xCinValue.value, type, copy, proc );
@@ -853,7 +858,7 @@ void DaoCinValue_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc
 	DaoCinType *cintype = self->xCinValue.cintype;
 	DaoRoutine *rout = DaoType_FindFunctionChars( cintype->vatype, "for" );
 	if( rout != NULL ){
-		DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & iterator, 1 );
+		DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
 	}
 }
 

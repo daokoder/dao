@@ -5758,7 +5758,7 @@ int DaoCtype_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoPr
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( type, proc->string );
     if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
-    DaoProcess_PushCallable( proc, rout, self, & value, 1 );
+    DaoProcess_PushCall( proc, rout, self, & value, 1 );
 	return DAO_OK;
 }
 
@@ -5774,7 +5774,7 @@ DaoValue* DaoCtype_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProce
 {
 	DaoType *type = self->xCtype.classType;
 	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
-	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
+	if( rout != NULL ) DaoProcess_PushCall( proc, rout, self, index, N );
 	return NULL;
 }
 
@@ -5799,7 +5799,7 @@ int DaoCtype_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *valu
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	args[0] = value;
 	memcpy( args+1, index, N*sizeof(DaoValue*) );
-	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
+	DaoProcess_PushCall( proc, rout, self, args, N+1 );
 	return DAO_OK;
 }
 
@@ -5929,7 +5929,7 @@ DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoPro
 {
 	DaoType *type = self->xCstruct.ctype;
 	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
-	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
+	if( rout != NULL ) DaoProcess_PushCall( proc, rout, self, index, N );
 	return NULL;
 }
 
@@ -5954,7 +5954,7 @@ int DaoCstruct_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *va
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	args[0] = value;
 	memcpy( args+1, index, N*sizeof(DaoValue*) );
-	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
+	DaoProcess_PushCall( proc, rout, self, args, N+1 );
 	return DAO_OK;
 }
 
@@ -5983,6 +5983,7 @@ DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 {
 	DaoType *type = self->xCstruct.ctype;
+	DaoType *argtype = proc->activeTypes[op->a];;
 	DaoRoutine *rout = NULL;
 	int retc = 0;
 
@@ -5996,9 +5997,9 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
+		retc = DaoProcess_PushCallWithTypes( proc, rout, self, & self, & argtype, 1 );
 	}else{
-		retc = DaoProcess_PushCallable( proc, rout, NULL, & self, 1 );
+		retc = DaoProcess_PushCallWithTypes( proc, rout, NULL, & self, & argtype, 1 );
 	}
 	// TODO: retc;
 	return NULL;
@@ -6046,6 +6047,7 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 {
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
+	DaoType *argtypes[2];
 
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
@@ -6061,11 +6063,14 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	default: return NULL;
 	}
 
+	argtypes[0] = proc->activeTypes[ op->a ];
+	argtypes[1] = proc->activeTypes[ op->b ];
+
 	if( op->c == op->a ){
 		DaoType *type = self->xCstruct.ctype;
 		rout = DaoType_FindFunctionChars( type, DaoVmCode_GetCompoundOperator( op->code ) );
 		if( rout != NULL ){
-			DaoProcess_PushCallable( proc, rout, self, args+1, 1 );
+			DaoProcess_PushCallWithTypes( proc, rout, self, args+1, argtypes+1, 1 );
 			return NULL;
 		}
 	}
@@ -6075,7 +6080,7 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
 	if( op->c == op->b && self == args[1] ) selfvalue = self;
-	DaoProcess_PushCallable( proc, rout, selfvalue, args, 2 );
+	DaoProcess_PushCallWithTypes( proc, rout, selfvalue, args, argtypes, 2 );
 	// TODO: retc;
 	return NULL;
 }
@@ -6121,7 +6126,7 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	rout = DaoType_FindFunction( self->xCstruct.ctype, buffer );
 	DString_Delete( buffer );
 	if( rout != NULL ){
-		int rc = DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & type, 1 );
+		int rc = DaoProcess_PushCall( proc, rout, self, (DaoValue**) & type, 1 );
 		if( rc ) return NULL;
 	}
 	return NULL;
@@ -6147,7 +6152,7 @@ void DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc 
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self->xCstruct.ctype, "for" );
 	if( rout != NULL ){
-		DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & iterator, 1 );
+		DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
 	}
 }
 

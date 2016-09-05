@@ -580,7 +580,7 @@ static int DaoProcess_CheckInvarMethod( DaoProcess *self, DaoRoutine *routine )
 // If the callable is a constructor, and O is a derived type of the constructor's type,
 // cast O to the constructor's type and then call the constructor on the casted object:
 */
-static int DaoProcess_PushCallableX( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], DaoType *T[], int N )
+int DaoProcess_PushCallWithTypes( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], DaoType *T[], int N )
 {
 	if( R == NULL ) return DAO_ERROR;
 	R = DaoRoutine_Resolve( R, O, NULL, P, T, N, DVM_CALL );
@@ -601,9 +601,9 @@ static int DaoProcess_PushCallableX( DaoProcess *self, DaoRoutine *R, DaoValue *
 	}
 	return 0;
 }
-int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], int N )
+int DaoProcess_PushCall( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], int N )
 {
-	return DaoProcess_PushCallableX( self, R, O, P, NULL, N );
+	return DaoProcess_PushCallWithTypes( self, R, O, P, NULL, N );
 }
 /* Special case: mt.start()!!{} */
 void DaoProcess_InterceptReturnValue( DaoProcess *self )
@@ -747,7 +747,7 @@ DaoValue* DaoProcess_Eval( DaoProcess *self, DaoNamespace *nspace, const char *s
 }
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {
-	int ret = DaoProcess_PushCallable( self, M, O, P, N );
+	int ret = DaoProcess_PushCall( self, M, O, P, N );
 	if( ret ) goto Done;
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );

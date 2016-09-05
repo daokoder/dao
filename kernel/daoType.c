@@ -1890,12 +1890,12 @@ DaoValue* DaoType_DoGetField( DaoType *self, DaoValue *object, DaoString *name, 
 	DString_Append( proc->string, name->value );
 	rout = DaoType_FindFunction( self, proc->string );
 	if( rout != NULL ){
-		DaoProcess_PushCallable( proc, rout, object, NULL, 0 );
+		DaoProcess_PushCall( proc, rout, object, NULL, 0 );
 	}else{
 		DaoValue *arg = (DaoValue*) name;
 		rout = DaoType_FindFunctionChars( self, "." );
 		if( rout == NULL ) return NULL;
-		DaoProcess_PushCallable( proc, rout, object, & arg, 1 );
+		DaoProcess_PushCall( proc, rout, object, & arg, 1 );
 	}
 	return NULL;
 }
@@ -1934,14 +1934,14 @@ int DaoType_DoSetField( DaoType *self, DaoValue *object, DaoString *name, DaoVal
     DString_AppendChars( proc->string, "=" );
     rout = DaoType_FindFunction( self, proc->string );
 	if( rout != NULL ){
-		return DaoProcess_PushCallable( proc, rout, object, & value, 1 );
+		return DaoProcess_PushCall( proc, rout, object, & value, 1 );
 	}else{
 		DaoValue *args[2];
 		args[0] = (DaoValue*) name;
 		args[1] = value;
 		rout = DaoType_FindFunctionChars( self, ".=" );
 		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
-		return DaoProcess_PushCallable( proc, rout, object, args, 2 );
+		return DaoProcess_PushCall( proc, rout, object, args, 2 );
 	}
 	return DAO_ERROR_FIELD_ABSENT;
 }
