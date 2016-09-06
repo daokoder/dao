@@ -1573,7 +1573,6 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		newtype->mapNames = DMap_Copy( routype->mapNames );
 	}
 
-	if( routype->name->chars[0] == '@' ) DString_AppendChar( newtype->name, '@' );
 	DString_AppendChars( newtype->name, "routine<" );
 	for(i=0; i<routype->args->size; i++){
 		if( i >0 ) DString_AppendChars( newtype->name, "," );

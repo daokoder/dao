@@ -705,7 +705,7 @@ static DaoType* DaoFloat_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	case DVM_MUL : case DVM_DIV :
 	case DVM_MOD : case DVM_POW :
 		if( left->tid == DAO_NONE || right->tid == DAO_NONE ) return NULL;
-		if( left->tid <= DAO_FLOAT && right->tid <= DAO_FLOAT ) return dao_type_int;
+		if( left->tid <= DAO_FLOAT && right->tid <= DAO_FLOAT ) return dao_type_float;
 		break;
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
@@ -1034,7 +1034,7 @@ static DaoType* DaoComplex_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *a
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 		if( left->tid == DAO_NONE || right->tid == DAO_NONE ) return NULL;
-		if( left->tid <= DAO_COMPLEX && right->tid <= DAO_COMPLEX ) return dao_type_int;
+		if( left->tid <= DAO_COMPLEX && right->tid <= DAO_COMPLEX ) return dao_type_complex;
 		break;
 	case DVM_EQ : case DVM_NE :
 		if( left->tid <= DAO_COMPLEX && right->tid <= DAO_COMPLEX ) return dao_type_bool;
@@ -5505,6 +5505,8 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, int copy
 	if( type->tid == DAO_TUPLE ){
 		int i, typeSize = type->args->size - type->variadic;
 		if( self->ctype == type || type->args->size == 0 ){
+			return (DaoValue*) DaoTuple_TryCopy( self, copy, proc );
+		}else if( DaoType_MatchTo( self->ctype, type, NULL ) >= DAO_MT_EQ ){
 			return (DaoValue*) DaoTuple_TryCopy( self, copy, proc );
 		}
 		tuple = DaoProcess_PrepareTuple( proc, type, self->size );

@@ -1601,16 +1601,16 @@ static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	// Check type compatibility:
 	*/
 	if( etype->tid == DAO_COMPLEX ){
-		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_COMPLEX ) typeOK = 1;
+		if( value->tid >= DAO_BOOLEAN && value->tid <= DAO_COMPLEX ) typeOK = 1;
 		if( value->tid == DAO_ARRAY ){
 			DaoType *etype2 = value->args->items.pType[0];
-			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_COMPLEX ) typeOK = 1;
+			if( etype2->tid >= DAO_BOOLEAN && etype2->tid <= DAO_COMPLEX ) typeOK = 1;
 		}
 	}else{
-		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_FLOAT ) typeOK = 1;
+		if( value->tid >= DAO_BOOLEAN && value->tid <= DAO_FLOAT ) typeOK = 1;
 		if( value->tid == DAO_ARRAY ){
 			DaoType *etype2 = value->args->items.pType[0];
-			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_FLOAT ) typeOK = 1;
+			if( etype2->tid >= DAO_BOOLEAN && etype2->tid <= DAO_FLOAT ) typeOK = 1;
 		}
 	}
 	if( typeOK == 0 ) return DAO_ERROR_TYPE;

@@ -2336,7 +2336,7 @@ CallEntry:
 			}
 		}OPNEXT() OPCASE( ISA_ST ){
 			vA = locVars[vmc->a];
-			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
+			locVars[vmc->c]->xBoolean.value = vA && vA->type == locVars[vmc->b]->xType.tid;
 		}OPNEXT() OPCASE( TUPLE_SIM ){
 			DaoProcess_DoTupleSim( self, vmc );
 		}OPNEXT()
