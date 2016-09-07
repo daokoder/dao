@@ -1051,7 +1051,7 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	case DAO_CLASS  : return self->xClass.clsType;
 	case DAO_CTYPE  : return self->xCtype.classType;
 	case DAO_CDATA  :
-	case DAO_CSTRUCT : return self->xCdata.ctype;
+	case DAO_CSTRUCT : return self->xCstruct.ctype;
 	case DAO_ROUTINE   : return self->xRoutine.routType;
 	case DAO_PAR_NAMED : return self->xNameValue.ctype;
 	case DAO_INTERFACE : return self->xInterface.abtype;

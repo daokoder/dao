@@ -341,8 +341,8 @@ static DaoVmCodeInfo dao_code_infolist[] =
 
 	/* for compiling only */
 	{ "nop",        DVM_UNUSED,     DAO_CODE_NOP, 0 },
-	{ "label",      DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "load2",      DVM_UNUSED,     DAO_CODE_NOP, 0 },
+	{ "label",      DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "loop",       DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "branch",     DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "do",         DVM_UNUSED,     DAO_CODE_NOP, 0 },

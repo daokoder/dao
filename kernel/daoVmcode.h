@@ -336,8 +336,8 @@ typedef enum DaoOpcode DaoOpcode;
 enum DaoOpcodeExtra
 {
 	DVM_NOP = DVM_NULL + 1 ,
-	DVM_LABEL ,
 	DVM_LOAD2 ,
+	DVM_LABEL ,
 	DVM_LOOP ,
 	DVM_BRANCH ,
 	DVM_DO ,

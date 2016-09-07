@@ -415,7 +415,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		DaoValue_AddType( scope, name, alias );
 
 	}else{
-		sptree = value->xCdata.ctype->kernel->sptree;
+		sptree = value->xCtype.valueType->kernel->sptree;
 		if( sptree == NULL ) goto Error;
 		if( sptree->holders->size && types->size )
 			if( DaoTypeTree_Test( sptree, types->items.pType, types->size ) == 0 ) goto Error;

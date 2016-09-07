@@ -2553,7 +2553,7 @@ int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 		DaoType *type;
 		if( self->activeCode->code == DVM_MOVE || self->activeCode->code == DVM_MOVE_PP ){
 			if( (A->type >= DAO_CSTRUCT && A->type <= DAO_CDATA) && t && t->tid == A->type ){
-				if( DaoType_MatchTo( A->xCdata.ctype, t, NULL ) ){
+				if( DaoType_MatchTo( A->xCstruct.ctype, t, NULL ) ){
 					DaoValue_Copy( A, C );
 					return 1;
 				}
@@ -3122,7 +3122,7 @@ void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
 	if( dA->type == DAO_OBJECT ){
 		*res = dA->xObject.rootObject->defClass == dB->xObject.rootObject->defClass;
 	}else if( dA->type >= DAO_CSTRUCT && dA->type <= DAO_CDATA ){
-		*res = dA->xCdata.ctype == dB->xCdata.ctype;
+		*res = dA->xCstruct.ctype == dB->xCstruct.ctype;
 	}else if( dA->type >= DAO_ENUM && dA->type <= DAO_TUPLE ){
 		DaoType *t1 = NULL;
 		DaoType *t2 = NULL;
