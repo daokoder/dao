@@ -267,12 +267,18 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes )
 	for(i=0,n=vmCodes->size; i<n; i++){
 		body->vmCodes->data.codes[i] = *(DaoVmCode*) vmCodes->items.pVmc[i];
 	}
-	return DaoRoutine_DoTypeInference( self, 0 );
+	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost ){
+		return DaoRoutine_DoTypeInference( self, 0 );
+	}
+	return 1;
 }
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes )
 {
 	DArray_Assign( self->body->vmCodes, vmCodes );
-	return DaoRoutine_DoTypeInference( self, 0 );
+	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost ){
+		return DaoRoutine_DoTypeInference( self, 0 );
+	}
+	return 1;
 }
 
 void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns )

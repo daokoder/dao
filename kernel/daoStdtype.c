@@ -896,7 +896,7 @@ static int DaoComplex_CheckSetField( DaoType *self, DaoString *field, DaoType *v
 	if( strcmp( field->value->chars, "real" ) != 0 && strcmp( field->value->chars, "imag" ) != 0 ){
 		return DAO_ERROR_FIELD;
 	}
-	if( value->tid > DAO_FLOAT ) return DAO_ERROR_VALUE;
+	if( value->tid > DAO_FLOAT && ! (value->tid & DAO_ANY) ) return DAO_ERROR_VALUE;
 	return DAO_OK;
 }
 
@@ -1340,10 +1340,10 @@ static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTy
 	if( N != 1 ) return DAO_ERROR_INDEX;
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( ! DaoType_CheckRangeIndex( index[0] ) ) return DAO_ERROR_INDEX;
-		if( value->tid != DAO_STRING ) return DAO_ERROR_VALUE;
+		if( value->tid != DAO_STRING && ! (value->tid & DAO_ANY) ) return DAO_ERROR_VALUE;
 	}else{
 		if( ! DaoType_CheckNumberIndex( index[0] ) ) return DAO_ERROR_INDEX;
-		if( value->tid > DAO_FLOAT ) return DAO_ERROR_VALUE;
+		if( value->tid > DAO_FLOAT && ! (value->tid & DAO_ANY) ) return DAO_ERROR_VALUE;
 	}
 	return DAO_OK;
 }
@@ -6245,7 +6245,7 @@ static DaoTypeCore daoCstructCore =
 	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
 	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
-	NULL,                        NULL,                     /* ForEach */
+	DaoCstruct_CheckForEach,     DaoCstruct_DoForEach,     /* ForEach */
 	DaoCstruct_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Compare */

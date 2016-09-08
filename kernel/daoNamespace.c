@@ -898,6 +898,11 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			node->value.pInt = LOOKUP_BIND( st, pm, 0, self->constants->size );
 			DaoRoutines_Add( mroutine, (DaoRoutine*) value );
 			DList_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine, DAO_GLOBAL_CONSTANT ) );
+			/*
+			// Always add an entry for a routine for convenience,
+			// for example, for getting all defined routines in a file:
+			*/
+			DList_Append( self->constants, DaoConstant_New( value, DAO_GLOBAL_CONSTANT ) );
 			return node->value.pInt;
 		}
 	}
@@ -2019,16 +2024,12 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 							DaoRoutine *rout = meta->routines->items.pRoutine[k];
 							/* skip constructor */
 							if( rout->attribs & DAO_ROUT_INITOR ) continue;
-							/* skip methods not defined in this parent type */
-							if( rout->routHost != skn->abtype ) continue;
 							DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
 						}
 					}else{
 						DaoRoutine *rout = it->value.pRoutine;
 						/* skip constructor */
 						if( rout->attribs & DAO_ROUT_INITOR ) continue;
-						/* skip methods not defined in this parent type */
-						if( rout->routHost != skn->abtype ) continue;
 						DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
 					}
 				}

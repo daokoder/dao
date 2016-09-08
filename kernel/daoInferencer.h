@@ -88,6 +88,7 @@ struct DaoInferencer
 	DList      *array;
 	DList      *array2;
 	DList      *defers;
+	DList      *routines;
 
 	DMap        *defs;
 	DMap        *defs2;

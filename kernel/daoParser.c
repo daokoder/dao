@@ -213,7 +213,6 @@ DaoParser* DaoParser_New()
 	self->switchNames = DList_New( DAO_DATA_STRING );
 	self->enumTypes = DList_New(0);
 	self->routCompilable = DList_New(0);
-	self->routReInferable = DList_New(0);
 	DList_Append( self->lookupTables, self->table );
 	DList_Append( self->strings, self->string );
 	DList_Append( self->lists, self->toks );
@@ -257,7 +256,6 @@ void DaoParser_Delete( DaoParser *self )
 	DList_Delete( self->strings );
 	DList_Delete( self->lists );
 	DList_Delete( self->routCompilable );
-	DList_Delete( self->routReInferable );
 	DList_Delete( self->typeItems );
 
 	DaoLexer_Delete( self->lexer );
@@ -343,7 +341,6 @@ void DaoParser_Reset( DaoParser *self )
 	DList_Clear( self->enumTypes );
 	DList_Clear( self->vmCodes );
 	DList_Clear( self->routCompilable );
-	DList_Clear( self->routReInferable );
 
 	DaoLexer_Reset( self->lexer );
 	DaoLexer_Reset( self->elexer );
@@ -2126,32 +2123,6 @@ int DaoParser_ParseScript( DaoParser *self )
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
-	/*
-	// Currently the __main__ routine is inferenced after other routines.
-	// As a result, some code in those routines cannot be specialized,
-	// because the type information for some global variable may not be
-	// available. Redoing inference on those routines may allow these
-	// code to be specialized.
-	//
-	// Do not redo such inference on compiling to bytecode.
-	// Because the type information for some global variables (declare
-	// without explicit types) are not yet available when those routines
-	// are decoded. Without proper type information, type errors may arise
-	// for specialized code that use global variables.
-	//
-	// Example:
-	//   global glb = rand(100)
-	//   routine func() 
-	//   {
-	//     return glb + 456 
-	//   }
-	 */
-	if( self->byteBlock ) return 1;
-	for(i=0; i<self->routReInferable->size; i++){
-		DaoRoutine *rout = (DaoRoutine*) self->routReInferable->items.pValue[i];
-		DaoRoutine_DoTypeInference( rout, 0 );
-	}
-	self->routReInferable->size = 0;
 	return 1;
 }
 
@@ -2652,6 +2623,8 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 		DaoParser_Error( self, DAO_ROUT_WAS_IMPLEMENTED, newrout->routName );
 		return NULL;
 	}
+	rout->body->codeStart = newrout->body->codeStart;
+	rout->body->codeEnd = newrout->body->codeEnd;
 	return rout;
 }
 /*
@@ -2879,7 +2852,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			goto InvalidDefinition;
 		}
 		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
-		if( parser->usingGlobal ) DList_Append( self->routReInferable, parser->routine );
 	}
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right + 1;
@@ -3074,7 +3046,6 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 			parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
 		}
 		error |= DaoParser_ParseRoutine( parser ) == 0;
-		if( parser->usingGlobal ) DList_Append( self->routReInferable, rout );
 		if( error ) DaoParser_PrintError( parser, 0, 0, NULL );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) break;

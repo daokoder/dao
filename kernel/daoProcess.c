@@ -2342,6 +2342,7 @@ CallEntry:
 		}OPNEXT()
 		OPDEFAULT()
 		{
+			DaoProcess_RaiseError( self, "Error", "Unkown bytecode cannot be executed!" );
 			goto CheckException;
 RaiseErrorIndexOutOfRange:
 			self->activeCode = vmc;

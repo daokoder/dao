@@ -143,7 +143,6 @@ struct DaoParser
 	DArray_(int)    *outers;
 
 	DList_(DaoRoutine*) *routCompilable; /* list of defined routines with bodies */
-	DList_(DaoRoutine*) *routReInferable;
 
 	DList_(DaoValue*) *refCountedList;
 

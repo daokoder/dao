@@ -1825,12 +1825,12 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
 		if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		if( right->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
-		break;
+		return dao_type_bool;
 	case DVM_EQ  : case DVM_NE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
 		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
 		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
-		break;
+		return dao_type_bool;
 	case DVM_IN :
 		if( left->tid == DAO_NONE ) return NULL;
 		if( left->tid > DAO_COMPLEX ) return NULL;
@@ -1889,6 +1889,24 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 		DaoArray *na = (DaoArray*) A;
 		DaoArray *nb = (DaoArray*) B;
 		DaoArray *nc;
+		if( op->code >= DVM_LT && op->code <= DVM_NE ){
+			int D = DaoValue_Compare( A, B );
+			switch( op->code ){
+			case DVM_LT:
+				if( abs( D ) > 1 ) return NULL;
+				D = D <  0;
+				break;
+			case DVM_LE:
+				if( abs( D ) > 1 ) return NULL;
+				D = D <= 0;
+				break;
+			case DVM_EQ: D = D == 0; break;
+			case DVM_NE: D = D != 0; break;
+			default: break;
+			}
+			DaoProcess_PutBoolean( proc, D );
+			return NULL;
+		}
 		if( op->a == op->c ){
 			nc = na;
 		}else if( op->b == op->c ){
@@ -2031,18 +2049,20 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 	DaoArray *first = NULL;
 	DaoArray *sub = NULL;
 	DaoVmCode *sect;
+	daoint dims[DAO_MAX_PARAM];
 	daoint D2 = p[1]->xInteger.value;
 	daoint D3 = p[2]->xInteger.value;
 	daoint A1 = D2 * D3;
 	daoint i, j, k, entry, size = 1;
 
-	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
+	/* If multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
 	for(i=0; i<N; i++){
 		daoint d = p[i]->xInteger.value;
 		if( d < 0 ){
 			DaoProcess_RaiseError( proc, "Param", NULL );
 			break;
 		}
+		dims[i] = d;
 		size *= d;
 	}
 	if( size < 0 ){
@@ -2074,7 +2094,7 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 		if( i == 0 ){
 			int D = N;
 			DaoArray_SetDimCount( array, N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0) );
-			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
+			for(j=0; j<N; j++) array->dims[j] = dims[j];
 			if( res->type == DAO_ARRAY ){
 				first = DaoArray_Copy( (DaoArray*) res, NULL );
 				if( first->ndim == 2 && (first->dims[0] == 1 || first->dims[1] == 1) ){
