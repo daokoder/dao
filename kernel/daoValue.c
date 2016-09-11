@@ -1064,13 +1064,13 @@ DaoType* DaoValue_GetType( DaoValue *self )
 }
 DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self )
 {
-	if( self == NULL ) return DaoVmSpace_GetTypeCore( DAO_NONE );
+	if( self == NULL ) return DaoType_GetCoreByID( DAO_NONE );
 	switch( self->type ){
 	case DAO_CSTRUCT :
 	case DAO_CDATA   : return self->xCstruct.ctype->core;
 	default : break;
 	}
-	return DaoVmSpace_GetTypeCore( self->type );
+	return DaoType_GetCoreByID( self->type );
 }
 
 

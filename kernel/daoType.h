@@ -196,6 +196,7 @@ DAO_DLL int DaoType_CheckSetField( DaoType *self, DaoString *name, DaoType *valu
 DAO_DLL int DaoType_DoSetField( DaoType *self, DaoValue *object, DaoString *name, DaoValue *value, DaoProcess *proc );
 
 DAO_DLL DaoTypeCore* DaoType_GetTypeCore( DaoType *self );
+DAO_DLL DaoTypeCore* DaoType_GetCoreByID( short type );
 
 
 
@@ -265,6 +266,39 @@ DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count );
 
 DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count );
 DAO_DLL void DaoType_SpecializeMethods( DaoType *self );
+
+
+extern DaoTypeCore  daoNoneCore;
+extern DaoTypeCore  daoBooleanCore;
+extern DaoTypeCore  daoIntegerCore;
+extern DaoTypeCore  daoFloatCore;
+extern DaoTypeCore  daoComplexCore;
+extern DaoTypeCore  daoStringCore;
+extern DaoTypeCore  daoEnumCore;
+extern DaoTypeCore  daoArrayCore;
+extern DaoTypeCore  daoListCore;
+extern DaoTypeCore  daoMapCore;
+extern DaoTypeCore  daoTupleCore;
+extern DaoTypeCore  daoNameValueCore;
+extern DaoTypeCore  daoCtypeCore;
+extern DaoTypeCore  daoCstructCore;
+extern DaoTypeCore  daoCdataCore;
+extern DaoTypeCore  daoClassCore;
+extern DaoTypeCore  daoObjectCore;
+extern DaoTypeCore  daoInterfaceCore;
+extern DaoTypeCore  daoCinTypeCore;
+extern DaoTypeCore  daoCinValueCore;
+extern DaoTypeCore  daoNamespaceCore;
+extern DaoTypeCore  daoRoutineCore;
+extern DaoTypeCore  daoProcessCore;
+extern DaoTypeCore  daoTypeCore;
+extern DaoTypeCore  daoTypeKernelCore;
+
+extern DaoTypeCore  daoDeviceCore;
+extern DaoTypeCore  daoStreamCore;
+
+extern DaoTypeCore  daoFutureCore;
+extern DaoTypeCore  daoChannelCore;
 
 
 #endif

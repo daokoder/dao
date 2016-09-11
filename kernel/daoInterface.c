@@ -310,7 +310,7 @@ static int DaoInterface_CheckSetItem( DaoType *self, DaoType *index[], int N, Da
 	return DAO_OK;
 }
 
-DaoType* DaoInterface_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
+static DaoType* DaoInterface_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 
@@ -332,7 +332,7 @@ DaoType* DaoInterface_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx 
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
+static DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
@@ -368,7 +368,7 @@ DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+static DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "(" );
@@ -385,7 +385,7 @@ DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine 
 	return NULL;
 }
 
-DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
+static DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "for" );
 	if( rout != NULL ){
@@ -401,7 +401,7 @@ DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return NULL;
 }
 
-void DaoInterface_CoreDelete( DaoValue *self )
+static void DaoInterface_CoreDelete( DaoValue *self )
 {
 	DaoInterface_Delete( (DaoInterface*) self );
 }

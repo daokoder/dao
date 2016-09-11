@@ -2,9 +2,11 @@
 routine main( index : int, name = "abc" )
 {
 	io.writeln( "main(index:int,name=\"abc\")", index, name )
+	return 0
 }
 
 routine main( name : string )
 {
 	io.writeln( "main(name:string)", name )
+	return 0
 }

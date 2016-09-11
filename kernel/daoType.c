@@ -74,6 +74,179 @@ DaoType *dao_type_iterator_any = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
 
+static DaoType* DaoType_CheckGetFieldAny( DaoType *self, DaoString *name, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static int DaoType_CheckSetFieldAny( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckGetItemAny( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static int DaoType_CheckSetItemAny( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckUnaryAny( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static DaoType* DaoType_CheckBinaryAny( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
+{
+	return self;
+}
+
+static DaoType* DaoType_CheckConversionAny( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	return type;
+}
+
+static DaoType* DaoType_CheckForEachAny( DaoType *self, DaoRoutine *ctx )
+{
+	return DaoNamespace_MakeIteratorType( ctx->nameSpace, self );
+}
+
+
+static DaoTypeCore daoAnyCore =
+{
+	"any",                          /* name */
+	0,                              /* size */
+	{ NULL },                       /* bases */
+	NULL,                           /* numbers */
+	NULL,                           /* methods */
+	DaoType_CheckGetFieldAny,    NULL,  /* GetField */
+	DaoType_CheckSetFieldAny,    NULL,  /* SetField */
+	DaoType_CheckGetItemAny,     NULL,  /* GetItem */
+	DaoType_CheckSetItemAny,     NULL,  /* SetItem */
+	DaoType_CheckUnaryAny,       NULL,  /* Unary */
+	DaoType_CheckBinaryAny,      NULL,  /* Binary */
+	DaoType_CheckConversionAny,  NULL,  /* Conversion */
+	DaoType_CheckForEachAny,     NULL,  /* ForEach */
+	NULL,                           /* Print */
+	NULL,                           /* Slice */
+	NULL,                           /* Compare */
+	NULL,                           /* Hash */
+	NULL,                           /* Create */
+	NULL,                           /* Copy */
+	NULL,                           /* Delete */
+	NULL                            /* HandleGC */
+};
+
+
+static DaoType* DaoType_CheckGetFieldVariant( DaoType *self, DaoString *name, DaoRoutine *ctx )
+{
+	return dao_type_any;
+}
+
+static int DaoType_CheckSetFieldVariant( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckGetItemVariant( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	return dao_type_any;
+}
+
+static int DaoType_CheckSetItemVariant( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckUnaryVariant( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
+{
+	return dao_type_any;
+}
+
+static DaoType* DaoType_CheckBinaryVariant( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
+{
+	return dao_type_any;
+}
+
+static DaoType* DaoType_CheckConversionVariant( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	return type;
+}
+
+static DaoType* DaoType_CheckForEachVariant( DaoType *self, DaoRoutine *ctx )
+{
+	return DaoNamespace_MakeIteratorType( ctx->nameSpace, dao_type_any );
+}
+
+
+static DaoTypeCore daoVariantCore =
+{
+	"variant",                          /* name */
+	0,                                  /* size */
+	{ NULL },                           /* bases */
+	NULL,                               /* numbers */
+	NULL,                               /* methods */
+	DaoType_CheckGetFieldVariant,    NULL,  /* GetField */
+	DaoType_CheckSetFieldVariant,    NULL,  /* SetField */
+	DaoType_CheckGetItemVariant,     NULL,  /* GetItem */
+	DaoType_CheckSetItemVariant,     NULL,  /* SetItem */
+	DaoType_CheckUnaryVariant,       NULL,  /* Unary */
+	DaoType_CheckBinaryVariant,      NULL,  /* Binary */
+	DaoType_CheckConversionVariant,  NULL,  /* Conversion */
+	DaoType_CheckForEachVariant,     NULL,  /* ForEach */
+	NULL,                               /* Print */
+	NULL,                               /* Slice */
+	NULL,                               /* Compare */
+	NULL,                               /* Hash */
+	NULL,                               /* Create */
+	NULL,                               /* Copy */
+	NULL,                               /* Delete */
+	NULL                                /* HandleGC */
+};
+
+
+DaoTypeCore* DaoType_GetCoreByID( short type )
+{
+	switch( type ){
+	case DAO_NONE      :  return & daoNoneCore;
+	case DAO_BOOLEAN   :  return & daoBooleanCore;
+	case DAO_INTEGER   :  return & daoIntegerCore;
+	case DAO_FLOAT     :  return & daoFloatCore;
+	case DAO_COMPLEX   :  return & daoComplexCore;
+	case DAO_ENUM      :  return & daoEnumCore;
+	case DAO_STRING    :  return & daoStringCore;
+	case DAO_LIST      :  return & daoListCore;
+	case DAO_MAP       :  return & daoMapCore;
+	case DAO_TUPLE     :  return & daoTupleCore;
+	case DAO_PAR_NAMED :  return & daoNameValueCore;
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY  :  return & daoArrayCore;
+#else
+	case DAO_ARRAY  :  return & daoNoneCore;
+#endif
+	case DAO_CTYPE     :  return & daoCtypeCore;
+	case DAO_CSTRUCT   :  return & daoCstructCore;
+	case DAO_CDATA     :  return & daoCdataCore;
+	case DAO_INTERFACE :  return & daoInterfaceCore;
+	case DAO_CINTYPE   :  return & daoCinTypeCore;
+	case DAO_CINVALUE  :  return & daoCinValueCore;
+	case DAO_CLASS     :  return & daoClassCore;
+	case DAO_OBJECT    :  return & daoObjectCore;
+	case DAO_ROUTINE   :  return & daoRoutineCore;
+	case DAO_NAMESPACE :  return & daoNamespaceCore;
+	case DAO_PROCESS   :  return & daoProcessCore;
+	case DAO_TYPE      :  return & daoTypeCore;
+	case DAO_TYPEKERNEL : return & daoTypeKernelCore;
+	case DAO_VARIANT    : return & daoVariantCore;
+	default : if( type & DAO_ANY ) return & daoAnyCore;
+	}
+	return NULL;
+}
+
+
 static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
 
 void DaoType_Init()
@@ -267,7 +440,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *nest )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New();
-	self->core = DaoVmSpace_GetTypeCore( tid );
+	self->core = DaoType_GetCoreByID( tid );
 	//self->kernel = core->kernel;
 	//GC_IncRC( self->kernel );
 	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) dao_type_any;

@@ -1820,14 +1820,14 @@ static void DaoSTR_Fetch( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Clear( pt ); /* passed in by value; */
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
-	if( end == 0 ) end = DString_Size( self ) - 1;
+	if( N < 5 ) end = self->size;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) goto Done;
 	if( DaoRegex_Match( patt, self, & start, & end ) ){
 		matched = 1;
 		if( group > 0 && DaoRegex_SubMatch( patt, group, & start, & end ) ==0 ) matched = 0;
 	}
 Done:
-	if( matched ) DString_SubString( self, pt, start, end-start+1 );
+	if( matched ) DString_SubString( self, pt, start, end - start );
 	DaoProcess_PutString( proc, pt );
 }
 
@@ -1843,7 +1843,7 @@ static void DaoSTR_Match( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
-	if( end == 0 ) end = DString_Size( self ) - 1;
+	if( N < 5 ) end = self->size;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) goto Done;
 	if( DaoRegex_Match( patt, self, & start, & end ) ){
 		matched = 1;
@@ -1871,7 +1871,7 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	daoint index = p[3]->xInteger.value;
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
-	if( end == 0 ) end = DString_Size( self ) - 1;
+	if( N < 6 ) end = self->size;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	DaoRegex_ChangeExt( patt, self, res, str, index, & start, & end );
 }
@@ -1889,14 +1889,14 @@ static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
-	if( end == 0 ) end = DString_Size( self ) - 1;
+	if( N < 4 ) end = self->size;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	if( DaoRegex_Match( patt, self, & start, & end ) ==0 ) return;
 	subs = DaoString_New();
 	for(gid=0; gid<=patt->group; ++gid){
 		DString_Clear( subs->value );
 		if( DaoRegex_SubMatch( patt, gid, & start, & end ) ){
-			DString_SubString( self, subs->value, start, end-start+1 );
+			DString_SubString( self, subs->value, start, end - start );
 		}
 		DList_Append( list->value, (DaoValue*) subs );
 	}
@@ -1915,7 +1915,7 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 	
 	size = DString_Size( self );
 	start = offset = 0;
-	end = size - 1;
+	end = size;
 	if( size == 0 || patt == NULL ) return;
 	subs = DaoString_New();
 	while( (matched = DaoRegex_Match( patt, self, & start, & end )) || done == 0 ){
@@ -1929,13 +1929,13 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 		if( matched == 0 && done != 0 ) break;
 		if( type == 0 || type == 1 ){
 			if( matched ){
-				DString_SubString( self, subs->value, start, end-start+1 );
+				DString_SubString( self, subs->value, start, end - start );
 				DaoList_Append( list, (DaoValue*) subs );
 			}
 		}
 		done = matched == 0;
-		start = offset = end + 1;
-		end = size - 1;
+		start = offset = end;
+		end = size;
 	}
 	DaoString_Delete( subs );
 }
@@ -1957,7 +1957,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( from < 0 ) from += self->size;
 	if( to < 0 ) to += self->size;
-	if( to == 0 ) to = DString_Size( self ) - 1;
+	if( N < 4 ) to = self->size;
 	if( (patt == NULL) | (from < 0) | (to < 0) ){
 		DaoProcess_RaiseError( proc, "Param", NULL );
 		return;
@@ -1973,10 +1973,10 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	start = offset = from;
 	end = to;
 	while( (matched = DaoRegex_Match( patt, self, & start, & end )) || done == 0 ){
-		if( matched == 0 ) start = to + 1;
+		if( matched == 0 ) start = to;
 		if( start > offset ){
 			startpos.value = offset;
-			endpos.value = start-1;
+			endpos.value = start;
 			denum.value = 0;
 			if( sect->b > 0 ) DaoProcess_SetValue( proc, sect->a, (DaoValue*) & startpos );
 			if( sect->b > 1 ) DaoProcess_SetValue( proc, sect->a+1, (DaoValue*) & endpos );
@@ -2002,7 +2002,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
 		done = matched == 0;
-		start = offset = end + 1;
+		start = offset = end;
 		end = to;
 	}
 	DaoProcess_PopFrame( proc );
@@ -2213,16 +2213,17 @@ static DaoFunctionEntry daoStringMeths[] =
 		*/
 	},
 	{ DaoSTR_Fetch,
-		"fetch( invar self: string, pattern: string, group = 0, start = 0, end = -1 )"
+		"fetch( invar self: string, pattern: string, group = 0, start = 0, end = 0 )"
 			"=> string"
 		/*
 		// Fetch the substring that matches the "group"-th group of pattern "pattern".
-		// Only the region between "start" and "end" is searched.
-		// Negative index starts from the last byte of the string.
+		// Only the region between "start" (inclusive) and "end" (exclusive) is searched.
+		// When the "end" parameter is not used explicitly, the region will range from
+		// "start" to the end of the string.
 		*/
 	},
 	{ DaoSTR_Match,
-		"match( invar self: string, pattern: string, group = 0, start = 0, end = -1 )"
+		"match( invar self: string, pattern: string, group = 0, start = 0, end = 0 )"
 			"=> tuple<start:int,end:int>|none"
 		/*
 		// Match part of this string to pattern "pattern".
@@ -2233,7 +2234,7 @@ static DaoFunctionEntry daoStringMeths[] =
 	},
 	{ DaoSTR_Change,
 		"change( invar self: string, pattern: string, target: string, index = 0, "
-			"start = 0, end = -1 ) => string"
+			"start = 0, end = 0 ) => string"
 		/*
 		// Change the part(s) of the string that match pattern "pattern" to "target".
 		// The target string "target" can contain back references from pattern "pattern".
@@ -2244,7 +2245,7 @@ static DaoFunctionEntry daoStringMeths[] =
 		*/
 	},
 	{ DaoSTR_Capture,
-		"capture( invar self: string, pattern: string, start = 0, end = -1 ) => list<string>"
+		"capture( invar self: string, pattern: string, start = 0, end = 0 ) => list<string>"
 		/*
 		// Match pattern "pattern" to the string, and capture all the substrings that
 		// match to each of the groups of "pattern". Note that the pattern groups are
@@ -2263,7 +2264,7 @@ static DaoFunctionEntry daoStringMeths[] =
 		*/
 	},
 	{ DaoSTR_Scan,
-		"scan( invar self: string, pattern: string, start = 0, end = -1 )"
+		"scan( invar self: string, pattern: string, start = 0, end = 0 )"
 			"[start: int, end: int, state: enum<unmatched,matched> => none|@V]"
 			"=> list<@V>"
 		/*
@@ -6231,7 +6232,7 @@ DaoValue* DaoCstruct_CopyPOD( DaoValue *self, DaoValue *target )
 
 
 
-static DaoTypeCore daoCstructCore =
+DaoTypeCore daoCstructCore =
 {
 	"cstruct",                                             /* name */
 	sizeof(DaoCstruct),                                    /* size */

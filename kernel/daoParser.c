@@ -6919,7 +6919,7 @@ InvalidSection:
 				self->curToken += 1;
 				if( DaoParser_FindOpenToken( self, DTOK_COMMA, start+1, rb, 0 ) < 0 ){
 					if( (start+1) == rb ){
-						enode = DaoParser_NoneValue( self );
+						enode = DaoParser_FullRange( self );
 					}else{
 						enode = DaoParser_ParseExpression2( self, 0, DAO_EXPRLIST_SLICE, ASSIGNMENT_WARNING );
 					}

@@ -901,7 +901,7 @@ enum PatternType{
 
 routine ExtractPatterns( source :string, pattern :string, ptype :PatternType, allpats )
 {
-	blank = ";"[0];
+	blank = ";";
 	source.scan( pattern ){ [start,end,state]
 		if( state == $unmatched ) return none;
 		codes = source[ start : end ];
@@ -1717,7 +1717,7 @@ routine Variable::Parse( fname = "" )
 			utp = UserType.{ name = typename, input_file = fname, source=source2 };
 			map_user_types[ typename ] = utp;
 			map_user_types[ "struct " + typename ] = utp;
-			if( utp.name[0:0] == "_" ){
+			if( utp.name[0:1] == "_" ){
 				io.writeln( "debug:", utp.name, ",", source );
 				#reflect.trace();
 			}
@@ -1797,9 +1797,9 @@ routine Variable::Generate( cxx_no_self =0 )
 	"index"=>sindex, "default"=>vdefault, "namespace"=>"", "namespace2"=>"" };
 	kvmap[ "size" ] = sqsizes.size() ? sqsizes[0] : "0";
 	kvmap[ "size2" ] = sqsizes.size() >1 ? sqsizes[1] : "0";
-	if( kvmap[ "size" ][0:0] == "." )
+	if( kvmap[ "size" ][0:1] == "." )
 	kvmap[ "size" ] = "self->" + kvmap[ "size" ][1:];
-	if( kvmap[ "size2" ][0:0] == "." )
+	if( kvmap[ "size2" ][0:1] == "." )
 	kvmap[ "size2" ] = "self->" + kvmap[ "size2" ][1:];
 	cxxtype = typename;
 	cxxcall = name;
@@ -3033,7 +3033,7 @@ routine Function::Generate()
 	proxy_name = "";
 	if( proxy_functions.find( signature2 ) == none ){
 		proxy_name = new_proxy_function_name.resume();
-		proxy_name = proxy_name[ : proxy_name.size()-4 ];
+		proxy_name = proxy_name[ : proxy_name.size()-3 ];
 		kvmap3[ "proxy_name" ] = proxy_name;
 		proxy_codes = "";
 		if( has_return and has_param ){

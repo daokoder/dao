@@ -3989,8 +3989,8 @@ ErrorInvalidArgValue:
 	for(i=0; i<daomake_module_paths->size; ++i){
 		DaoVmSpace_AddPath( vmSpace, daomake_module_paths->items.pString[i]->chars );
 	}
-	if( architecture && *architecture ) DString_SetChars( daomake_architecture, architecture );
-	if( platform && *platform ){
+	if( architecture && architecture[0] ) DString_SetChars( daomake_architecture, architecture );
+	if( platform && platform[0] ){
 		DaoNamespace *pns;
 		DString_SetChars( daomake_platform, platform );
 		DString_SetChars( name, "platforms/" );

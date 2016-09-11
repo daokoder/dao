@@ -20,7 +20,7 @@ m2 = mbs_alnum_neg.match( "[^%a%d]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_alnum.size()-1, 0, mbs_alnum_neg.size()-1 )
+( 0, mbs_alnum.size(), 0, mbs_alnum_neg.size() )
 @[test()]
 
 
@@ -42,7 +42,7 @@ m2 = mbs_alpha_neg.match( "%A+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_alpha.size()-1, 0, mbs_alpha_neg.size()-1 )
+( 0, mbs_alpha.size(), 0, mbs_alpha_neg.size() )
 @[test()]
 
 
@@ -64,7 +64,7 @@ m2 = mbs_blank_neg.match( "[^ \t]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_blank.size()-1, 0, mbs_blank_neg.size()-1 )
+( 0, mbs_blank.size(), 0, mbs_blank_neg.size() )
 @[test()]
 
 
@@ -86,7 +86,7 @@ m2 = mbs_cntrl_neg.match( "%K+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_cntrl.size()-1, 0, mbs_cntrl_neg.size()-1 )
+( 0, mbs_cntrl.size(), 0, mbs_cntrl_neg.size() )
 @[test()]
 
 
@@ -108,7 +108,7 @@ m2 = mbs_digit_neg.match( "%D+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_digit.size()-1, 0, mbs_digit_neg.size()-1 )
+( 0, mbs_digit.size(), 0, mbs_digit_neg.size() )
 @[test()]
 
 
@@ -130,7 +130,7 @@ m2 = mbs_graph_neg.match( ".+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_graph.size()-1, 0, mbs_graph_neg.size()-1 )
+( 0, mbs_graph.size(), 0, mbs_graph_neg.size() )
 @[test()]
 
 
@@ -152,7 +152,7 @@ m2 = mbs_lower_neg.match( "[^%c]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_lower.size()-1, 0, mbs_lower_neg.size()-1 )
+( 0, mbs_lower.size(), 0, mbs_lower_neg.size() )
 @[test()]
 
 
@@ -174,7 +174,7 @@ m2 = mbs_print_neg.match( ".+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_print.size()-1, 0, mbs_print_neg.size()-1 )
+( 0, mbs_print.size(), 0, mbs_print_neg.size() )
 @[test()]
 
 
@@ -196,7 +196,7 @@ m2 = mbs_punct_neg.match( "%P+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_punct.size()-1, 0, mbs_punct_neg.size()-1 )
+( 0, mbs_punct.size(), 0, mbs_punct_neg.size() )
 @[test()]
 
 
@@ -218,7 +218,7 @@ m2 = mbs_space_neg.match( "%S+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_space.size()-1, 0, mbs_space_neg.size()-1 )
+( 0, mbs_space.size(), 0, mbs_space_neg.size() )
 @[test()]
 
 
@@ -240,7 +240,7 @@ m2 = mbs_upper_neg.match( "[^%C]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_upper.size()-1, 0, mbs_upper_neg.size()-1 )
+( 0, mbs_upper.size(), 0, mbs_upper_neg.size() )
 @[test()]
 
 
@@ -262,7 +262,7 @@ m2 = mbs_xdigit_neg.match( "%X+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
-( 0, mbs_xdigit.size()-1, 0, mbs_xdigit_neg.size()-1 )
+( 0, mbs_xdigit.size(), 0, mbs_xdigit_neg.size() )
 @[test()]
 
 
@@ -278,7 +278,7 @@ m1 = mbs_ascii.match( ".+" )
 res = ( m1.start, m1.end )
 @[test()]
 @[test()]
-( 0, mbs_ascii.size()-1 )
+( 0, mbs_ascii.size() )
 @[test()]
 
 

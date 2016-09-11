@@ -3618,7 +3618,7 @@ SkipChecking:
 			}
 			break;
 		case DVM_IN :
-			if( bt->core == NULL || bt->core->CheckBinary == NULL ) return 0;
+			if( bt->core == NULL || bt->core->CheckBinary == NULL ) goto InvalidOper;
 			operands[0] = at;
 			operands[1] = bt;
 			ct = bt->core->CheckBinary( bt, (DaoVmCode*)vmc, operands, self->routine );
@@ -3626,12 +3626,12 @@ SkipChecking:
 
 			DaoInferencer_UpdateVarType( self, opc, ct );
 			/* allow less strict typing: */
-			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) return 1;
+			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) break;
 			AssertTypeMatching( ct, types[opc], defs );
 			ct = types[opc];
 			break;
 		case DVM_NOT :
-			if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+			if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
 			ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 			if( ct == NULL ) goto InvalidOper;
 			DaoInferencer_UpdateVarType( self, opc, ct );
@@ -3648,7 +3648,7 @@ SkipChecking:
 			goto InvalidOper;
 			break;
 		case DVM_MINUS :
-			if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+			if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
 			ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 			if( ct == NULL ) goto InvalidOper;
 			DaoInferencer_UpdateVarType( self, opc, ct );
@@ -3665,7 +3665,7 @@ SkipChecking:
 			break;
 		case DVM_TILDE :
 			{
-				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+				if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
 				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
 				DaoInferencer_UpdateVarType( self, opc, ct );
@@ -3683,7 +3683,7 @@ SkipChecking:
 			}
 		case DVM_SIZE :
 			{
-				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+				if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
 				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
 				DaoInferencer_UpdateVarType( self, opc, ct );
