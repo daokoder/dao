@@ -2,7 +2,7 @@
 
 @[test(code_01)]
 i = 0
-for( i = 1 : 3 ) io.writeln( i )
+for( i = 1 : 4 ) io.writeln( i )
 io.writeln( i )
 @[test(code_01)]
 @[test(code_01)]
@@ -16,7 +16,7 @@ io.writeln( i )
 
 @[test(code_01)]
 i = 0
-for(var i = 1 : 3 ) io.writeln( i )
+for(var i = 1 : 4 ) io.writeln( i )
 io.writeln( i )
 @[test(code_01)]
 @[test(code_01)]
@@ -116,7 +116,7 @@ for( invar x in ls ){
 
 
 @[test(code_01)]
-for( i = 1 : 3 ) io.writeln( i )
+for( i = 1 : 4 ) io.writeln( i )
 io.writeln( i )
 @[test(code_01)]
 @[test(code_01)]

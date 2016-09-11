@@ -2,7 +2,7 @@
 @[test]
 closures = {};
 
-for( i = 1 : 5 ){
+for( i = 1 : 6 ){
 	ls = { i };
 	closure = routine(){
 		io.writeln( ls, i )

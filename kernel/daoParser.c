@@ -5564,7 +5564,7 @@ CleanUp:
 			DaoParser_AddCode( self, DVM_NOP, 0, 0, 0 );
 			inode->jumpTrue = self->vmcLast;
 		}else{
-			DaoParser_AddCode( self, DVM_LE, loc, last, self->regCount );
+			DaoParser_AddCode( self, DVM_LT, loc, last, self->regCount );
 			inode->jumpTrue = self->vmcLast;
 			DaoParser_PushTokenIndices( self, start, colon1, rb );
 			DaoParser_AddCode( self, DVM_TEST, self->regCount, 0, 0 );

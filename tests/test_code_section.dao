@@ -125,7 +125,7 @@ Test { [X] io.writeln( X ) }
 routine First()[int]
 {
 	io.writeln( "Calling First()" )
-	for( i = 1 : 5 ) yield(i)
+	for( i = 1 : 6 ) yield(i)
 }
 
 routine Second()[int]
@@ -161,7 +161,7 @@ Yielding from Second()
 @[test(code_00)]
 routine First()[int]
 {
-	for( i = 1 : 5 ) yield(i)
+	for( i = 1 : 6 ) yield(i)
 }
 
 routine Second()[...]
@@ -186,7 +186,7 @@ Second{ [X] io.writeln( X ) }
 @[test(code_00)]
 routine First()[int,int]
 {
-	for( i = 1 : 5 ) yield(i, i+10)
+	for( i = 1 : 6 ) yield(i, i+10)
 }
 
 routine Second()[...]
@@ -211,7 +211,7 @@ Second{ io.writeln( X, Y ) }
 @[test(code_00)]
 routine First()[int]
 {
-	for( i = 1 : 5 ) yield(i)
+	for( i = 1 : 6 ) yield(i)
 }
 
 routine Second()[...]
@@ -232,7 +232,7 @@ Second{ io.writeln( X, Y ) }
 @[test(code_00)]
 routine First()[int,int]
 {
-	for( i = 1 : 5 ) yield(i, i+10)
+	for( i = 1 : 6 ) yield(i, i+10)
 }
 
 routine Second()[...]
@@ -253,7 +253,7 @@ Second{ [A, B, C] io.writeln( A, B ,C ) }  # Two many code section arguments;
 @[test(code_00)]
 routine First()[int,int]
 {
-	for( i = 1 : 5 ) yield(i, i+10)
+	for( i = 1 : 6 ) yield(i, i+10)
 }
 
 routine Second()[...]
