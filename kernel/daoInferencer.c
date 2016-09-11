@@ -3584,7 +3584,13 @@ SkipChecking:
 		case DVM_LT : case DVM_LE :
 		case DVM_EQ : case DVM_NE :
 			ct = DaoInferencer_CheckBinaryOper( self, inode, at, bt );
-			if( ct == NULL ) goto InvalidOper;
+			if( ct == NULL ){
+				if( vmc->code == DVM_EQ || vmc->code == DVM_NE ){
+					ct = dao_type_bool;
+				}else{
+					goto InvalidOper;
+				}
+			}
 
 			DaoInferencer_UpdateVarType( self, opc, ct );
 			/* allow less strict typing: */

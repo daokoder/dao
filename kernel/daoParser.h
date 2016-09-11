@@ -142,7 +142,7 @@ struct DaoParser
 	DArray_(int[4]) *uplocs;
 	DArray_(int)    *outers;
 
-	DList_(DaoRoutine*) *routCompilable; /* list of defined routines with bodies */
+	DList_(DaoParser*) *routCompilable; /* list of parsers for defined routines with bodies */
 
 	DList_(DaoValue*) *refCountedList;
 

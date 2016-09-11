@@ -4504,6 +4504,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 					int mode = (explicit_decl<<1)|(explicit_invar<<2);
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, mode );
 					self->usingGlobal = 1;
+					routine->body->useNonLocal = self->usingGlobal;
 					if( explicit_store && block ){
 						DaoVariable *var = ns->variables->items.pVar[id];
 						DaoByteBlock_DeclareGlobal( block, name, NULL, var->dtype, pm );
@@ -4956,6 +4957,7 @@ int DaoParser_GetNormRegister( DaoParser *self, int reg, int exp, int first, int
 	default : break;
 	}
 	self->usingGlobal |= code == DVM_GETVG;
+	self->routine->body->useNonLocal = self->usingGlobal;
 	/*
 	   printf( "i = %i %s %i\n", i, DaoVmCode_GetOpcodeName(get), leftval );
 	 */
@@ -5356,6 +5358,7 @@ static void DaoParser_TryAddSetVX( DaoParser *self, int index, int local, int fi
 	case DAO_STATIC_VARIABLE : set = DVM_SETVG; break;
 	}
 	self->usingGlobal |= set == DVM_SETVG;
+	self->routine->body->useNonLocal = self->usingGlobal;
 	DaoParser_PushTokenIndices( self, first, mid, last );
 	if( set ) DaoParser_AddCode( self, set, local, id, up );
 	DaoParser_PopTokenIndices( self, 1 );

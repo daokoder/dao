@@ -4653,7 +4653,13 @@ void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 
 	core = DaoValue_GetTypeCore( O );
 	if( core == NULL || core->DoBinary == NULL ){
-		DaoProcess_RaiseError( self, "Type", "" );
+		if( vmc->code == DVM_EQ ){
+			DaoProcess_PutBoolean( self, A == B );
+		}else if( vmc->code == DVM_NE ){
+			DaoProcess_PutBoolean( self, A != B );
+		}else{
+			DaoProcess_RaiseError( self, "Type", "" );
+		}
 		return;
 	}
 	C = core->DoBinary( O, vmc, AB, self );

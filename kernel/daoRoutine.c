@@ -267,7 +267,7 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes )
 	for(i=0,n=vmCodes->size; i<n; i++){
 		body->vmCodes->data.codes[i] = *(DaoVmCode*) vmCodes->items.pVmc[i];
 	}
-	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost ){
+	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost || self->body->useNonLocal == 0 ){
 		return DaoRoutine_DoTypeInference( self, 0 );
 	}
 	return 1;
@@ -275,7 +275,7 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes )
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes )
 {
 	DArray_Assign( self->body->vmCodes, vmCodes );
-	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost ){
+	if( (self->attribs & DAO_ROUT_MAIN) || self->routHost || self->body->useNonLocal == 0 ){
 		return DaoRoutine_DoTypeInference( self, 0 );
 	}
 	return 1;
