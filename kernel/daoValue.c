@@ -570,10 +570,6 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 #endif
 	if( tm == 0 ) return 0;
 
-	if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
-		DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
-		return 1;
-	}
 
 	/*
 	// Composite types must match exactly. Example,
@@ -606,6 +602,9 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	if( cintype ){
 		S = (DaoValue*) DaoCinValue_New( cintype, S );
+	}else if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
+		DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
+		return 1;
 	}else{
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 	}

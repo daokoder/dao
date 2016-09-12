@@ -4602,6 +4602,7 @@ void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 	AB[0] = A;
 	AB[1] = B;
 
+	O = A;
 	if( A->type == 0 || B->type == 0 ){
 		switch( vmc->code ){
 		case DVM_AND: D = B && A; break;

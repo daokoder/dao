@@ -575,7 +575,7 @@ ErrorDivByZero:
 
 static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
-	if( type->tid <= DAO_STRING ) return type;
+	if( type->tid <= DAO_ENUM ) return type;
 	return NULL;
 }
 
@@ -1493,10 +1493,11 @@ DaoType* DaoString_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
 	iterator->values[1]->xInteger.value = 0;
+	return DAO_OK;
 }
 
 static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -2110,7 +2111,7 @@ static DaoFunctionEntry daoStringMeths[] =
 		"string( count: int )[index: int => string] => string"
 		/*
 		// Create and return a string that is concatenation of the resulting
-		// strings from the exection of the code section.
+		// strings from the execution of the code section.
 		*/
 	},
 	{ DaoSTR_Size,
@@ -3194,10 +3195,11 @@ DaoType* DaoList_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoList_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoList_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xList.value->size > 0;
 	iterator->values[1]->xInteger.value = 0;
+	return DAO_OK;
 }
 
 static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -4593,7 +4595,7 @@ DaoType* DaoMap_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_any;
 }
 
-void DaoMap_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoMap_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	DNode *node = DMap_First( self->xMap.value );
 	DaoValue **data = iterator->values;
@@ -4614,6 +4616,7 @@ void DaoMap_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 	}else{
 		data[1]->xCdata.data = node;
 	}
+	return DAO_OK;
 }
 
 static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -5561,10 +5564,11 @@ DaoType* DaoTuple_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoTuple_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoTuple_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xTuple.size > 0;
 	iterator->values[1]->xInteger.value = 0;
+	return DAO_OK;
 }
 
 static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -6151,12 +6155,13 @@ DaoType* DaoCstruct_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return NULL;
 }
 
-void DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self->xCstruct.ctype, "for" );
 	if( rout != NULL ){
-		DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
+		return DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
 	}
+	return DAO_ERROR;
 }
 
 void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )

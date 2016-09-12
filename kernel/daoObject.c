@@ -397,7 +397,7 @@ static int DaoObject_DoSetField( DaoValue *self, DaoString *name, DaoValue *valu
 	DaoObject *host = proc->activeObject;
 	DaoClass *hostClass = host ? host->defClass : NULL;
 	int ec = DaoObject_SetData( object, name->value, value, host );
-	if( ec != DAO_ERROR ){
+	if( ec != DAO_OK ){
 		DString *field = proc->string;
 		DaoRoutine *rout;
 
@@ -677,14 +677,15 @@ DaoType* DaoObject_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return NULL;
 }
 
-void DaoObject_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+int DaoObject_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
 	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "for", host );
 	if( rout != NULL ){
-		DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
+		return DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
 	}
+	return DAO_ERROR;
 }
 
 void DaoObject_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )

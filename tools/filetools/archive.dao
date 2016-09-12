@@ -47,8 +47,8 @@ routine ArchiveToCSource( archive : string )
 		if( (pos + 2 + m + 4) >= size ) break;
 		n = DaoDecodeUInt32( archive, pos + 2 + m );
 
-		name = archive[pos+2 : pos+2+m-1];
-		source = archive[pos+2+m+4 : pos+2+m+4+n-1];
+		name = archive[pos+2 : pos+2+m];
+		source = archive[pos+2+m+4 : pos+2+m+4+n];
 		if( name.match( '%.(dll|so|dylib)$' ) != none ){
 			onloads += 'extern int ' + source + '( DaoVmSpace *vms, DaoNamespace *ns );\n';
 			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
@@ -74,7 +74,7 @@ routine ArchiveToCSource( archive : string )
 routine main( file : string )
 {
 	archive = io.read( file )
-	if( archive[0:1] != '\33\33' ){
+	if( archive[0:2] != '\33\33' ){
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
 		return 1;
 	}

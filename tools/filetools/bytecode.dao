@@ -302,7 +302,7 @@ routine DaoByteCode::DecodeShortString()=>string
 	len = DecodeUInt16();
 	i = offset;
 	offset += len;
-	return '' + data[i:i+len-1];
+	return '' + data[i:i+len];
 }
 routine DaoByteCode::DecodeIdentifiers()
 {
@@ -657,9 +657,9 @@ routine DaoByteCode::Decode( bytecodes : string )
 	#data = bytecodes.collect{ (X+256)%256 }
 
 	if( data.size() < 16 ) std::error( 'Invalid bytecode file' );
-	if( data[:3] != "\33Dao" ) std::error( 'Not a Dao bytecode file' );
+	if( data[:4] != "\33Dao" ) std::error( 'Not a Dao bytecode file' );
 
-	header = data[:15];
+	header = data[:16];
 
 	intSize = data[9];
 	offset = 16;

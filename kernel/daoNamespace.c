@@ -681,6 +681,7 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core )
 DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeCore *con, DaoType *abs, DaoType *tar )
 {
 	DaoType *sutype;
+	DaoTypeCore *stdCore = DaoType_GetCoreByID( DAO_CINVALUE );
 	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, con );
 	DaoInterface *abstract = (DaoInterface*) abs->aux;
 	DaoCinType *cintype;
@@ -700,6 +701,22 @@ DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeCore *con, DaoType
 
 	cintype->citype->core = con;
 	cintype->vatype->core = con;
+
+	con->CheckGetField   = stdCore->CheckGetField;
+	con->CheckGetItem    = stdCore->CheckGetItem;
+	con->CheckUnary      = stdCore->CheckUnary;
+	con->CheckBinary     = stdCore->CheckBinary;
+	con->CheckConversion = stdCore->CheckConversion;
+	con->CheckForEach    = stdCore->CheckForEach;
+
+	con->DoSetField   = stdCore->DoSetField;
+	con->DoSetItem    = stdCore->DoSetItem;
+	con->DoUnary      = stdCore->DoUnary;
+	con->DoBinary     = stdCore->DoBinary;
+	con->DoConversion = stdCore->DoConversion;
+	con->DoForEach    = stdCore->DoForEach;
+
+	con->Print  = stdCore->Print;
 
 	for(i=0; i<sizeof(con->bases); i++){
 		if( con->bases[i] == NULL ) break;

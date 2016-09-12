@@ -403,7 +403,7 @@ struct DaoTypeCore
 	*/
 
 	DaoType* (*CheckForEach)( DaoType *self, DaoRoutine *rout );
-	void (*DoForEach)( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
+	int (*DoForEach)( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
 	/*
 	// Functions for preparing for-in iteration:
 	// The check function must return a specialized type of the built-in
@@ -917,7 +917,7 @@ DAO_DLL DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRo
 DAO_DLL DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
 
 DAO_DLL DaoType* DaoCstruct_CheckForEach( DaoType *self, DaoRoutine *ctx );
-DAO_DLL void DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
+DAO_DLL int DaoCstruct_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
 
 DAO_DLL void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc );
 

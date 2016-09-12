@@ -1965,10 +1965,11 @@ DaoType* DaoArray_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoArray_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *p )
+int DaoArray_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *p )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;
+	return DAO_OK;
 }
 
 
