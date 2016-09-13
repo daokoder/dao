@@ -396,7 +396,7 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 	daoint i, T = tp->args->size;
 	int tm, eqs = 0;
 	/*
-	// auto-cast tuple type, on the following conditions:
+	// Auto-cast tuple type, on the following conditions:
 	// (1) the item values of "dest" must match exactly to the item types of "tp";
 	// (2) "tp->mapNames" must contain "(*dest)->xTuple.ctype->mapNames";
 	*/
@@ -405,9 +405,9 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 		src->xTuple.ctype = tp;
 		return 1;
 	}
-	if( DaoType_MatchValue( tp, src, NULL ) < DAO_MT_SUB ) return 1;
+	if( DaoType_MatchValue( tp, src, NULL ) < DAO_MT_SIM ) return 1; /* Redundant? */
 	/*
-	// casting is not necessary if the tuple's field names are a superset of the
+	// Casting is not necessary if the tuple's field names are a superset of the
 	// field names of the target type:
 	*/
 	if( tp->mapNames == NULL || tp->mapNames->size ==0 ) goto Finalize;

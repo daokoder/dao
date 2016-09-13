@@ -1071,7 +1071,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			if( type->subtid == DAO_ENUM_SYM ){ /* Alias: */
 				return DAO_MT_EQ;
 			}else{ /* Some enum type containing this symbol: */
-				return DAO_MT_SIM;
+				return DAO_MT_SUB;
 			}
 		}
 		return DString_EQ( self->fname, type->fname ) ? DAO_MT_EQ : DAO_MT_NOT;
@@ -1369,7 +1369,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	case DAO_ENUM :
 		other = & value->xEnum;
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
-		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SIM;
+		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SUB;
 		if( self->realnum && value->xEnum.subtype == DAO_ENUM_SYM ) return DAO_MT_NOT;
 		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
@@ -1383,7 +1383,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 			}
 			if( DMap_Find( self->mapNames, node->key.pVoid ) == NULL ) return 0;
 		}
-		return DAO_MT_SIM;
+		return DAO_MT_SUB;
 	case DAO_ARRAY :
 		if( value->xArray.size == 0 ) return DAO_MT_ANY;
 		tp = dao_array_types[ value->xArray.etype ];
@@ -2353,7 +2353,7 @@ int DaoTypeTree_Test( DaoTypeTree *self, DaoType *types[], int count )
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types[i];
 		int mt = DaoType_MatchTo( arg, par, NULL );
-		if( mt == 0 || (mt >= DAO_MT_SUB && mt <= DAO_MT_SIM) ) return 0;
+		if( mt == 0 || (mt >= DAO_MT_SIM && mt <= DAO_MT_SUB) ) return 0;
 	}
 	return 1;
 }
