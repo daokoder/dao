@@ -117,6 +117,7 @@ struct DaoVmSpace
 	DMap   *nsRefs;
 
 	DMap   *typeKernels;
+	DMap   *spaceData;
 
 	DMap   *allProcesses;
 	DMap   *allRoutines;

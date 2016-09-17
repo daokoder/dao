@@ -1126,6 +1126,14 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 DAO_DLL const char* DaoVmSpace_CurrentWorkingPath( DaoVmSpace *self );
 DAO_DLL const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self );
 
+/*
+// Set and get space specific data:
+// The key parameter should be a function pointer that can be called on the value
+// parameter to free the data;
+*/
+DAO_DLL void* DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value );
+DAO_DLL void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key );
+
 DAO_DLL void DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 
 /*

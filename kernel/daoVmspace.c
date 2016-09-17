@@ -579,6 +579,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
 	self->typeKernels = DHash_New( 0, 0 );
+	self->spaceData = DHash_New( 0, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -643,6 +644,15 @@ DaoVmSpace* DaoVmSpace_New()
 		for(it=DMap_First(master->nsPlugins); it!=NULL; it=DMap_Next(master->nsPlugins,it)){
 			DaoVmSpace_AddPlugin( self, it->key.pString, (DaoNamespace*) it->value.pValue );
 		}
+		/*
+		// Some modules may register types and functions to standard namespaces
+		// such as std and io, creating DaoVmSpace specific standard namespaces
+		// to avoid those of the master DaoVmSpace being modified. 
+		*/
+		for(it=DMap_First(master->nsModules); it!=NULL; it=DMap_Next(master->nsModules,it)){
+			DaoNamespace *ns = DaoVmSpace_GetNamespace( self, it->key.pString->chars );
+			DaoNamespace_AddParent( ns, (DaoNamespace*) it->key.pValue );
+		}
 	}
 
 	self->daoNamespace = DaoNamespace_New( self, "dao" );
@@ -680,6 +690,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->vfiles); it; it=DMap_Next(self->vfiles,it)){
 		DaoVirtualFile_Delete( (DaoVirtualFile*) it->value.pVoid );
 	}
+	DaoAux_Delete( self->spaceData );
 	GC_DecRC( self->coreNamespace );
 	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
@@ -2983,4 +2994,25 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	type = DaoVmSpace_MakeExceptionType2( self, name );
 	DaoVmSpace_Unlock( self );
 	return type;
+}
+
+
+void* DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value )
+{
+	void *prev = DaoVmSpace_GetSpaceData( self, key );
+	if( prev != NULL ){
+		typedef void (*data_delete)(void*);
+		data_delete del = (data_delete) key;
+		(*del)( prev );
+	}
+	DMap_Insert( self->spaceData, key, value );
+	return value;
+}
+
+void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key )
+{
+	DNode *node;
+	node = DMap_Find( self->spaceData, key );
+	if( node ) return node->value.pVoid;
+	return NULL;
 }

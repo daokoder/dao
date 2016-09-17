@@ -198,6 +198,8 @@ DAO_DLL int DaoType_DoSetField( DaoType *self, DaoValue *object, DaoString *name
 DAO_DLL DaoTypeCore* DaoType_GetTypeCore( DaoType *self );
 DAO_DLL DaoTypeCore* DaoType_GetCoreByID( short type );
 
+DAO_DLL DaoVmSpace* DaoType_GetVmSpace( DaoType *self );
+
 
 
 /*

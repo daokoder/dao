@@ -1955,6 +1955,13 @@ void DaoType_ExportArguments( DaoType *self, DList *args, int noname )
 	}
 }
 
+DaoVmSpace* DaoType_GetVmSpace( DaoType *self )
+{
+	if( self->kernel == NULL ) return NULL;
+	if( self->kernel->nspace == NULL ) return NULL;
+	return self->kernel->nspace->vmSpace;
+}
+
 
 extern DMutex mutex_methods_setup;
 
