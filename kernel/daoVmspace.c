@@ -637,9 +637,14 @@ DaoVmSpace* DaoVmSpace_New()
 		DString_Assign( self->daoBinFile, master->daoBinFile );
 		DString_Assign( self->daoBinPath, master->daoBinPath );
 		DString_Assign( self->startPath, master->startPath );
+		DString_Assign( self->pathWorking, master->pathWorking );
+		DList_Assign( self->nameLoading, master->nameLoading );
+		DList_Assign( self->pathLoading, master->pathLoading );
+		DList_Assign( self->pathSearching, master->pathSearching );
+		DList_Assign( self->virtualPaths, master->virtualPaths );
 		DMap_Assign( self->vfiles, master->vfiles );
 		DMap_Assign( self->vmodules, master->vmodules );
-		DList_Assign( self->virtualPaths, master->virtualPaths );
+
 		self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 		for(it=DMap_First(master->nsPlugins); it!=NULL; it=DMap_Next(master->nsPlugins,it)){
 			DaoVmSpace_AddPlugin( self, it->key.pString, (DaoNamespace*) it->value.pValue );
@@ -651,7 +656,7 @@ DaoVmSpace* DaoVmSpace_New()
 		*/
 		for(it=DMap_First(master->nsModules); it!=NULL; it=DMap_Next(master->nsModules,it)){
 			DaoNamespace *ns = DaoVmSpace_GetNamespace( self, it->key.pString->chars );
-			DaoNamespace_AddParent( ns, (DaoNamespace*) it->key.pValue );
+			DaoNamespace_AddParent( ns, (DaoNamespace*) it->value.pValue );
 		}
 	}
 
@@ -660,6 +665,15 @@ DaoVmSpace* DaoVmSpace_New()
 	GC_IncRC( self->daoNamespace );
 	DaoNamespace_AddParent( self->daoNamespace, self->coreNamespace );
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
+
+	if( masterVmSpace != NULL ){
+		DaoNamespace *ions = DaoVmSpace_GetNamespace( self, "io" );
+		DaoNamespace *mtns = DaoVmSpace_GetNamespace( self, "mt" );
+		DaoNamespace *stdns = DaoVmSpace_GetNamespace( self, "std" );
+		DaoNamespace_AddConstValue( self->daoNamespace, "io", (DaoValue*) ions );
+		DaoNamespace_AddConstValue( self->daoNamespace, "mt", (DaoValue*) mtns );
+		DaoNamespace_AddConstValue( self->daoNamespace, "std", (DaoValue*) stdns );
+	}
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
