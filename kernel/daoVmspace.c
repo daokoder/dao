@@ -608,6 +608,8 @@ DaoVmSpace* DaoVmSpace_New()
 	GC_IncRC( self->stdioStream );
 	GC_IncRC( self->errorStream );
 
+	self->taskletServer = NULL;
+
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->moduleMutex );
 	DMutex_Init( & self->cacheMutex );
@@ -1343,11 +1345,11 @@ static void DaoVmSpace_Interun( DaoVmSpace *self )
 		}
 #ifdef DAO_WITH_CONCURRENT
 		if( self->mainProcess->status >= DAO_PROCESS_SUSPENDED ){
-			if( DaoCallServer_GetThreadCount() == 0 ){
-				DaoCallServer_AddThread( NULL, NULL, NULL );
+			if( DaoVmSpace_GetThreadCount( self ) == 0 ){
+				DaoVmSpace_AddTaskletThread( self, NULL, NULL, NULL );
 			}
 		}
-		DaoCallServer_Join();
+		DaoVmSpace_JoinTasklets( self );
 #endif
 		/*
 		   printf( "%s\n", input->chars );
@@ -2824,7 +2826,7 @@ void DaoQuit()
 
 	/* TypeTest(); */
 #ifdef DAO_WITH_CONCURRENT
-	DaoCallServer_Stop();
+	DaoVmSpace_StopTasklets( masterVmSpace );
 #endif
 
 	if( daoConfig.iscgi ) return;

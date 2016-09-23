@@ -44,15 +44,90 @@
 
 #define MIN_TIME  1E-27
 
+
+enum DaoTaskletEventType
+{
+	DAO_EVENT_RESUME_TASKLET ,  /* Resume the tasklet; */
+	DAO_EVENT_WAIT_TASKLET   ,  /* Wait for another tasklet; */
+	DAO_EVENT_WAIT_RECEIVING ,  /* Wait for receiving from a channel; */
+	DAO_EVENT_WAIT_SENDING   ,  /* Wait after sending to a channel; */
+	DAO_EVENT_WAIT_SELECT       /* Wait for multiple futures or channels; */
+};
+enum DaoTaskletEventState
+{
+	DAO_EVENT_WAIT ,
+	DAO_EVENT_RESUME  /* Ensure the processing of timed-out events; */
+};
+
+
+
+typedef struct DaoTaskletServer  DaoTaskletServer;
+typedef struct DaoTaskletThread  DaoTaskletThread;
+typedef struct DaoTaskletEvent   DaoTaskletEvent;
+
+
+/*
+// Task event for scheduling.
+//
+// A task event can be generated in different situation:
+// 1. Starting of a new tasklet by calling mt.start::{} or asynchronous methods:
+//    DaoTaskletEvent {
+//        type = DAO_EVENT_RESUME_TASKLET;
+//        future = future value for the new tasklet;
+//        channel = NULL;
+//    };
+// 2. Waiting for a tasklet (future value):
+//    DaoTaskletEvent {
+//        type = DAO_EVENT_WAIT_TASKLET/DAO_EVENT_RESUME_TASKLET;
+//        future = future value for the waiting tasklet;
+//        channel = NULL;
+//    };
+// 3. Waiting to Receive message from a channel:
+//    DaoTaskletEvent {
+//        type = DAO_EVENT_WAIT_RECEIVING;
+//        future = future value for the waiting tasklet;
+//        channel = channel for receiving;
+//    };
+// 4. Waiting after sending message to a channel:
+//    DaoTaskletEvent {
+//        type = DAO_EVENT_WAIT_SENDING;
+//        future = future value for the sending tasklet;
+//        channel = channel for sending;
+//    };
+// 5. Waiting for one of the future values or channels becoming ready:
+//    DaoTaskletEvent {
+//        type = DAO_EVENT_WAIT_SELECT;
+//        future = future value for the waiting tasklet;
+//        channel = NULL;
+//        channels = select list of channels;
+//    };
+//
+*/
+struct DaoTaskletEvent
+{
+	uchar_t      type;
+	uchar_t      state;
+	uchar_t      timeout;
+	uchar_t      auxiliary;
+	double       expiring;  /* expiring time for a timeout event; */
+	DaoFuture   *future;
+	DaoChannel  *channel;
+	DaoValue    *message;
+	DaoValue    *selected;
+	DaoMap      *selects;  /* DHash<DaoFuture*|DaoChannel*,0|1>; */
+};
+
+
+
 #ifdef DAO_WITH_CONCURRENT
 
 
-DaoTaskEvent* DaoTaskEvent_New()
+DaoTaskletEvent* DaoTaskletEvent_New()
 {
-	DaoTaskEvent *self = (DaoTaskEvent*) dao_calloc( 1, sizeof(DaoTaskEvent) );
+	DaoTaskletEvent *self = (DaoTaskletEvent*) dao_calloc( 1, sizeof(DaoTaskletEvent) );
 	return self;
 }
-void DaoTaskEvent_Reset( DaoTaskEvent *self )
+void DaoTaskletEvent_Reset( DaoTaskletEvent *self )
 {
 	self->type = 0;
 	self->state = 0;
@@ -70,12 +145,12 @@ void DaoTaskEvent_Reset( DaoTaskEvent *self )
 	self->message = NULL;
 	self->selects = NULL;
 }
-void DaoTaskEvent_Delete( DaoTaskEvent *self )
+void DaoTaskletEvent_Delete( DaoTaskletEvent *self )
 {
-	DaoTaskEvent_Reset( self );
+	DaoTaskletEvent_Reset( self );
 	dao_free( self );
 }
-void DaoTaskEvent_Init( DaoTaskEvent *self, int T, int S, DaoFuture *F, DaoChannel *C )
+void DaoTaskletEvent_Init( DaoTaskletEvent *self, int T, int S, DaoFuture *F, DaoChannel *C )
 {
 	GC_Assign( & self->future, F );
 	GC_Assign( & self->channel, C );
@@ -107,24 +182,24 @@ static int DaoValue_CheckCtype( DaoValue *self, DaoType *type )
 
 
 
-typedef struct DaoCallThread   DaoCallThread;
-typedef struct DaoCallServer   DaoCallServer;
 
 
-struct DaoCallThread
+struct DaoTaskletThread
 {
-	DThread       thread;
-	DThreadData  *thdData;
-
-	DThreadTask   taskFunc;  /* first task; */
-	void         *taskParam;
-	void         *taskOwner;
+	DaoTaskletServer  *server;
+	DThread            thread;
+	DThreadData       *thdData;
+	DThreadTask        taskFunc;  /* first task; */
+	void              *taskParam;
+	void              *taskOwner;
 };
 
-static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param );
-static void DaoCallThread_Run( DaoCallThread *self );
+static DaoTaskletThread* DaoTaskletThread_New( DaoTaskletServer *server, DThreadTask func, void *param );
+static void DaoTaskletThread_Run( DaoTaskletThread *self );
 
-struct DaoCallServer
+
+
+struct DaoTaskletServer
 {
 	DThread  timer;
 	DMutex   mutex;
@@ -143,9 +218,9 @@ struct DaoCallServer
 	DList  *functions;  /* list of DThreadTask function pointers */
 	DList  *parameters; /* list of void* */
 	DList  *owners;     /* list of void* */
-	DList  *events;     /* list of DaoTaskEvent* */
-	DList  *events2;    /* list of DaoTaskEvent* */
-	DMap   *waitings;   /* timed waiting: <dao_complex,DaoTaskEvent*> */
+	DList  *events;     /* list of DaoTaskletEvent* */
+	DList  *events2;    /* list of DaoTaskletEvent* */
+	DMap   *waitings;   /* timed waiting: <dao_complex,DaoTaskletEvent*> */
 	DMap   *active;     /* map of DaoObject* or DaoProcess* keys */
 	DMap   *pending;    /* map of pointers from ::parameters, ::events and ::events2 */
 
@@ -154,25 +229,25 @@ struct DaoCallServer
 	dao_complex   timestamp;  /* (time,index); */
 	DaoVmSpace   *vmspace;
 };
-static DaoCallServer *daoCallServer = NULL;
 
-static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param )
+static DaoTaskletThread* DaoTaskletThread_New( DaoTaskletServer *server, DThreadTask func, void *param )
 {
-	DaoCallThread *self = (DaoCallThread*)dao_calloc( 1, sizeof(DaoCallThread) );
+	DaoTaskletThread *self = (DaoTaskletThread*)dao_calloc( 1, sizeof(DaoTaskletThread) );
+	self->server = server;
 	self->taskFunc = func;
 	self->taskParam = param;
 	DThread_Init( & self->thread );
 	return self;
 }
-static void DaoCallThread_Delete( DaoCallThread *self )
+static void DaoTaskletThread_Delete( DaoTaskletThread *self )
 {
 	// XXX self->thdData
 	DThread_Destroy( & self->thread );
 	dao_free( self );
 }
-static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
+static DaoTaskletServer* DaoTaskletServer_New( DaoVmSpace *vms )
 {
-	DaoCallServer *self = (DaoCallServer*)dao_malloc( sizeof(DaoCallServer) );
+	DaoTaskletServer *self = (DaoTaskletServer*)dao_malloc( sizeof(DaoTaskletServer) );
 	DMutex_Init( & self->mutex );
 	DCondVar_Init( & self->condv );
 	DCondVar_Init( & self->condv2 );
@@ -198,14 +273,14 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->timestamp.imag = 0.0;
 	return self;
 }
-static void DaoCallServer_Delete( DaoCallServer *self )
+static void DaoTaskletServer_Delete( DaoTaskletServer *self )
 {
 	daoint i;
 	for(i=0; i<self->threads->size; i++){
-		DaoCallThread_Delete( (DaoCallThread*)self->threads->items.pVoid[i] );
+		DaoTaskletThread_Delete( (DaoTaskletThread*)self->threads->items.pVoid[i] );
 	}
 	for(i=0; i<self->caches->size; ++i){
-		DaoTaskEvent_Delete( (DaoTaskEvent*) self->caches->items.pVoid[i] );
+		DaoTaskletEvent_Delete( (DaoTaskletEvent*) self->caches->items.pVoid[i] );
 	}
 	DList_Delete( self->threads );
 	DList_Delete( self->functions );
@@ -224,73 +299,81 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	dao_free( self );
 }
 
-static void DaoCallServer_Timer( void *p );
+static void DaoTaskletServer_Timer( DaoTaskletServer *self );
 
-static void DaoCallServer_Init( DaoVmSpace *vms )
+static void DaoTaskletServer_Init( DaoVmSpace *vms )
 {
+	DaoTaskletServer *server;
+
 	DaoCGC_Start();
-	daoCallServer = DaoCallServer_New( vms );
-	/* Set it here, so that DaoCallServer_Stop() will not stop prematurally: */
-	daoCallServer->timing = 1;
-	if( DThread_Start( & daoCallServer->timer, (DThreadTask) DaoCallServer_Timer, NULL ) ==0 ){
+
+	if( vms->taskletServer ) return;
+
+	server = DaoTaskletServer_New( vms );
+	/* Set it here, so that DaoVmSpace_StopTasklets() will not stop prematurally: */
+	server->timing = 1;
+	if( DThread_Start( & server->timer, (DThreadTask) DaoTaskletServer_Timer, server ) ==0 ){
 		dao_abort( "failed to create the timer thread" );
 	}
-}
-static DaoCallServer* DaoCallServer_TryInit( DaoVmSpace *vms )
-{
-	if( daoCallServer == NULL ) DaoCallServer_Init( vms );
-	return daoCallServer;
+	vms->taskletServer = server;
 }
 
-static DaoTaskEvent* DaoCallServer_MakeEvent()
+static DaoTaskletServer* DaoTaskletServer_TryInit( DaoVmSpace *vms )
 {
-	DaoTaskEvent *event;
-	DaoCallServer *server = daoCallServer;
-	DMutex_Lock( & server->mutex );
-	event = (DaoTaskEvent*) DList_PopBack( server->caches );
-	if( event == NULL ) event = DaoTaskEvent_New();
-	DMutex_Unlock( & server->mutex );
+	if( vms->taskletServer == NULL ) DaoTaskletServer_Init( vms );
+	return (DaoTaskletServer*) vms->taskletServer;
+}
+
+static DaoTaskletEvent* DaoTaskletServer_MakeEvent( DaoTaskletServer *self )
+{
+	DaoTaskletEvent *event;
+	DMutex_Lock( & self->mutex );
+	event = (DaoTaskletEvent*) DList_PopBack( self->caches );
+	if( event == NULL ) event = DaoTaskletEvent_New();
+	DMutex_Unlock( & self->mutex );
 	return event;
 }
-/* Lock daoCallServer::mutex before calling this function: */
-static void DaoCallServer_CacheEvent( DaoTaskEvent *event )
+/* Lock self::mutex before calling this function: */
+static void DaoTaskletServer_CacheEvent( DaoTaskletServer *self, DaoTaskletEvent *event )
 {
-	DaoCallServer *server = daoCallServer;
-	DaoTaskEvent_Reset( event );
-	DList_PushBack( server->caches, event );
+	DaoTaskletEvent_Reset( event );
+	DList_PushBack( self->caches, event );
 }
-int DaoCallServer_GetThreadCount()
+int DaoVmSpace_GetThreadCount( DaoVmSpace *self )
 {
-	DaoCallServer_TryInit( masterVmSpace );
-	return daoCallServer->total;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
+	return server->total;
 }
-void DaoCallServer_AddThread( DThreadTask func, void *param, void *proc )
+void DaoVmSpace_AddTaskletThread( DaoVmSpace *self, DThreadTask func, void *param, void *proc )
 {
-	DaoCallThread *calth;
-	DaoCallServer_TryInit( masterVmSpace );
-	calth = DaoCallThread_New( func, param );
-	calth->taskOwner = proc;
-	DMutex_Lock( & daoCallServer->mutex );
-	daoCallServer->total += 1;
-	DList_Append( daoCallServer->threads, calth );
-	DMutex_Unlock( & daoCallServer->mutex );
-	if( DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth ) == 0 ){
-		if( func != NULL || daoCallServer->total == 0 ){
+	DaoTaskletThread *taskthd;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
+	taskthd = DaoTaskletThread_New( server, func, param );
+	taskthd->taskOwner = proc;
+	DMutex_Lock( & server->mutex );
+	server->total += 1;
+	DList_Append( server->threads, taskthd );
+	DMutex_Unlock( & server->mutex );
+	if( DThread_Start( & taskthd->thread, (DThreadTask) DaoTaskletThread_Run, taskthd ) == 0 ){
+		if( func != NULL || server->total == 0 ){
 			dao_abort( "failed to create a task thread" );
 		}
 	}
 }
-static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo )
+
+static void DaoVmSpace_TryAddTaskletThread( DaoVmSpace *self, DThreadTask func, void *param, int todo )
 {
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
 	int max = daoConfig.cpu > 2 ? daoConfig.cpu : 2;
-	int total = daoCallServer->total;
-	if( total < 2 ) DaoCallServer_AddThread( NULL, NULL, NULL );
+	int total = server->total;
+	if( total < 2 ) DaoVmSpace_AddTaskletThread( self, NULL, NULL, NULL );
 	if( todo == 0 ) return;
 	if( total < max || todo > pow( total + max + 10, 5 ) ){
-		DaoCallServer_AddThread( NULL, NULL, NULL );
+		DaoVmSpace_AddTaskletThread( self, NULL, NULL, NULL );
 	}
 }
-static int DaoTaskEvent_CheckSelect( DaoTaskEvent *self )
+
+static int DaoTaskletEvent_CheckSelect( DaoTaskletEvent *self )
 {
 	DNode *it;
 	int closed = 0;
@@ -302,37 +385,37 @@ static int DaoTaskEvent_CheckSelect( DaoTaskEvent *self )
 			closed += chan->cap == 0;
 		}else{
 			DaoFuture *fut = (DaoFuture*) it->key.pValue;
-			move = fut->state == DAO_CALL_FINISHED;
+			move = fut->state == DAO_TASKLET_FINISHED;
 		}
 		if( move ) break;
 	}
 	if( self->selects->value->size == closed ) move = 1;
 	return move;
 }
-static void DaoCallServer_ActivateEvents()
+
+static void DaoTaskletServer_ActivateEvents( DaoTaskletServer *self )
 {
-	DaoCallServer *server = daoCallServer;
 	char message[128];
 	daoint i, j, count = 0;
 
-	if( server->finishing == 0 ) return;
-	if( server->idle != server->total ) return;
-	if( server->events->size != 0 ) return;
-	if( server->events2->size == 0 ) return;
+	if( self->finishing == 0 ) return;
+	if( self->idle != self->total ) return;
+	if( self->events->size != 0 ) return;
+	if( self->events2->size == 0 ) return;
 
 #ifdef DEBUG
-	sprintf( message, "WARNING: try activating events (%i,%i,%i,%i)!\n", server->total,
-			server->idle, (int)server->events->size, (int)server->events2->size );
-	DaoStream_WriteChars( masterVmSpace->errorStream, message );
+	sprintf( message, "WARNING: try activating events (%i,%i,%i,%i)!\n", self->total,
+			self->idle, (int)self->events->size, (int)self->events2->size );
+	DaoStream_WriteChars( self->vmspace->errorStream, message );
 #endif
-	for(i=0; i<server->events2->size; ++i){
-		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
+	for(i=0; i<self->events2->size; ++i){
+		DaoTaskletEvent *event = (DaoTaskletEvent*) self->events2->items.pVoid[i];
 		DaoChannel *chan = event->channel;
 		DaoFuture *fut = event->future;
 		int move = 0, closed = 0;
 		switch( event->type ){
 		case DAO_EVENT_WAIT_TASKLET :
-			move = fut->precond == NULL || fut->precond->state == DAO_CALL_FINISHED;
+			move = fut->precond == NULL || fut->precond->state == DAO_TASKLET_FINISHED;
 			break;
 		case DAO_EVENT_WAIT_RECEIVING :
 			move = chan->buffer->size > 0;
@@ -343,20 +426,20 @@ static void DaoCallServer_ActivateEvents()
 			break;
 		case DAO_EVENT_WAIT_SELECT :
 			if( event->selects == NULL ) continue;
-			move = DaoTaskEvent_CheckSelect( event );
+			move = DaoTaskletEvent_CheckSelect( event );
 			break;
 		default: break;
 		}
 		if( move ){
-			DList_Append( server->events, event );
-			DList_Erase( server->events2, i, 1 );
+			DList_Append( self->events, event );
+			DList_Erase( self->events2, i, 1 );
 			count += 1;
 			i -= 1;
 		}
 	}
-	DCondVar_Signal( & server->condv );
+	DCondVar_Signal( & self->condv );
 	if( count == 0 ){
-		DaoStream *stream = masterVmSpace->errorStream;
+		DaoStream *stream = self->vmspace->errorStream;
 		DaoStream_WriteChars( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
 #if DEBUG
 		fprintf( stderr, "ERROR: All tasklets are suspended - deadlock!\n" );
@@ -364,54 +447,53 @@ static void DaoCallServer_ActivateEvents()
 		exit(1);
 	}
 }
-static void DaoCallServer_Timer( void *p )
+static void DaoTaskletServer_Timer( DaoTaskletServer *self )
 {
-	DaoCallServer *server = daoCallServer;
 	double time = 0.0;
 	daoint i, timeout;
 
-	while( server->finishing == 0 || server->stopped != server->total ){
-		DMutex_Lock( & server->mutex );
-		while( server->waitings->size == 0 ){
-			if( server->idle == server->total && server->events2->size ){
-				DaoCallServer_ActivateEvents();
+	while( self->finishing == 0 || self->stopped != self->total ){
+		DMutex_Lock( & self->mutex );
+		while( self->waitings->size == 0 ){
+			if( self->idle == self->total && self->events2->size ){
+				DaoTaskletServer_ActivateEvents( self );
 			}
-			if( server->finishing && server->stopped == server->total ) break;
-			DCondVar_TimedWait( & server->condv2, & server->mutex, 0.01 );
+			if( self->finishing && self->stopped == self->total ) break;
+			DCondVar_TimedWait( & self->condv2, & self->mutex, 0.01 );
 		}
-		if( server->waitings->size ){
-			DNode *node = DMap_First( server->waitings );
+		if( self->waitings->size ){
+			DNode *node = DMap_First( self->waitings );
 			time = node->key.pComplex->real;
 			time -= Dao_GetCurrentTime();
 			/* wait the right amount of time for the closest arriving timeout: */
-			if( time > 0 ) DCondVar_TimedWait( & server->condv2, & server->mutex, time );
+			if( time > 0 ) DCondVar_TimedWait( & self->condv2, & self->mutex, time );
 		}
-		DMutex_Unlock( & server->mutex );
-		if( server->finishing && server->stopped == server->total ) break;
+		DMutex_Unlock( & self->mutex );
+		if( self->finishing && self->stopped == self->total ) break;
 
-		DMutex_Lock( & server->mutex );
-		if( server->waitings->size ){ /* a new wait timed out: */
-			DNode *node = DMap_First( server->waitings );
+		DMutex_Lock( & self->mutex );
+		if( self->waitings->size ){ /* a new wait timed out: */
+			DNode *node = DMap_First( self->waitings );
 			time = Dao_GetCurrentTime();
 			if( node->key.pComplex->real < time ){
-				DaoTaskEvent *event = (DaoTaskEvent*) node->value.pVoid;
+				DaoTaskletEvent *event = (DaoTaskletEvent*) node->value.pVoid;
 				event->state = DAO_EVENT_RESUME;
 				event->timeout = 1;
 				event->expiring = MIN_TIME;
-				DList_Append( server->events, node->value.pVoid );
-				DMap_EraseNode( server->waitings, node );
+				DList_Append( self->events, node->value.pVoid );
+				DMap_EraseNode( self->waitings, node );
 			}
 		}
-		DCondVar_Signal( & server->condv );
-		DMutex_Unlock( & server->mutex );
+		DCondVar_Signal( & self->condv );
+		DMutex_Unlock( & self->mutex );
 	}
-	server->timing = 0;
+	self->timing = 0;
 }
 
-void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc )
+void DaoVmSpace_AddTaskletJob( DaoVmSpace *self, DThreadTask func, void *param, void *proc )
 {
 	int scheduled = 0;
-	DaoCallServer *server = DaoCallServer_TryInit( masterVmSpace );
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
 	DMutex_Lock( & server->mutex );
 	if( server->vacant > server->parameters->size || proc == NULL ){
 		scheduled = 1;
@@ -423,25 +505,26 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc )
 	}
 	DMutex_Unlock( & server->mutex );
 	if( scheduled ){
-		if( proc == NULL ) DaoCallServer_TryAddThread( NULL, NULL, server->parameters->size );
+		if( proc == NULL ){
+			DaoVmSpace_TryAddTaskletThread( self, NULL, NULL, server->parameters->size );
+		}
 	}else{
-		DaoCallServer_AddThread( func, param, proc );
+		DaoVmSpace_AddTaskletThread( self, func, param, proc );
 	}
 }
-static void DaoCallServer_AddEvent( DaoTaskEvent *event )
+static void DaoTaskletServer_AddEvent( DaoTaskletServer *self, DaoTaskletEvent *event )
 {
-	DaoCallServer *server = daoCallServer;
-	DList_Append( server->events, event );
-	DMap_Insert( server->pending, event, NULL );
+	DList_Append( self->events, event );
+	DMap_Insert( self->pending, event, NULL );
 }
-static void DaoCallServer_Add( DaoTaskEvent *event )
+static void DaoVmSpace_AddEvent( DaoVmSpace *self, DaoTaskletEvent *event )
 {
-	DaoCallServer *server = daoCallServer;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
 	DMutex_Lock( & server->mutex );
-	DaoCallServer_AddEvent( event );
+	DaoTaskletServer_AddEvent( server, event );
 	DCondVar_Signal( & server->condv );
 	DMutex_Unlock( & server->mutex );
-	DaoCallServer_TryAddThread( NULL, NULL, server->pending->size );
+	DaoVmSpace_TryAddTaskletThread( self, NULL, NULL, server->pending->size );
 }
 #endif
 
@@ -453,23 +536,23 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 	type = type && type->args->size ? type->args->items.pType[0] : NULL;
 	switch( self->status ){
 	case DAO_PROCESS_ABORTED :
-		future->state = DAO_CALL_ABORTED;
+		future->state = DAO_TASKLET_ABORTED;
 		break;
 	case DAO_PROCESS_FINISHED :
 		DaoValue_Move( self->stackValues[0], & future->value, type );
-		future->state = DAO_CALL_FINISHED;
+		future->state = DAO_TASKLET_FINISHED;
 		break;
-	case DAO_PROCESS_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
+	case DAO_PROCESS_SUSPENDED : future->state = DAO_TASKLET_PAUSED; break;
 	case DAO_PROCESS_RUNNING :
-	case DAO_PROCESS_STACKED : future->state = DAO_CALL_RUNNING; break;
+	case DAO_PROCESS_STACKED : future->state = DAO_TASKLET_RUNNING; break;
 	default : break;
 	}
 }
 
-void DaoCallServer_AddCall( DaoProcess *caller )
+void DaoVmSpace_AddTaskletCall( DaoVmSpace *self, DaoProcess *caller )
 {
 	DaoFuture *future;
-	DaoTaskEvent *event;
+	DaoTaskletEvent *event;
 	DaoProcess *callee = DaoVmSpace_AcquireProcess( caller->vmSpace );
 	DaoStackFrame *frame = caller->topFrame;
 	DaoRoutine *routine = frame->routine;
@@ -511,7 +594,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	}
 
 	future = DaoFuture_New( type, 1 );
-	future->state = DAO_CALL_PAUSED;
+	future->state = DAO_TASKLET_PAUSED;
 	future->actor = caller->topFrame->object;
 	GC_IncRC( future->actor );
 
@@ -534,14 +617,13 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	}
 
 #ifdef DAO_WITH_CONCURRENT
-	DaoCallServer_TryInit( masterVmSpace );
-	event = DaoCallServer_MakeEvent();
-	DaoTaskEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
+	event = DaoTaskletServer_MakeEvent( DaoTaskletServer_TryInit( self ) );
+	DaoTaskletEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
 
 	DaoProcess_PopFrame( caller );
 	DaoProcess_PutValue( caller, (DaoValue*) future );
 
-	DaoCallServer_Add( event );
+	DaoVmSpace_AddEvent( self, event );
 #else
 	DaoProcess_PopFrame( caller );
 	DaoProcess_PutValue( caller, (DaoValue*) future );
@@ -563,27 +645,25 @@ DaoFuture* DaoProcess_GetInitFuture( DaoProcess *self )
 	GC_Assign( & future->process, self );
 	return future;
 }
-void DaoCallServer_MarkActiveProcess( DaoProcess *process, int active )
-{
-	DaoCallServer *server = daoCallServer;
 
-	if( daoCallServer == NULL ) return;
-	if( process->active == active ) return;
+void DaoProcess_MarkActiveTasklet( DaoProcess *self, int active )
+{
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self->vmSpace );
+
+	if( self->active == active ) return;
 
 	DMutex_Lock( & server->mutex );
 	if( active ){
-		DMap_Insert( server->active, process, NULL );
-		process->active = 1;
+		DMap_Insert( server->active, self, NULL );
+		self->active = 1;
 	}else{
-		DMap_Erase( server->active, process );
-		process->active = 0;
+		DMap_Erase( server->active, self );
+		self->active = 0;
 	}
 	DMutex_Unlock( & server->mutex );
 }
-void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double timeout )
+void DaoTaskletServer_AddTimedWait( DaoTaskletServer *self, DaoProcess *wait, DaoTaskletEvent *event, double timeout )
 {
-	DaoCallServer *server = daoCallServer;
-
 	/*
 	// The "wait" process may not be running in the thread pool,
 	// so it may have not been added to active process list.
@@ -593,40 +673,42 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 	// because it may have not been blocked completely
 	// (namely, it may be still running).
 	*/
-	DaoCallServer_MarkActiveProcess( wait, 1 );
+	DaoProcess_MarkActiveTasklet( wait, 1 );
 
-	DMutex_Lock( & server->mutex );
+	DMutex_Lock( & self->mutex );
 	if( timeout >= 1E-27 ){
-		server->timestamp.real = timeout + Dao_GetCurrentTime();
-		server->timestamp.imag += 1;
-		event->expiring = server->timestamp.real;
-		DMap_Insert( server->waitings, & server->timestamp, event );
-		DMap_Insert( server->pending, event, NULL );
-		DCondVar_Signal( & server->condv2 );
+		self->timestamp.real = timeout + Dao_GetCurrentTime();
+		self->timestamp.imag += 1;
+		event->expiring = self->timestamp.real;
+		DMap_Insert( self->waitings, & self->timestamp, event );
+		DMap_Insert( self->pending, event, NULL );
+		DCondVar_Signal( & self->condv2 );
 	}else{
 		event->expiring = -1.0;
-		DaoCallServer_AddEvent( event );
-		DCondVar_Signal( & server->condv );
+		DaoTaskletServer_AddEvent( self, event );
+		DCondVar_Signal( & self->condv );
 	}
-	DMutex_Unlock( & server->mutex );
+	DMutex_Unlock( & self->mutex );
 }
-void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
+
+void DaoVmSpace_AddTaskletWait( DaoVmSpace *self, DaoProcess *wait, DaoFuture *pre, double timeout )
 {
-	DaoTaskEvent *event;
-	DaoCallServer *server = DaoCallServer_TryInit( masterVmSpace );;
+	DaoTaskletEvent *event;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( self );
 	DaoFuture *future = DaoProcess_GetInitFuture( wait );
 
 	GC_Assign( & future->precond, pre );
-	future->state = DAO_CALL_PAUSED;
+	future->state = DAO_TASKLET_PAUSED;
 
-	event = DaoCallServer_MakeEvent();
-	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_TASKLET, DAO_EVENT_WAIT, future, NULL );
+	event = DaoTaskletServer_MakeEvent( server );
+	DaoTaskletEvent_Init( event, DAO_EVENT_WAIT_TASKLET, DAO_EVENT_WAIT, future, NULL );
 
-	DaoCallServer_AddTimedWait( wait, event, timeout );
+	DaoTaskletServer_AddTimedWait( server, wait, event, timeout );
 }
-static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoChannel *chan )
+
+static int DaoTaskletServer_CheckEvent( DaoTaskletEvent *event, DaoFuture *fut, DaoChannel *chan )
 {
-	DaoTaskEvent event2 = *event;
+	DaoTaskletEvent event2 = *event;
 	daoint i, move = 0, closed = 0;
 	switch( event->type ){
 	case DAO_EVENT_WAIT_TASKLET :
@@ -645,7 +727,7 @@ static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoCha
 		if( event->selects == NULL ) break;
 		if( fut  ) move |= DMap_Find( event->selects->value, fut ) != NULL;
 		if( chan ) move |= DMap_Find( event->selects->value, chan ) != NULL;
-		//move = DaoTaskEvent_CheckSelect( event );
+		//move = DaoTaskletEvent_CheckSelect( event );
 		break;
 	default: break;
 	}
@@ -654,45 +736,45 @@ static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoCha
 /*
 // Only activate one event per channel:
 */
-void DaoChannel_ActivateEvent( DaoChannel *self, int type )
+void DaoChannel_ActivateEvent( DaoChannel *self, int type, DaoTaskletServer *server )
 {
-	DaoCallServer *server = daoCallServer;
 	DNode *node;
 	daoint i;
 
 	for(i=0; i<server->events2->size; ++i){
-		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
+		DaoTaskletEvent *event = (DaoTaskletEvent*) server->events2->items.pVoid[i];
 		if( event->type != type ) continue;
-		if( DaoCallServer_CheckEvent( event, NULL, self ) ){
+		if( DaoTaskletServer_CheckEvent( event, NULL, self ) ){
 			DList_Append( server->events, event );
 			DList_Erase( server->events2, i, 1 );
 			return;
 		}
 	}
 	for(node=DMap_First(server->waitings); node; node=DMap_Next(server->waitings,node)){
-		DaoTaskEvent *event = (DaoTaskEvent*) node->value.pValue;
+		DaoTaskletEvent *event = (DaoTaskletEvent*) node->value.pValue;
 		if( event->type != type ) continue;
-		if( DaoCallServer_CheckEvent( event, NULL, self ) ){
+		if( DaoTaskletServer_CheckEvent( event, NULL, self ) ){
 			DList_Append( server->events, event );
 			DMap_EraseNode( server->waitings, node );
 			return;
 		}
 	}
 }
+
 /*
 // Activate all events waiting on a future value:
 */
-void DaoFuture_ActivateEvent( DaoFuture *self )
+void DaoFuture_ActivateEvent( DaoFuture *self, DaoVmSpace *vmspace )
 {
-	DaoCallServer *server = daoCallServer;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( vmspace );
 	DList *array = DList_New(0);
 	DNode *node;
 	daoint i;
 
 	DMutex_Lock( & server->mutex );
 	for(i=0; i<server->events2->size; ++i){
-		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
-		if( DaoCallServer_CheckEvent( event, self, NULL ) ){
+		DaoTaskletEvent *event = (DaoTaskletEvent*) server->events2->items.pVoid[i];
+		if( DaoTaskletServer_CheckEvent( event, self, NULL ) ){
 			event->state = DAO_EVENT_RESUME;
 			DList_Append( server->events, event );
 			DList_Erase( server->events2, i, 1 );
@@ -700,9 +782,9 @@ void DaoFuture_ActivateEvent( DaoFuture *self )
 		}
 	}
 	for(node=DMap_First(server->waitings); node; node=DMap_Next(server->waitings,node)){
-		DaoTaskEvent *event = (DaoTaskEvent*) node->value.pValue;
+		DaoTaskletEvent *event = (DaoTaskletEvent*) node->value.pValue;
 		/* remove from timed waiting list: */
-		if( DaoCallServer_CheckEvent( event, self, NULL ) ){
+		if( DaoTaskletServer_CheckEvent( event, self, NULL ) ){
 			event->state = DAO_EVENT_RESUME;
 			DList_Append( server->events, event );
 			DList_Append( array, node->key.pVoid );
@@ -713,18 +795,17 @@ void DaoFuture_ActivateEvent( DaoFuture *self )
 	DMutex_Unlock( & server->mutex );
 	DList_Delete( array );
 }
-static DaoFuture* DaoCallServer_GetNextFuture()
+static DaoFuture* DaoTaskletServer_GetNextFuture( DaoTaskletServer *self )
 {
-	DaoCallServer *server = daoCallServer;
 	DaoFuture *first, *future, *precond;
-	DList *events = server->events;
-	DMap *pending = server->pending;
-	DMap *active = server->active;
+	DList *events = self->events;
+	DMap *pending = self->pending;
+	DMap *active = self->active;
 	DNode *it;
 	daoint i, j;
 
 	for(i=0; i<events->size; i++){
-		DaoTaskEvent *event = (DaoTaskEvent*) events->items.pVoid[i];
+		DaoTaskletEvent *event = (DaoTaskletEvent*) events->items.pVoid[i];
 		DaoFuture *future = event->future;
 		DaoObject *actor = future->actor;
 		DaoChannel *channel = event->channel;
@@ -736,14 +817,14 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		int type = event->type;
 
 		if( event->state == DAO_EVENT_WAIT && future->precond != NULL ){
-			if( future->precond->state != DAO_CALL_FINISHED ) goto MoveToWaiting;
+			if( future->precond->state != DAO_TASKLET_FINISHED ) goto MoveToWaiting;
 		}
 		switch( event->type ){
 		case DAO_EVENT_WAIT_SENDING :
 			if( channel->buffer->size >= channel->cap ){
 				if( event->state == DAO_EVENT_WAIT ){
-					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING );
-					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SELECT );
+					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING, self );
+					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SELECT, self );
 					goto MoveToWaiting;
 				}
 			}
@@ -752,7 +833,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		case DAO_EVENT_WAIT_RECEIVING :
 			if( channel->buffer->size == 0 ){
 				if( channel->cap > 0 && event->state == DAO_EVENT_WAIT ){
-					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
+					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING, self );
 					goto MoveToWaiting;
 				}
 				message = dao_none_value;
@@ -763,10 +844,12 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			event->auxiliary = channel->cap <= 0 && channel->buffer->size == 0;
 			event->type = DAO_EVENT_RESUME_TASKLET;
 			DList_PopFront( channel->buffer );
-			if( channel->buffer->size < channel->cap )
-				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
-			if( channel->buffer->size )
-				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING );
+			if( channel->buffer->size < channel->cap ){
+				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING, self );
+			}
+			if( channel->buffer->size ){
+				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING, self );
+			}
 			break;
 		case DAO_EVENT_WAIT_SELECT :
 			message = dao_none_value;
@@ -784,7 +867,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 					}
 				}else{
 					DaoFuture *fut = (DaoFuture*) it->key.pValue;
-					if( fut->state == DAO_CALL_FINISHED ){
+					if( fut->state == DAO_TASKLET_FINISHED ){
 						futselect = fut;
 						selected = it->key.pValue;
 						message = fut->value;
@@ -805,10 +888,12 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			if( chselect != NULL || futselect != NULL ) event->auxiliary = 0;
 			if( chselect ){
 				DList_PopFront( chselect->buffer );
-				if( chselect->buffer->size < chselect->cap )
-					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SENDING );
-				if( chselect->buffer->size )
-					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SELECT );
+				if( chselect->buffer->size < chselect->cap ){
+					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SENDING, self );
+				}
+				if( chselect->buffer->size ){
+					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SELECT, self );
+				}
 			}
 			if( futselect != NULL || closed != NULL ){
 				void *key = futselect ? (void*)futselect : (void*)closed;
@@ -849,26 +934,27 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		future->timeout = event->timeout;
 
 		GC_IncRC( future ); /* To be decreased at the end of tasklet; */
-		DaoCallServer_CacheEvent( event );
+		DaoTaskletServer_CacheEvent( self, event );
 		return future;
 MoveToWaiting:
 		if( event->expiring >= 0.0 && event->expiring < MIN_TIME ) continue;
 		if( event->expiring >= MIN_TIME ){
 			dao_complex com = {0.0,0.0};
 			com.real = event->expiring;
-			DMap_Insert( server->waitings, & com, event );
-			DCondVar_Signal( & server->condv2 );
+			DMap_Insert( self->waitings, & com, event );
+			DCondVar_Signal( & self->condv2 );
 		}else{
-			DList_Append( server->events2, event );
+			DList_Append( self->events2, event );
 		}
-		DList_Erase( server->events, i, 1 );
+		DList_Erase( self->events, i, 1 );
 		i -= 1;
 	}
 	return NULL;
 }
-static void DaoCallThread_Run( DaoCallThread *self )
+
+static void DaoTaskletThread_Run( DaoTaskletThread *self )
 {
-	DaoCallServer *server = daoCallServer;
+	DaoTaskletServer *server = self->server;
 	double wt = 0.001;
 	daoint i, count, timeout;
 
@@ -928,7 +1014,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Lock( & server->mutex );
 		server->idle -= 1;
 		server->vacant -= self->taskOwner == NULL;
-		future = DaoCallServer_GetNextFuture();
+		future = DaoTaskletServer_GetNextFuture( server );
 		DMutex_Unlock( & server->mutex );
 
 		if( future == NULL ) continue;
@@ -940,7 +1026,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		}
 
 		count = process->exceptions->size;
-		future->state = DAO_CALL_RUNNING;
+		future->state = DAO_TASKLET_RUNNING;
 		DaoProcess_InterceptReturnValue( process );
 		DaoProcess_Start( process );
 		if( process->exceptions->size > count ) DaoProcess_PrintException( process, NULL, 1 );
@@ -961,50 +1047,59 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Unlock( & server->mutex );
 
 		DaoProcess_ReturnFutureValue( process, future );
-		if( future->state == DAO_CALL_FINISHED ) DaoFuture_ActivateEvent( future );
+		if( future->state == DAO_TASKLET_FINISHED ){
+			DaoFuture_ActivateEvent( future, server->vmspace );
+		}
 		GC_DecRC( future );
 	}
 	DMutex_Lock( & server->mutex );
 	server->stopped += 1;
 	DMutex_Unlock( & server->mutex );
 }
-void DaoCallServer_Join()
+
+void DaoVmSpace_JoinTasklets( DaoVmSpace *self )
 {
+	DaoTaskletServer *server = (DaoTaskletServer*) self->taskletServer;
 	DCondVar condv;
-	if( daoCallServer == NULL ) return;
+
+	if( server == NULL ) return;
+
 	DCondVar_Init( & condv );
-	DMutex_Lock( & daoCallServer->mutex );
-	while( daoCallServer->pending->size || daoCallServer->vacant != daoCallServer->total ){
-		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
+	DMutex_Lock( & server->mutex );
+	while( server->pending->size || server->vacant != server->total ){
+		DCondVar_TimedWait( & condv, & server->mutex, 0.01 );
 	}
-	DMutex_Unlock( & daoCallServer->mutex );
+	DMutex_Unlock( & server->mutex );
 	DCondVar_Destroy( & condv );
 }
-void DaoCallServer_Stop()
+void DaoVmSpace_StopTasklets( DaoVmSpace *self )
 {
+	DaoTaskletServer *server = (DaoTaskletServer*) self->taskletServer;
+	DaoTaskletThread *taskthd;
 	DCondVar condv;
-	DaoCallThread *calth;
-	if( daoCallServer == NULL ) return;
+
+	if( server == NULL ) return;
+
 	DCondVar_Init( & condv );
-	daoCallServer->finishing = 1;
+	server->finishing = 1;
 
-	calth = DaoCallThread_New( NULL, NULL );
-	DMutex_Lock( & daoCallServer->mutex );
-	daoCallServer->total += 1;
-	DMutex_Unlock( & daoCallServer->mutex );
+	taskthd = DaoTaskletThread_New( server, NULL, NULL );
+	DMutex_Lock( & server->mutex );
+	server->total += 1;
+	DMutex_Unlock( & server->mutex );
 
-	DaoCallThread_Run( calth );  /* process tasks in the main thread; */
+	DaoTaskletThread_Run( taskthd );  /* process tasks in the main thread; */
 
-	DMutex_Lock( & daoCallServer->mutex );
-	while( daoCallServer->stopped != daoCallServer->total || daoCallServer->timing ){
-		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
+	DMutex_Lock( & server->mutex );
+	while( server->stopped != server->total || server->timing ){
+		DCondVar_TimedWait( & condv, & server->mutex, 0.01 );
 	}
-	DMutex_Unlock( & daoCallServer->mutex );
+	DMutex_Unlock( & server->mutex );
 
 	DCondVar_Destroy( & condv );
-	DaoCallThread_Delete( calth );
-	DaoCallServer_Delete( daoCallServer );
-	daoCallServer = NULL;
+	DaoTaskletThread_Delete( taskthd );
+	DaoTaskletServer_Delete( server );
+	self->taskletServer = NULL;
 }
 
 
@@ -1090,7 +1185,7 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );
-	DaoCallServer_TryInit( masterVmSpace );
+	DaoTaskletServer_TryInit( masterVmSpace );
 }
 static void CHANNEL_Buffer( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -1099,6 +1194,7 @@ static void CHANNEL_Buffer( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 {
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( proc->vmSpace );
 	DaoChannel *self = (DaoChannel*) par[0];
 	daoint i;
 
@@ -1106,27 +1202,28 @@ static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 	if( N == 1 ) return;
 
 	/* Closing the channel: */
-	DMutex_Lock( & daoCallServer->mutex );
+	DMutex_Lock( & server->mutex );
 	self->cap = par[1]->xInteger.value;
 	if( self->cap == 0 ){
-		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
-		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
-		DCondVar_Signal( & daoCallServer->condv );
+		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING, server );
+		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT, server );
+		DCondVar_Signal( & server->condv );
 	}
-	DMutex_Unlock( & daoCallServer->mutex );
+	DMutex_Unlock( & server->mutex );
 }
-void DaoChannel_Send( DaoChannel *self, DaoValue *data )
+void DaoChannel_Send( DaoChannel *self, DaoValue *data, DaoTaskletServer *server )
 {
-	DMutex_Lock( & daoCallServer->mutex );
+	DMutex_Lock( & server->mutex );
 	DList_Append( self->buffer, data );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
-	DCondVar_Signal( & daoCallServer->condv );
-	DMutex_Unlock( & daoCallServer->mutex );
+	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING, server );
+	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT, server );
+	DCondVar_Signal( & server->condv );
+	DMutex_Unlock( & server->mutex );
 }
 static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoValue *data;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( proc->vmSpace );
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[2]->xFloat.value;
@@ -1144,35 +1241,36 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	}
 
 	//printf( "CHANNEL_Send: %p\n", event );
-	DaoChannel_Send( self, data );
+	DaoChannel_Send( self, data, server );
 
 	if( self->buffer->size >= self->cap ){
-		DaoTaskEvent *event = DaoCallServer_MakeEvent();
-		DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SENDING, DAO_EVENT_WAIT, future, self );
+		DaoTaskletEvent *event = DaoTaskletServer_MakeEvent( server );
+		DaoTaskletEvent_Init( event, DAO_EVENT_WAIT_SENDING, DAO_EVENT_WAIT, future, self );
 		proc->status = DAO_PROCESS_SUSPENDED;
 		proc->pauseType = DAO_PAUSE_CHANNEL_SEND;
-		DaoCallServer_AddTimedWait( proc, event, timeout );
+		DaoTaskletServer_AddTimedWait( server, proc, event, timeout );
 	}
 }
 static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTaskEvent *event = NULL;
+	DaoTaskletEvent *event = NULL;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( proc->vmSpace );
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[1]->xFloat.value;
 
-	event = DaoCallServer_MakeEvent();
-	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_RECEIVING, DAO_EVENT_WAIT, future, self );
+	event = DaoTaskletServer_MakeEvent( server );
+	DaoTaskletEvent_Init( event, DAO_EVENT_WAIT_RECEIVING, DAO_EVENT_WAIT, future, self );
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_CHANNEL_RECEIVE;
-	DaoCallServer_AddTimedWait( proc, event, timeout );
+	DaoTaskletServer_AddTimedWait( server, proc, event, timeout );
 
 	/* Message may have been sent before this call: */
 	if( self->buffer->size ){
-		DMutex_Lock( & daoCallServer->mutex );
-		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
-		DCondVar_Signal( & daoCallServer->condv );
-		DMutex_Unlock( & daoCallServer->mutex );
+		DMutex_Lock( & server->mutex );
+		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING, server );
+		DCondVar_Signal( & server->condv );
+		DMutex_Unlock( & server->mutex );
 	}
 }
 
@@ -1233,7 +1331,8 @@ DaoTypeCore daoChannelCore =
 void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 {
 	DNode *it;
-	DaoTaskEvent *event = NULL;
+	DaoTaskletEvent *event = NULL;
+	DaoTaskletServer *server = DaoTaskletServer_TryInit( proc->vmSpace );
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoMap *selects = (DaoMap*) par[0];
 	float timeout = par[1]->xFloat.value;
@@ -1248,18 +1347,18 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 		}
 	}
 
-	event = DaoCallServer_MakeEvent();
-	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SELECT, DAO_EVENT_WAIT, future, NULL );
+	event = DaoTaskletServer_MakeEvent( server );
+	DaoTaskletEvent_Init( event, DAO_EVENT_WAIT_SELECT, DAO_EVENT_WAIT, future, NULL );
 	GC_Assign( & event->selects, selects );
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_CHANFUT_SELECT;
-	DaoCallServer_AddTimedWait( proc, event, timeout );
+	DaoTaskletServer_AddTimedWait( server, proc, event, timeout );
 
 	/* Message may have been sent before this call: */
-	DMutex_Lock( & daoCallServer->mutex );
-	DaoChannel_ActivateEvent( NULL, DAO_EVENT_WAIT_SELECT );
-	DCondVar_Signal( & daoCallServer->condv );
-	DMutex_Unlock( & daoCallServer->mutex );
+	DMutex_Lock( & server->mutex );
+	DaoChannel_ActivateEvent( NULL, DAO_EVENT_WAIT_SELECT, server );
+	DCondVar_Signal( & server->condv );
+	DMutex_Unlock( & server->mutex );
 }
 
 #endif
@@ -1275,7 +1374,7 @@ DaoFuture* DaoFuture_New( DaoType *type, int vatype )
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
 	self->value = dao_none_value;
-	self->state = DAO_CALL_PAUSED;
+	self->state = DAO_TASKLET_PAUSED;
 	return self;
 }
 static void DaoFuture_Delete( DaoFuture *self )
@@ -1294,14 +1393,14 @@ static void DaoFuture_Delete( DaoFuture *self )
 static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *self = (DaoFuture*) par[0];
-	if( self->state == DAO_CALL_FINISHED ){
+	if( self->state == DAO_TASKLET_FINISHED ){
 		DaoProcess_PutValue( proc, self->value );
 		return;
 	}
 #ifdef DAO_WITH_CONCURRENT
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_FUTURE_VALUE;
-	DaoCallServer_AddWait( proc, self, -1 );
+	DaoVmSpace_AddTaskletWait( proc->vmSpace, proc, self, -1 );
 #else
 	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
 #endif
@@ -1310,12 +1409,12 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *self = (DaoFuture*) par[0];
 	float timeout = par[1]->xFloat.value;
-	DaoProcess_PutBoolean( proc, self->state == DAO_CALL_FINISHED );
-	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+	DaoProcess_PutBoolean( proc, self->state == DAO_TASKLET_FINISHED );
+	if( self->state == DAO_TASKLET_FINISHED || timeout == 0 ) return;
 #ifdef DAO_WITH_CONCURRENT
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
-	DaoCallServer_AddWait( proc, self, timeout );
+	DaoVmSpace_AddTaskletWait( proc->vmSpace, proc, self, timeout );
 #else
 	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
 #endif

@@ -61,6 +61,20 @@ enum DaoModuleTypes
 // -- Module loading and namespace management;
 // -- C types and functions defined in modules;
 // -- Path management;
+//
+// Notes:
+// Though it is very desirable to support completely independent vm spaces with
+// independent garbage collectors, there are various practical issues which may
+// make such support not worthy the efforts.
+//
+// First of all, many functions will need to take additional parameters, which
+// would make the API tedious to use. Second, the values will need to be space
+// aware such that passing values between different vm spaces can be prevented,
+// to make sure the garbage collectors can work independently. This is hard to
+// guarantee with the current design where Dao values are directly accessible.
+//
+// Things could be simplified if an additional field of vm space pointer or id
+// is added to Dao values, but there will still be much hassle.
 */
 struct DaoVmSpace
 {
@@ -143,6 +157,8 @@ struct DaoVmSpace
 	DMutex    cacheMutex;
 	DMutex    miscMutex;
 #endif
+
+	void  *taskletServer;
 
 	char* (*ReadLine)( const char *prompt, DString *buffer );
 	int   (*AddHistory)( const char *cmd );

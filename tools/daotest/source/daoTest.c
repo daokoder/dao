@@ -295,7 +295,7 @@ int main( int argc, char **argv )
 				DaoNamespace_AddParent( ns2, ns );
 				DaoProcess_Eval( proc, ns2, codes->chars );
 #ifdef DAO_WITH_CONCURRENT
-				DaoCallServer_Join();
+				DaoVmSpace_JoinTasklets( vmSpace );
 #endif
 				DString_Trim( output, 1, 1, 0 );
 				DString_Trim( result, 1, 1, 0 );

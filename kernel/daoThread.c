@@ -723,7 +723,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->condv = & condv;
 		task->mutex = & mutex;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
-		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task, task->clone );
+		if( i ) DaoVmSpace_AddTaskletJob( proc->vmSpace, DaoMT_RunFunctional, task, task->clone );
 	}
 	DaoMT_RunFunctional( tasks );
 
@@ -759,8 +759,8 @@ static void DaoMT_Start0( void *p )
 	DaoProcess_Start( proc );
 	DaoProcess_ReturnFutureValue( proc, proc->future );
 	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, NULL, 1 );
-	if( proc->future->state == DAO_CALL_FINISHED ){
-		DaoFuture_ActivateEvent( proc->future );
+	if( proc->future->state == DAO_TASKLET_FINISHED ){
+		DaoFuture_ActivateEvent( proc->future, proc->vmSpace );
 		DaoVmSpace_ReleaseProcess( proc->vmSpace, proc );
 	}
 }
@@ -790,7 +790,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	future->process = clone;
 	GC_IncRC( clone );
 	GC_Assign( & clone->future, future );
-	future->state = DAO_CALL_RUNNING;
+	future->state = DAO_TASKLET_RUNNING;
 
 	for(vmc=sect; vmc!=end; vmc++){
 		int i = -1, code = vmc->code;
@@ -801,7 +801,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 		}
 		if( i >= 0 ) DaoValue_Move( proc->activeValues[i], & clone->activeValues[i], NULL );
 	}
-	DaoCallServer_AddTask( DaoMT_Start0, clone, p[0]->xEnum.value ? clone : NULL );
+	DaoVmSpace_AddTaskletJob( proc->vmSpace, DaoMT_Start0, clone, p[0]->xEnum.value ? clone : NULL );
 }
 static void DaoMT_Iterate( DaoProcess *proc, DaoValue *p[], int n )
 {

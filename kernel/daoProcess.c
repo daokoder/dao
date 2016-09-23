@@ -1240,11 +1240,11 @@ CallEntry:
 			// No need to check abortion of the precondition tasklet.
 			// If it happened, this one should not have been activated.
 			*/
-			finished = future->precond->state == DAO_CALL_FINISHED;
+			finished = future->precond->state == DAO_TASKLET_FINISHED;
 			DaoProcess_PutValue( self, finished ? future->precond->value : dao_none_value );
 			break;
 		case DAO_PAUSE_FUTURE_WAIT :
-			DaoProcess_PutBoolean( self, future->precond->state == DAO_CALL_FINISHED );
+			DaoProcess_PutBoolean( self, future->precond->state == DAO_TASKLET_FINISHED );
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
 			DaoProcess_PutBoolean( self, future->timeout == 0 );
@@ -2444,7 +2444,7 @@ ReturnFalse:
 	// self->active!=0: if the process has been added to the active process list;
 	// Now it must be manually removed from the active process list:
 	*/
-	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
+	if( active == 0 && self->active ) DaoProcess_MarkActiveTasklet( self, 0 );
 #endif
 	DaoGC_TryInvoke( self );
 	self->startFrame = startFrame;
@@ -2454,7 +2454,7 @@ ReturnFalse:
 ReturnTrue:
 
 #ifdef DAO_WITH_CONCURRENT
-	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
+	if( active == 0 && self->active ) DaoProcess_MarkActiveTasklet( self, 0 );
 #endif
 	DaoGC_TryInvoke( self );
 	self->startFrame = startFrame;
@@ -2470,7 +2470,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		DCondVar condv;
 		DMutex_Init( & mutex );
 		DCondVar_Init( & condv );
-		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL, NULL );
+		if( DaoVmSpace_GetThreadCount( self->vmSpace ) == 0 ){
+			DaoVmSpace_AddTaskletThread( self->vmSpace, NULL, NULL, NULL );
+		}
 		DMutex_Lock( & mutex );
 		while( self->status >= DAO_PROCESS_SUSPENDED ){
 			DCondVar_TimedWait( & condv, & mutex, 0.01 );
@@ -3548,13 +3550,13 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	DaoStackFrame *frame = self->topFrame;
 	DaoStackFrame *prev = frame->prev;
 	if( vmc->b & DAO_CALL_ASYNC ){
-		DaoCallServer_AddCall( self );
+		DaoVmSpace_AddTaskletCall( self->vmSpace, self );
 		self->status = DAO_PROCESS_RUNNING;
 		return 1;
 	}
 	if( vmc->code != DVM_MCALL ) return 0;
 	if( frame->object && frame->object->isAsync ){
-		DaoCallServer_AddCall( self );
+		DaoVmSpace_AddTaskletCall( self->vmSpace, self );
 		self->status = DAO_PROCESS_RUNNING;
 		return 1;
 	}

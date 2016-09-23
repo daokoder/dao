@@ -32,83 +32,13 @@
 #include"daoVmspace.h"
 
 
-
-enum DaoTaskEventType
+enum DaoTaskletStatus
 {
-	DAO_EVENT_RESUME_TASKLET ,  /* Resume the tasklet; */
-	DAO_EVENT_WAIT_TASKLET   ,  /* Wait for another tasklet; */
-	DAO_EVENT_WAIT_RECEIVING ,  /* Wait for receiving from a channel; */
-	DAO_EVENT_WAIT_SENDING   ,  /* Wait after sending to a channel; */
-	DAO_EVENT_WAIT_SELECT       /* Wait for multiple futures or channels; */
+	DAO_TASKLET_RUNNING ,
+	DAO_TASKLET_PAUSED ,
+	DAO_TASKLET_FINISHED ,
+	DAO_TASKLET_ABORTED
 };
-enum DaoTaskEventState
-{
-	DAO_EVENT_WAIT ,
-	DAO_EVENT_RESUME  /* Ensure the processing of timed-out events; */
-};
-
-enum DaoTaskStatus
-{
-	DAO_CALL_RUNNING ,
-	DAO_CALL_PAUSED ,
-	DAO_CALL_FINISHED ,
-	DAO_CALL_ABORTED
-};
-
-
-typedef struct DaoTaskEvent  DaoTaskEvent;
-
-/*
-// Task event for scheduling.
-//
-// A task event can be generated in different situation:
-// 1. Starting of a new tasklet by calling mt.start::{} or asynchronous methods:
-//    DaoTaskEvent {
-//        type = DAO_EVENT_RESUME_TASKLET;
-//        future = future value for the new tasklet;
-//        channel = NULL;
-//    };
-// 2. Waiting for a tasklet (future value):
-//    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_TASKLET/DAO_EVENT_RESUME_TASKLET;
-//        future = future value for the waiting tasklet;
-//        channel = NULL;
-//    };
-// 3. Waiting to Receive message from a channel:
-//    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_RECEIVING;
-//        future = future value for the waiting tasklet;
-//        channel = channel for receiving;
-//    };
-// 4. Waiting after sending message to a channel:
-//    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_SENDING;
-//        future = future value for the sending tasklet;
-//        channel = channel for sending;
-//    };
-// 5. Waiting for one of the future values or channels becoming ready:
-//    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_SELECT;
-//        future = future value for the waiting tasklet;
-//        channel = NULL;
-//        channels = select list of channels;
-//    };
-//
-*/
-struct DaoTaskEvent
-{
-	uchar_t      type;
-	uchar_t      state;
-	uchar_t      timeout;
-	uchar_t      auxiliary;
-	double       expiring;  /* expiring time for a timeout event; */
-	DaoFuture   *future;
-	DaoChannel  *channel;
-	DaoValue    *message;
-	DaoValue    *selected;
-	DaoMap      *selects;  /* DHash<DaoFuture*|DaoChannel*,0|1>; */
-};
-
 
 
 /*
@@ -160,23 +90,23 @@ struct DaoFuture
 DAO_DLL DaoType *dao_type_future;
 DAO_DLL DaoFuture*  DaoFuture_New( DaoType *type, int vatype );
 
-DAO_DLL void DaoCallServer_AddCall( DaoProcess *call );
+
+DAO_DLL void DaoVmSpace_AddTaskletCall( DaoVmSpace *self, DaoProcess *call );
 
 #ifdef DAO_WITH_CONCURRENT
 
 DAO_DLL DaoType *dao_type_channel;
 DAO_DLL DaoChannel* DaoChannel_New( DaoType *type, int dtype );
 
-DAO_DLL void DaoChannel_Send( DaoChannel *self, DaoValue *data );
-DAO_DLL void DaoChannel_ActivateEvent( DaoChannel *self, int type );
-DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self );
+DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self, DaoVmSpace *vmspace );
+
+DAO_DLL void DaoProcess_MarkActiveTasklet( DaoProcess *self, int active );
 
 DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 
-
-DAO_DLL int DaoCallServer_GetThreadCount();
-DAO_DLL void DaoCallServer_Join();
-DAO_DLL void DaoCallServer_Stop();
+DAO_DLL int  DaoVmSpace_GetThreadCount( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_JoinTasklets( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_StopTasklets( DaoVmSpace *self );
 
 /*
 // If "proc" is not NULL, obtain (or create) a thread exclusively for
@@ -186,9 +116,9 @@ DAO_DLL void DaoCallServer_Stop();
 // or proc->status = DAO_PROCESS_ABORTED after DaoProcess_Start(proc).
 // the virtual process "proc".
 */
-DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param, void *proc );
-DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc );
-DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout );
+DAO_DLL void DaoVmSpace_AddTaskletThread( DaoVmSpace *self, DThreadTask func, void *param, void *proc );
+DAO_DLL void DaoVmSpace_AddTaskletJob( DaoVmSpace *self, DThreadTask func, void *param, void *proc );
+DAO_DLL void DaoVmSpace_AddTaskletWait( DaoVmSpace *self, DaoProcess *wait, DaoFuture *future, double timeout );
 
 #endif
 
