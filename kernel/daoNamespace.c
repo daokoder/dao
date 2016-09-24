@@ -69,6 +69,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoType *type;
 
 	DaoValue_Init( self, DAO_NAMESPACE );
+	//printf( "DaoNamespace_New: %p %s\n", self, nsname );
 	GC_IncRC( vms );
 	self->vmSpace = vms;
 	self->trait |= DAO_VALUE_DELAYGC;
@@ -133,6 +134,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->chars ); */
+
+	//printf( "DaoNamespace_Delete: %p %s\n", self, self->name->chars );
 
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );

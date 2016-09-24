@@ -621,7 +621,6 @@ DaoVmSpace* DaoVmSpace_New()
 
 	if( masterVmSpace == NULL ){
 		self->coreNamespace = DaoNamespace_New( self, "core" );
-		self->coreNamespace->vmSpace = self;
 		GC_IncRC( self->coreNamespace );
 	}else{
 		DNode *it;
@@ -664,7 +663,6 @@ DaoVmSpace* DaoVmSpace_New()
 	}
 
 	self->daoNamespace = DaoNamespace_New( self, "dao" );
-	self->daoNamespace->vmSpace = self;
 	GC_IncRC( self->daoNamespace );
 	DaoNamespace_AddParent( self->daoNamespace, self->coreNamespace );
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
@@ -679,16 +677,17 @@ DaoVmSpace* DaoVmSpace_New()
 	}
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
-	self->mainNamespace->vmSpace = self;
 	GC_IncRC( self->mainNamespace );
 	DaoNamespace_AddParent( self->mainNamespace, self->daoNamespace );
 
 	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
+	GC_IncRC( self );
 	return self;
 }
-void DaoVmSpace_DeleteData( DaoVmSpace *self )
+
+static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 {
 	DNode *it;
 
@@ -743,13 +742,14 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 }
+
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
 	int i;
+
 	for(i=0; i<self->typeCores->size; ++i) dao_free( self->typeCores->items.pVoid[i] );
 	DList_Delete( self->typeCores );
 
-	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->nsPlugins );
 #ifdef DAO_WITH_THREAD
@@ -758,6 +758,60 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMutex_Destroy( & self->miscMutex );
 #endif
 	dao_free( self );
+}
+
+void DaoVmSpace_TryDelete( DaoVmSpace *self )
+{
+#ifdef DAO_WITH_THREAD
+	DCondVar condv;
+#endif
+	DNode *it;
+	daoint cycle;
+
+#ifdef DAO_WITH_CONCURRENT
+	DaoVmSpace_StopTasklets( self );
+#endif
+
+	if( (self->options & DAO_OPTION_PROFILE) && self->profiler ){
+		DaoProfiler *profiler = self->profiler;
+		if( profiler->Report ) profiler->Report( profiler, self->stdioStream );
+	}
+
+	DaoVmSpace_DeleteData( self );
+
+	DaoGC_SetFinalMode( 1 );
+	cycle = DaoGC_GetCycleIndex();
+
+#ifdef DAO_WITH_THREAD
+	DCondVar_Init( & condv );
+	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 2) ){
+		//printf( "Refcount = %i\n", self->refCount );
+		DaoGC_TryInvoke();
+		DCondVar_TimedWait( & condv, & self->moduleMutex, 0.01 );
+	}
+	DCondVar_Destroy( & condv );
+#else
+	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 2) ){
+		//printf( "Refcount = %i\n", self->refCount );
+		DaoGC_TryInvoke();
+	}
+#endif
+
+	//printf( "Refcount = %i\n", self->refCount );
+	if( self->refCount != 1 ){
+		printf( "Warning: VM space has unexpected refCount %i\n", self->refCount );
+	}
+
+#ifdef DEBUG
+	for(it=DMap_First(self->nsModules); it; it=DMap_Next(self->nsModules,it) ){
+		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
+				((DaoNamespace*)it->value.pValue)->name->chars, it->value.pValue->xBase.refCount );
+	}
+#endif
+
+	DaoGC_SetFinalMode( 0 );
+
+	GC_DecRC( self );
 }
 
 void DaoVmSpace_Lock( DaoVmSpace *self )
@@ -979,7 +1033,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			DaoStream *stream2 = self->errorStream;
 			DaoNamespace *ions = DaoVmSpace_GetNamespace( self, "io" );
 			DaoNamespace *mainns = DaoNamespace_New( self, "MainNamespace" );
-			mainns->vmSpace = self;
 			GC_Assign( & self->mainNamespace, mainns );
 			DaoNamespace_AddConstValue( mainns, "io", (DaoValue*) ions );
 			DaoNamespace_AddConstValue( mainns, "stdio", (DaoValue*) stream1 );
@@ -2700,7 +2753,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
 
 	masterVmSpace = vms = DaoVmSpace_New();
-	GC_IncRC( masterVmSpace );
 
 	DString_Reserve( masterVmSpace->startPath, 512 );
 	cwd = getcwd( masterVmSpace->startPath->chars, 511 );
@@ -2830,31 +2882,10 @@ void DaoQuit()
 	int i;
 	DNode *it = NULL;
 
-	/* TypeTest(); */
-#ifdef DAO_WITH_CONCURRENT
-	DaoVmSpace_StopTasklets( masterVmSpace );
-#endif
-
-	if( daoConfig.iscgi ) return;
-
-	if( (masterVmSpace->options & DAO_OPTION_PROFILE) && masterVmSpace->profiler ){
-		DaoProfiler *profiler = masterVmSpace->profiler;
-		if( profiler->Report ) profiler->Report( profiler, masterVmSpace->stdioStream );
-	}
-
-	DaoVmSpace_DeleteData( masterVmSpace );
+	DaoVmSpace_TryDelete( masterVmSpace );
 
 	DaoGC_Finish();
-#ifdef DEBUG
-	for(it=DMap_First(masterVmSpace->nsModules); it; it=DMap_Next(masterVmSpace->nsModules,it) ){
-		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
-				((DaoNamespace*)it->value.pValue)->name->chars, it->value.pValue->xBase.refCount );
-	}
-	if( masterVmSpace->refCount != 1 ){
-		printf( "Warning: the master VM space has unexpected refCount %i\n", masterVmSpace->refCount );
-	}
-#endif
-	DaoVmSpace_Delete( masterVmSpace );
+
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_Quit();
 #endif

@@ -4079,6 +4079,7 @@ ErrorInvalidArgValue:
 	DaoGC_DecRC( (DaoValue*) daomake_settings );
 	DaoGC_DecRC( (DaoValue*) daomake_platforms );
 	DaoGC_DecRC( (DaoValue*) daomake_packages );
+	DaoGC_DecRC( (DaoValue*) daomake_assemblers );
 	DaoGC_DecRC( (DaoValue*) daomake_compilers );
 	DaoGC_DecRC( (DaoValue*) daomake_linkers );
 	DaoGC_DecRC( (DaoValue*) daomake_includes );

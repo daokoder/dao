@@ -596,6 +596,11 @@ int DaoGC_Max( int n /*=-1*/ )
 	return prev;
 }
 
+daoint DaoGC_GetCycleIndex()
+{
+	return gcWorker.cycle;
+}
+
 void DaoGC_SetFinalMode( int bl )
 {
 	gcWorker.finalizing = bl;
@@ -790,6 +795,9 @@ static void DaoValue_Delete( DaoValue *self )
 		break;
 	case DAO_VARIABLE :
 		DaoVariable_Delete( (DaoVariable*)  self);
+		break;
+	case DAO_VMSPACE :
+		DaoVmSpace_Delete( (DaoVmSpace*) self );
 		break;
 	}
 }
@@ -1282,7 +1290,7 @@ void DaoCGC_TryBlock()
 {
 	if( gcWorker.idleList->size >= gcWorker.gcMax ){
 		DThreadData *thdData = DThread_GetSpecific();
-		if( thdData && ! ( thdData->state & DTHREAD_NO_PAUSE ) ){
+		if( thdData && ! (thdData->state & DTHREAD_NO_PAUSE) ){
 			DMutex_Lock( & gcWorker.mutex_block_mutator );
 			DCondVar_TimedWait( & gcWorker.condv_block_mutator, & gcWorker.mutex_block_mutator, 0.001 );
 			DMutex_Unlock( & gcWorker.mutex_block_mutator );
@@ -1476,7 +1484,7 @@ static int counts = 1000;
 static void DaoIGC_TryInvoke()
 {
 	if( gcWorker.busy ) return;
-	if( -- counts ) return;
+	if( gcWorker.finalizing == 0 && --counts ) return;
 	if( gcWorker.idleList->size < gcWorker.gcMax ){
 		counts = 1000;
 	}else{
@@ -1485,7 +1493,7 @@ static void DaoIGC_TryInvoke()
 
 	if( gcWorker.workList->size ){
 		DaoIGC_Continue();
-	}else if( gcWorker.idleList->size > gcWorker.gcMin ){
+	}else if( gcWorker.finalizing || gcWorker.idleList->size > gcWorker.gcMin ){
 		DaoIGC_Switch();
 	}
 }
@@ -1503,6 +1511,7 @@ void DaoIGC_Switch()
 void DaoIGC_Continue()
 {
 	if( gcWorker.busy ) return;
+	//printf( "DaoIGC_Continue: %i\n", gcWorker.workType );
 	gcWorker.busy = 1;
 	switch( gcWorker.workType ){
 	case GC_RESET_RC :

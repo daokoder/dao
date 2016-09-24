@@ -50,6 +50,8 @@ DAO_DLL void DaoObjectLogger_PrintProfile();
 DAO_DLL int DaoGC_Min( int n /*=-1*/ );
 DAO_DLL int DaoGC_Max( int n /*=-1*/ );
 
+DAO_DLL daoint DaoGC_GetCycleIndex();
+
 DAO_DLL void DaoGC_Start();
 DAO_DLL void DaoGC_Finish();
 DAO_DLL void DaoGC_TryInvoke();
