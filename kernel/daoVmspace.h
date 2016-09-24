@@ -78,6 +78,8 @@ enum DaoModuleTypes
 */
 struct DaoVmSpace
 {
+	DAO_VALUE_COMMON;
+
 	/*
 	// The common namespace for built-in types and values;
 	// It is immutable and shared among all DaoVmSpace;

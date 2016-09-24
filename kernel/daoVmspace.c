@@ -569,6 +569,7 @@ Done:
 DaoVmSpace* DaoVmSpace_New()
 {
 	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
+	DaoValue_Init( (DaoValue*) self, DAO_VMSPACE );
 	self->daoBinFile = DString_New();
 	self->daoBinPath = DString_New();
 	self->startPath = DString_New();
@@ -1767,6 +1768,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	}
 	if( self->mainSource->chars[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
+		DString_Assign( byteCoder->path, ns->name );
 		res = DaoByteCoder_Decode( byteCoder, self->mainSource );
 		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
 		res = res && DaoByteCoder_Build( byteCoder, ns );
@@ -1979,7 +1981,10 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 
 	if( source->chars[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
-		int bl = DaoByteCoder_Decode( byteCoder, source );
+		int bl;
+
+		DString_Assign( byteCoder->path, ns->name );
+		bl = DaoByteCoder_Decode( byteCoder, source );
 		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
 		bl = bl && DaoByteCoder_Build( byteCoder, ns );
 		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
@@ -2695,6 +2700,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
 
 	masterVmSpace = vms = DaoVmSpace_New();
+	GC_IncRC( masterVmSpace );
 
 	DString_Reserve( masterVmSpace->startPath, 512 );
 	cwd = getcwd( masterVmSpace->startPath->chars, 511 );
@@ -2843,6 +2849,9 @@ void DaoQuit()
 	for(it=DMap_First(masterVmSpace->nsModules); it; it=DMap_Next(masterVmSpace->nsModules,it) ){
 		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
 				((DaoNamespace*)it->value.pValue)->name->chars, it->value.pValue->xBase.refCount );
+	}
+	if( masterVmSpace->refCount != 1 ){
+		printf( "Warning: the master VM space has unexpected refCount %i\n", masterVmSpace->refCount );
 	}
 #endif
 	DaoVmSpace_Delete( masterVmSpace );

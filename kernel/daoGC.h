@@ -53,6 +53,7 @@ DAO_DLL int DaoGC_Max( int n /*=-1*/ );
 DAO_DLL void DaoGC_Start();
 DAO_DLL void DaoGC_Finish();
 DAO_DLL void DaoGC_TryInvoke();
+DAO_DLL void DaoGC_SetFinalMode( int bl );
 
 DAO_DLL void DaoCGC_Start();
 

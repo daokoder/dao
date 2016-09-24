@@ -43,7 +43,7 @@ struct DaoNamespace
 
 	DaoType  *nstype;
 
-	DaoVmSpace *vmSpace;
+	DaoVmSpace  *vmSpace;
 
 	DHash_(DString*,size_t)    *lookupTable; /* lookup table; */
 	DHash_(DString*,DaoType*)  *abstypes;    /* type lookup; */

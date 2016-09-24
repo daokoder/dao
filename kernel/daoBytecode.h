@@ -413,6 +413,7 @@ struct DaoByteCoder
 	DaoByteBlock  *top;
 
 	DString  *path;
+	DString  *encodedPath;
 
 	DHash_(DaoValue*,DaoByteBlock*)  *valueDataBlocks;   /* Same data to same block; */
 	DHash_(DaoValue*,DaoByteBlock*)  *valueObjectBlocks; /* Same object to same block; */

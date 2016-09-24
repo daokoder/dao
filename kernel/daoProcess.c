@@ -114,8 +114,9 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	int i;
 	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof( DaoProcess ) );
 	DaoValue_Init( self, DAO_PROCESS );
-	self->trait |= DAO_VALUE_DELAYGC;
+	GC_IncRC( vms );
 	self->vmSpace = vms;
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->status = DAO_PROCESS_SUSPENDED;
 	self->exceptions = DList_New( DAO_DATA_VALUE );
 	self->defers = DList_New( DAO_DATA_VALUE );
@@ -171,6 +172,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	if( self->future ) GC_DecRC( self->future );
 	if( self->factory ) DList_Delete( self->factory );
 	if( self->aux ) DaoAux_Delete( self->aux );
+	GC_DecRC( self->vmSpace );
 	dao_free( self );
 }
 

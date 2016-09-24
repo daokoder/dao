@@ -596,6 +596,11 @@ int DaoGC_Max( int n /*=-1*/ )
 	return prev;
 }
 
+void DaoGC_SetFinalMode( int bl )
+{
+	gcWorker.finalizing = bl;
+}
+
 void DaoGC_Init()
 {
 	if( gcWorker.idleList != NULL ) return;
@@ -1478,10 +1483,11 @@ static void DaoIGC_TryInvoke()
 		counts = 100;
 	}
 
-	if( gcWorker.workList->size )
+	if( gcWorker.workList->size ){
 		DaoIGC_Continue();
-	else if( gcWorker.idleList->size > gcWorker.gcMin )
+	}else if( gcWorker.idleList->size > gcWorker.gcMin ){
 		DaoIGC_Switch();
+	}
 }
 
 void DaoIGC_Switch()

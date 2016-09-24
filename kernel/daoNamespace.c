@@ -69,8 +69,9 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoType *type;
 
 	DaoValue_Init( self, DAO_NAMESPACE );
-	self->trait |= DAO_VALUE_DELAYGC;
+	GC_IncRC( vms );
 	self->vmSpace = vms;
+	self->trait |= DAO_VALUE_DELAYGC;
 	self->constants = DList_New( DAO_DATA_VALUE );
 	self->variables = DList_New( DAO_DATA_VALUE );
 	self->auxData = DList_New( DAO_DATA_VALUE );
@@ -152,6 +153,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->lang );
 	DString_Delete( self->inputs );
 	DList_Delete( self->sources );
+	GC_DecRC( self->vmSpace );
 	dao_free( self );
 }
 

@@ -39,7 +39,8 @@
 
 enum DaoExtraTypes
 {
-	DAO_VARIANT = END_CORE_TYPES, /* variant or disjoint union type */
+	DAO_VMSPACE = END_CORE_TYPES,
+	DAO_VARIANT , /* variant or disjoint union type */
 	DAO_CONSTANT ,
 	DAO_VARIABLE ,
 	DAO_ROUTBODY ,

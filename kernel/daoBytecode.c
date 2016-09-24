@@ -137,6 +137,7 @@ DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms )
 	self->indices = DList_New(0);
 	self->routines = DList_New(0);
 	self->path = DString_New();
+	self->encodedPath = DString_New();
 	self->intSize = sizeof(dao_integer);
 	self->floatSize = sizeof(dao_float);
 	self->vmspace = vms;
@@ -199,6 +200,7 @@ void DaoByteCoder_Delete( DaoByteCoder *self )
 	DList_Delete( self->indices );
 	DList_Delete( self->routines );
 	DString_Delete( self->path );
+	DString_Delete( self->encodedPath );
 	DMap_Delete( self->valueDataBlocks );
 	DMap_Delete( self->valueObjectBlocks );
 	dao_free( self );
@@ -519,7 +521,9 @@ static void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, in
 
 static void DaoByteCoder_Error( DaoByteCoder *self, DaoByteBlock *block, const char *msg )
 {
-	DaoStream_WriteChars( self->vmspace->errorStream, "ERROR: " );
+	DaoStream_WriteChars( self->vmspace->errorStream, "[[ERROR]] in file \"" );
+	DaoStream_WriteChars( self->vmspace->errorStream, self->path->chars );
+	DaoStream_WriteChars( self->vmspace->errorStream, "\":\n" );
 	DaoStream_WriteChars( self->vmspace->errorStream, msg );
 	DaoStream_WriteChars( self->vmspace->errorStream, "\n" );
 	if( block ) DaoByteCoder_PrintBlock( self, block, 0, 1 );
@@ -1593,8 +1597,8 @@ int DaoByteCoder_Decode( DaoByteCoder *self, DString *input )
 	if( sizeof(dao_float) == 4 && self->floatSize == 8 ) goto InvalidFormat;
 
 	i = DaoByteCoder_DecodeUInt16( codes );
-	DString_Reset( self->path, i );
-	memcpy( self->path->chars, codes + 2, i*sizeof(char) );
+	DString_Reset( self->encodedPath, i );
+	memcpy( self->encodedPath->chars, codes + 2, i*sizeof(char) );
 
 	DList_Append( self->stack, self->top );
 
@@ -1629,13 +1633,13 @@ int DaoByteCoder_Decode( DaoByteCoder *self, DString *input )
 	if( dstring != NULL ) DString_Delete( dstring );
 	return 1;
 InvalidFormat:
-	DaoByteCoder_Error( self, NULL, "invalid format!" );
+	DaoByteCoder_Error( self, NULL, "Invalid format!" );
 	goto ReturnZero;
 InvalidVersion:
-	DaoByteCoder_Error( self, NULL, "unofficial format!" );
+	DaoByteCoder_Error( self, NULL, "Unofficial format!" );
 	goto ReturnZero;
 InvalidHash:
-	DaoByteCoder_Error( self, NULL, "format not matching!" );
+	DaoByteCoder_Error( self, NULL, "Format not matching!" );
 ReturnZero:
 	if( dstring != NULL ) DString_Delete( dstring );
 	self->error = 1;
