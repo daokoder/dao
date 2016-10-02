@@ -38,4 +38,5 @@ routine main(){
 		io.writeln( "main()" )
 		#os.sleep(0.5)
 	}
+	return 0
 }

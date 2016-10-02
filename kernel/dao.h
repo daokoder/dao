@@ -1,6 +1,6 @@
 /*
 // Dao Virtual Machine
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
@@ -1090,7 +1090,7 @@ DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
-DAO_DLL DaoVmSpace* DaoVmSpace_MainVmSpace();
+DAO_DLL DaoVmSpace* DaoVmSpace_MasterVmSpace();
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );

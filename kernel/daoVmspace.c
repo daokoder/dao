@@ -1,6 +1,6 @@
 /*
 // Dao Virtual Machine
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
@@ -182,7 +182,7 @@ const char *const dao_copy_notice =
 "  Changeset ID: " CHANGESET_ID "\n\n"
 "  Copyright(C) 2006-2016, Limin Fu\n"
 "  Dao is released under the terms of the Simplified BSD License\n"
-"  Dao Language website: http://www.daovm.net\n"
+"  Dao Language website: http://daoscript.org\n"
 ;
 
 static const char *const cmd_help =
@@ -2681,7 +2681,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 }
 
 
-DaoVmSpace* DaoVmSpace_MainVmSpace()
+DaoVmSpace* DaoVmSpace_MasterVmSpace()
 {
 	return masterVmSpace;
 }

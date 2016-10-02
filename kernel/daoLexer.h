@@ -1,6 +1,6 @@
 /*
 // Dao Virtual Machine
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.

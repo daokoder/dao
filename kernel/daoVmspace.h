@@ -1,6 +1,6 @@
 /*
 // Dao Virtual Machine
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
@@ -175,6 +175,7 @@ DAO_DLL DaoVmSpace* DaoVmSpace_New();
 // persist until the program exits. So DaoVmSpace_Delete() is rarely needed to be called.
 */
 DAO_DLL void DaoVmSpace_Delete( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_TryDelete( DaoVmSpace *self );
 
 DAO_DLL void DaoVmSpace_Lock( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Unlock( DaoVmSpace *self );
