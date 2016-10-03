@@ -1,6 +1,6 @@
 /*
 // Dao Test Tool
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2013-2015, Limin Fu
 // All rights reserved.

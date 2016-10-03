@@ -1,6 +1,6 @@
 /*
 // DaoMake Tool
-// http://www.daovm.net
+// http://daoscript.org
 //
 // Copyright (c) 2013-2016, Limin Fu
 // All rights reserved.

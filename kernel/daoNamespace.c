@@ -222,6 +222,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumberEntry *items )
 	while( items[i].name != NULL ){
 		DString name = DString_WrapChars( items[i].name );
 		switch( items[i].type ){
+		case DAO_BOOLEAN : value->xBoolean.value = (dao_boolean) items[i].value; break;
 		case DAO_INTEGER : value->xInteger.value = (dao_integer) items[i].value; break;
 		case DAO_FLOAT   : value->xFloat.value = items[i].value; break;
 		default: continue;
