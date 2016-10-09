@@ -4361,8 +4361,8 @@ static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, Dao
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		DaoType *first  = index[0]->args->items.pType[0];
 		DaoType *second = index[0]->args->items.pType[1];
-		if( DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return NULL;
-		if( DaoType_MatchTo( second, vatype, NULL ) == 0 ) return NULL;
+		if( first->tid != DAO_NONE  && DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return NULL;
+		if( second->tid != DAO_NONE && DaoType_MatchTo( second, ketype, NULL ) == 0 ) return NULL;
 		return self;
 	}
 	if( DaoType_MatchTo( index[0], ketype, NULL ) ) return vatype;

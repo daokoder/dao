@@ -454,7 +454,6 @@ demos = {
 	"demo/interface.dao",
 	"demo/interface_forward_declaration.dao",
 	"demo/lists.dao",
-	"demo/macros.dao",
 	"demo/maps.dao",
 	"demo/mixins.dao",
 	"demo/numbers.dao",
