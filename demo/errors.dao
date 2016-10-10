@@ -63,24 +63,18 @@ Test2()
 # if the "block" raises an exception, the default "value" is returned
 # instead, and the exception is suppressed.
 
-fout = io::stdio
+ls = { "A", "B", "C" }
+it = "X";
 
 std.exec {
-	defer ( any ) { return none }
-	fout = io.open( "NonExistentFile.txt", "r+" )
+	defer ( any ) { return "X" }
+	it = ls[3]  # Index out of range;
 }
 
-if( fout != io::stdio ) defer{ fout.close() }
-
-fout.writeln( "hello" )
+io.writeln( it )
 
 
 # A simpler way to write the above codes:
-fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
+it = std.exec( "X" ){ ls[3] }
 
-# Or using the assertion operator ??:
-# fout = io.open( "NonExistentFile.txt", "r+" ) ?? io::stdio
-
-if( fout != io::stdio ) defer{ fout.close() }
-
-fout.writeln( "hello" )
+io.writeln( it )

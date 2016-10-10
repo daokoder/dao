@@ -2,11 +2,11 @@
 interface AA
 {
 	routine Meth( a = 0 );
-	routine[]( index: int )=>int;
-	routine.name()=>string;
+	routine []( index: int )=>int;
+	routine .name()=>string;
 
 	routine for( iter: tuple<bool,int> );
-	routine[]( iter: tuple<bool,int> )=>int;
+	routine []( iter: tuple<bool,int> )=>int;
 }
 routine Test( o: AA )
 {
@@ -20,14 +20,14 @@ routine Test( o: AA )
 class BB
 {
 	routine Meth( a = 0 ){ io.writeln( a ) }
-	routine[]( index: int ){ return index }
-	routine.name(){ return "BB" }
+	routine []( index: int ){ return index }
+	routine .name(){ return "BB" }
 
 	routine for( iter: tuple<bool,int> ){
 		iter[0] = true;
 		iter[1] = 0;
 	}
-	routine[]( iter: tuple<bool,int> ){
+	routine []( iter: tuple<bool,int> ){
 		id = iter[1];
 		iter[0] = iter[1] + 1 < 5;
 		iter[1] += 1;
