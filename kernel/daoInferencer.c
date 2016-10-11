@@ -3391,6 +3391,11 @@ SkipChecking:
 				if( DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvalidCasting;
 			}else if( at->tid == DAO_INTERFACE ){
 				ct = bt; /* The source value could be any type with a concrete interface type; */
+			}else if( at->tid == DAO_CINVALUE && bt->tid == DAO_INTERFACE ){
+				if( DaoType_MatchTo( at->aux->xCinType.target, bt, NULL ) == 0 ){
+					goto InvalidCasting;
+				}
+				ct = bt;
 			}else if( bt->tid == DAO_INTERFACE || bt->tid == DAO_CINVALUE ){
 				if( DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvalidCasting;
 			}else if( at->core != NULL && at->core->CheckConversion != NULL ){
