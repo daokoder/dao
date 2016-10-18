@@ -660,6 +660,12 @@ DaoVmSpace* DaoVmSpace_New()
 			DaoNamespace *ns = DaoVmSpace_GetNamespace( self, it->key.pString->chars );
 			DaoNamespace_AddParent( ns, (DaoNamespace*) it->value.pValue );
 		}
+
+		for(it=DMap_First(master->typeKernels); it!=NULL; it=DMap_Next(master->typeKernels,it)){
+			DaoTypeCore *core = (DaoTypeCore*) it->key.pVoid;
+			DaoTypeKernel *kernel = (DaoTypeKernel*) it->value.pVoid;
+			DaoVmSpace_AddKernel( self, core, kernel );
+		}
 	}
 
 	self->daoNamespace = DaoNamespace_New( self, "dao" );
