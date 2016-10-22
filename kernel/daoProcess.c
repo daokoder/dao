@@ -4692,7 +4692,7 @@ void DaoProcess_DoUnary( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	core = DaoValue_GetTypeCore( A );
-	if( core == NULL || core->DoBinary == NULL ){
+	if( core == NULL || core->DoUnary == NULL ){
 		DaoProcess_RaiseError( self, "Type", "" );
 		return;
 	}
