@@ -44,10 +44,6 @@
 /* Basic threading interfaces */
 
 
-static void DThread_Detach( DThread *self );
-static void DThread_Cancel( DThread *self );
-static void DThread_TestCancel( DThread *self );
-
 static dao_thdspec_t thdSpecKey = 0;
 
 #ifdef UNIX
@@ -159,18 +155,6 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 void DThread_Join( DThread *self )
 {
 	pthread_join( self->myThread, NULL );
-}
-void DThread_Detach( DThread *self )
-{
-	pthread_detach( self->myThread );
-}
-void DThread_Cancel( DThread *self )
-{
-	pthread_cancel( self->myThread );
-}
-void DThread_TestCancel( DThread *self )
-{
-	pthread_testcancel();
 }
 void DThread_Exit( DThread *self )
 {
@@ -339,22 +323,6 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 void DThread_Join( DThread *self )
 {
 	if( self->running ) DCondVar_Wait( & self->condv, NULL );
-}
-void DThread_Detach( DThread *self )
-{
-	DCondVar_Signal( & self->condv );
-}
-void DThread_Cancel( DThread *self )
-{
-	self->thdSpecData->state |= DTHREAD_CANCELED;
-	DCondVar_Signal( & self->condv );
-}
-void DThread_TestCancel( DThread *self )
-{
-	if( self->thdSpecData->state & DTHREAD_CANCELED ){
-		self->thdSpecData->state = 0;
-		DThread_Exit( self );
-	}
 }
 dao_thread_t DThread_Self()
 {
