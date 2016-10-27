@@ -1062,10 +1062,14 @@ DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
-// This cdata will make a copy of "D" which is assumed to has "N" bytes,
-// and be responsible to deallocate the copied data.
+// It can only be used for copiable types, whose type cores have Copy() methods.
+// The copy method will be used to copy data to an existing cdata object if there
+// is one at the destination with a reference count of one, or a newly created
+// cdata object otherwise.
+//
+// For other types, it will return NULL.
 */
-DAO_DLL DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *D, int N, DaoType *T );
+DAO_DLL DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type );
 
 
 

@@ -2740,13 +2740,17 @@ DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 	return NULL;
 }
 
-DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
+DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdt;
-	void *d2 = dao_malloc( n );
-	memcpy( d2, d, n );
-	cdt = DaoProcess_PutCdata( self, d2, t );
-	return cdt;
+	DaoCdata cdata = {0};
+
+	if( type->core->Copy == NULL ) return NULL;
+
+	cdata.type = DAO_CDATA;
+	cdata.ctype = type;
+	cdata.data = data;
+	cdata.refCount = 1; /* Force copying; */
+	return (DaoCdata*) DaoProcess_PutValue( self, (DaoValue*) & cdata );
 }
 
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
