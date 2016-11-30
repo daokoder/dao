@@ -785,7 +785,7 @@ void DaoVmSpace_TryDelete( DaoVmSpace *self )
 
 	DaoVmSpace_DeleteData( self );
 
-	DaoGC_SetFinalMode( 1 );
+	DaoGC_SetMode( 1, self == masterVmSpace );
 	cycle = DaoGC_GetCycleIndex();
 
 #ifdef DAO_WITH_THREAD
@@ -810,12 +810,14 @@ void DaoVmSpace_TryDelete( DaoVmSpace *self )
 
 #ifdef DEBUG
 	for(it=DMap_First(self->nsModules); it; it=DMap_Next(self->nsModules,it) ){
+		DaoNamespace *ns = (DaoNamespace*) it->value.pValue;
+		if( ns->vmSpace != self ) continue;
 		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
-				((DaoNamespace*)it->value.pValue)->name->chars, it->value.pValue->xBase.refCount );
+				ns->name->chars, ns->refCount );
 	}
 #endif
 
-	DaoGC_SetFinalMode( 0 );
+	DaoGC_SetMode( 0, self == masterVmSpace );
 
 	GC_DecRC( self );
 }

@@ -555,6 +555,7 @@ struct DaoGarbageCollector
 	DList   *temporary;      /* Temporary list; */
 	DMap    *wrappers;       /* Globally unique wrappers for Cdata objects; */
 
+	uchar_t   fullgc;
 	uchar_t   finalizing;
 	uchar_t   delayMask;
 	daoint    gcMin, gcMax;
@@ -583,16 +584,16 @@ struct DaoGarbageCollector
 static DaoGarbageCollector gcWorker = { NULL, NULL, NULL };
 
 
-int DaoGC_Min( int n /*=-1*/ )
+int DaoGC_Min( int n )
 {
 	int prev = gcWorker.gcMin;
-	if( n > 0 ) gcWorker.gcMin = n;
+	if( n >= 0 ) gcWorker.gcMin = n;
 	return prev;
 }
-int DaoGC_Max( int n /*=-1*/ )
+int DaoGC_Max( int n )
 {
 	int prev = gcWorker.gcMax;
-	if( n > 0 ) gcWorker.gcMax = n;
+	if( n >= 0 ) gcWorker.gcMax = n;
 	return prev;
 }
 
@@ -601,9 +602,10 @@ daoint DaoGC_GetCycleIndex()
 	return gcWorker.cycle;
 }
 
-void DaoGC_SetFinalMode( int bl )
+void DaoGC_SetMode( int fullgc, int finalizing )
 {
-	gcWorker.finalizing = bl;
+	gcWorker.fullgc = fullgc;
+	gcWorker.finalizing = finalizing;
 }
 
 void DaoGC_Init()
@@ -626,6 +628,7 @@ void DaoGC_Init()
 	gcWorker.wrappers = DHash_New(0,DAO_DATA_VALUE);
 
 	gcWorker.delayMask = DAO_VALUE_DELAYGC;
+	gcWorker.fullgc = 0;
 	gcWorker.finalizing = 0;
 	gcWorker.cycle = 0;
 	gcWorker.mdelete = 0;
@@ -659,6 +662,7 @@ void DaoCGC_Start()
 	DaoIGC_Finish();
 	gcWorker.concurrent = 1;
 	gcWorker.finalizing = 0;
+	gcWorker.fullgc = 0;
 	gcWorker.cycle = 0;
 	if( DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL ) == 0 ){
 		dao_abort( "failed to create the GC thread" );
@@ -1099,7 +1103,7 @@ void DaoGC_PrepareCandidates()
 	DList *delayList = gcWorker.delayList;
 	DList *types = gcWorker.temporary;
 	uchar_t cycle = (++gcWorker.cycle) % DAO_FULL_GC_SCAN_CYCLE;
-	uchar_t delay = cycle && gcWorker.finalizing == 0 ? DAO_VALUE_DELAYGC : 0;
+	uchar_t delay = cycle && gcWorker.fullgc == 0 ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k = 0;
 	int delay2;
 
@@ -1107,7 +1111,7 @@ void DaoGC_PrepareCandidates()
 	/* Damping to avoid "delay2" changing too dramatically: */
 	gcWorker.mdelete = 0.5*gcWorker.mdelete + 0.5*freeList->size;
 	delay2 = gcWorker.cycle % (1 + 100 / (1 + gcWorker.mdelete));
-	if( gcWorker.finalizing ) delay2 = 0;
+	if( gcWorker.fullgc ) delay2 = 0;
 
 	if( delay == 0 ){
 		/* Push delayed objects into the working list for full GC scan: */
@@ -1150,7 +1154,7 @@ void DaoGC_PrepareCandidates()
 			DList_PushBack2( delayList, value );
 			continue;
 		}else if( value->type == DAO_PROCESS && value->xProcess.status > DAO_PROCESS_ABORTED ){
-			if( gcWorker.finalizing == 0 ){
+			if( gcWorker.fullgc == 0 ){
 				value->xGC.delay = 1;
 				DList_PushBack2( delayList, value );
 				continue;
@@ -1283,6 +1287,7 @@ static void DaoGC_ScanCstruct( DaoCstruct *cstruct, int action )
 void DaoCGC_Finish()
 {
 	gcWorker.gcMin = 0;
+	gcWorker.fullgc = 1;
 	gcWorker.finalizing = 1;
 	DThread_Join( & gcWorker.thread );
 }
@@ -1312,7 +1317,7 @@ void DaoCGC_Recycle( void *p )
 		N = idles->size + works->size + idles2->size + works2->size + frees->size + delays->size;
 		if( gcWorker.finalizing && N == 0 ) break;
 		gcWorker.busy = 0;
-		while( ! gcWorker.finalizing && (idles->size + idles->size) < gcWorker.gcMin ){
+		while( ! gcWorker.fullgc && (idles->size + idles->size) < gcWorker.gcMin ){
 			daoint gcount = idles->size + idles2->size;
 			double wtime = 3.0 * gcount / (double)gcWorker.gcMin;
 			wtime = 0.01 * exp( - wtime * wtime );
@@ -1382,7 +1387,7 @@ void DaoCGC_CycRefCountIncScan()
 	DList *auxList = gcWorker.auxList;
 
 #if 0
-	if( gcWorker.finalizing ){
+	if( gcWorker.fullgc ){
 		for( i=0; i<workList->size; i++ ){
 			DaoValue *value = workList->items.pValue[i];
 			if( value->xGC.cycRefCount > 0 ) DaoGC_PrintValueInfo( value );
@@ -1484,16 +1489,18 @@ static int counts = 1000;
 static void DaoIGC_TryInvoke()
 {
 	if( gcWorker.busy ) return;
-	if( gcWorker.finalizing == 0 && --counts ) return;
-	if( gcWorker.idleList->size < gcWorker.gcMax ){
-		counts = 1000;
-	}else{
-		counts = 100;
+	if( gcWorker.fullgc == 0 && gcWorker.gcMin > 0 ){
+		if( --counts ) return;
+		if( gcWorker.idleList->size < gcWorker.gcMax ){
+			counts = 1000;
+		}else{
+			counts = 100;
+		}
 	}
 
 	if( gcWorker.workList->size ){
 		DaoIGC_Continue();
-	}else if( gcWorker.finalizing || gcWorker.idleList->size > gcWorker.gcMin ){
+	}else if( gcWorker.fullgc || gcWorker.idleList->size >= gcWorker.gcMin ){
 		DaoIGC_Switch();
 	}
 }
@@ -1522,7 +1529,7 @@ void DaoIGC_Continue()
 	case GC_DEC_RC :
 		DaoIGC_CycRefCountDecScan();
 #if 0
-		if( gcWorker.finalizing && gcWorker.workType == GC_INC_RC ){
+		if( gcWorker.fullgc && gcWorker.workType == GC_INC_RC ){
 			daoint i;
 			for( i=0; i<gcWorker.workList->size; i++ ){
 				DaoValue *value = gcWorker.workList->items.pValue[i];
@@ -1556,6 +1563,8 @@ void DaoIGC_Finish()
 	DList *idles2 = gcWorker.idleList2;
 	DList *frees = gcWorker.freeList;
 	DList *delays = gcWorker.delayList;
+	gcWorker.gcMin = 0;
+	gcWorker.fullgc = 1;
 	gcWorker.finalizing = 1;
 	while( idles->size + works->size + idles2->size + works2->size + frees->size + delays->size ){
 		while( works->size ) DaoIGC_Continue();

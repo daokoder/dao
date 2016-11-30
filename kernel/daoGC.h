@@ -47,15 +47,15 @@ DAO_DLL void DaoObjectLogger_LogDelete( DaoValue *object );
 DAO_DLL void DaoObjectLogger_PrintProfile();
 #endif
 
-DAO_DLL int DaoGC_Min( int n /*=-1*/ );
-DAO_DLL int DaoGC_Max( int n /*=-1*/ );
+DAO_DLL int DaoGC_Min( int n );
+DAO_DLL int DaoGC_Max( int n );
 
 DAO_DLL daoint DaoGC_GetCycleIndex();
 
 DAO_DLL void DaoGC_Start();
 DAO_DLL void DaoGC_Finish();
 DAO_DLL void DaoGC_TryInvoke();
-DAO_DLL void DaoGC_SetFinalMode( int bl );
+DAO_DLL void DaoGC_SetMode( int fullgc, int finalizing );
 
 DAO_DLL void DaoCGC_Start();
 
