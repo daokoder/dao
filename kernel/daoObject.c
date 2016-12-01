@@ -125,6 +125,11 @@ void DaoObject_Delete( DaoObject *self )
 	dao_free( self );
 }
 
+DaoClass* DaoObject_GetClass( DaoObject *self )
+{
+	return self->defClass;
+}
+
 int DaoObject_ChildOf( DaoObject *self, DaoValue *obj )
 {
 	if( obj == (DaoValue*) self ) return 1;

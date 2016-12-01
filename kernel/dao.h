@@ -880,7 +880,10 @@ DAO_DLL DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *stype, 
 DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
 
 
+DAO_DLL DaoNamespace* DaoClass_GetNamespace( DaoClass *self );
 
+
+DAO_DLL DaoClass*   DaoObject_GetClass( DaoObject *self );
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
@@ -1075,6 +1078,7 @@ DAO_DLL DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *t
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
 DAO_DLL DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name );
+DAO_DLL DaoVmSpace* DaoNamespace_GetVmSpace( DaoNamespace *self );
 DAO_DLL int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumberEntry *items );
 DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue *data );

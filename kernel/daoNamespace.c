@@ -176,6 +176,10 @@ void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 	}
 }
 
+DaoVmSpace* DaoNamespace_GetVmSpace( DaoNamespace *self )
+{
+	return self->vmSpace;
+}
 
 DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 {

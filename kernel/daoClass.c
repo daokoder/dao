@@ -109,6 +109,11 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 
 void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
 
+DaoNamespace* DaoClass_GetNamespace( DaoClass *self )
+{
+	if( self->initRoutine == NULL ) return NULL;
+	return self->initRoutine->nameSpace;
+}
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 {

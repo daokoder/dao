@@ -790,14 +790,14 @@ void DaoVmSpace_TryDelete( DaoVmSpace *self )
 
 #ifdef DAO_WITH_THREAD
 	DCondVar_Init( & condv );
-	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 2) ){
+	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 3) ){
 		//printf( "Refcount = %i\n", self->refCount );
 		DaoGC_TryInvoke();
 		DCondVar_TimedWait( & condv, & self->moduleMutex, 0.01 );
 	}
 	DCondVar_Destroy( & condv );
 #else
-	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 2) ){
+	while( self->refCount > 1 && DaoGC_GetCycleIndex() < (cycle + 3) ){
 		//printf( "Refcount = %i\n", self->refCount );
 		DaoGC_TryInvoke();
 	}
