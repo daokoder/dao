@@ -3023,10 +3023,11 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 		for(i=0; i<initors->overloads->routines->size; ++i){
 			DaoRoutine *tmp = initors->overloads->routines->items.pRoutine[i];
 			DaoRoutine *initor = DaoRoutine_Copy( tmp, 1, 0, 0 );
-			DaoNamespace *nspace = tmp->nameSpace;
+			DaoNamespace *nspace = self->daoNamespace;
 			DaoType *routype = tmp->routType;
 
 			routype = DaoNamespace_MakeRoutType( nspace, tmp->routType, NULL, NULL, type );
+			GC_Assign( & initor->nameSpace, nspace );
 			GC_Assign( & initor->routType, routype );
 			GC_Assign( & initor->routHost, type );
 			DString_Assign( initor->routName, type->name );
@@ -3049,6 +3050,15 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 {
 	DaoType *type;
+
+	/*
+	// The new exception type will be nested inside its parent type,
+	// so it must be handled by the same VM space as the parent type.
+	// Otherwise, this "self" VM space cannot be deleted cleanly.
+	// The root exception type is managed by the master VM space.
+	*/
+	self = masterVmSpace;
+
 	/*
 	// Locking is necessary because these exceptions are placed in a common
 	// namespace DaoVmSpace::daoNamespace. Also, it is necessary to lock this
