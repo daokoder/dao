@@ -649,6 +649,8 @@ void DaoGC_Start()
 }
 void DaoCGC_Start()
 {
+	daoint min = gcWorker.gcMin;
+
 	if( gcWorker.concurrent ) return;
 #ifdef DAO_WITH_THREAD
 	DThread_Init( & gcWorker.thread );
@@ -660,6 +662,7 @@ void DaoCGC_Start()
 	DCondVar_Init( & gcWorker.condv_start_gc );
 	DCondVar_Init( & gcWorker.condv_block_mutator );
 	DaoIGC_Finish();
+	gcWorker.gcMin = min;
 	gcWorker.concurrent = 1;
 	gcWorker.finalizing = 0;
 	gcWorker.fullgc = 0;

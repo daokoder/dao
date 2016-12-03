@@ -817,7 +817,7 @@ void DaoVmSpace_TryDelete( DaoVmSpace *self )
 	}
 #endif
 
-	DaoGC_SetMode( 0, self == masterVmSpace );
+	DaoGC_SetMode( 0, 0 );
 
 	GC_DecRC( self );
 }
