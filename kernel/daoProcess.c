@@ -2726,17 +2726,30 @@ DaoCstruct* DaoProcess_PutCstruct( DaoProcess *self, DaoType *type )
 
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 1 );
-	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
-	DaoGC_TryDelete( (DaoValue*) cdata );
+	if( type->core->Copy != NULL ){
+		return DaoProcess_CopyCdata( self, data, type );
+	}else{
+		DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 1 );
+		if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
+		DaoGC_TryDelete( (DaoValue*) cdata );
+	}
 	return NULL;
 }
 
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
-	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
-	DaoGC_TryDelete( (DaoValue*) cdata );
+	/*
+	// ClangDao does not handle it properly yet:
+	// CDaoUserType::userCopy may be set after the generation
+	// of some other types and functions;
+	*/
+	if( type->core->Copy != NULL ){
+		return DaoProcess_CopyCdata( self, data, type );
+	}else{
+		DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
+		if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
+		DaoGC_TryDelete( (DaoValue*) cdata );
+	}
 	return NULL;
 }
 

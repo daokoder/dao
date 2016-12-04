@@ -706,6 +706,7 @@ static void DaoWrappers_Insert( void *data, DaoValue *wrap )
 {
 	if( data == NULL ) return;
 	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
+	// Problematic for VM space sandboxing!
 	DMap_Insert( gcWorker.wrappers, data, wrap );
 	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 }
@@ -747,13 +748,38 @@ static void DaoWrappers_ClearGarbage()
 
 
 
+/*
+// TODO: Remove cdata wrapper caching;
+//
+// Note:
+// The DaoCdata objects were required to be unique for the wrapped data,
+// mainly for type casting (from C/C++ types to derived Dao classes).
+// But this might be impossible to guarantee for C++ objects that may
+// be casted to different pointers with different values due to multiple
+// inheritance. Now the better way to handle type casting for C++ types,
+// is to implement the type conversion method for the type core, and do
+// type casting using dynamic_cast<T>().
+//
+// Unfortunately for C objects, there is no similar way to do this.
+// However, casting from C types to derived Dao classes is not a common
+// use case, so it is not really necessary to support wrapper caching.
+//
+// In fact, deriving from C types or C++ types without deep wrapping
+// through intermediate classes should be discouraged. To add additional
+// functionalities to C/C++ objects, concrete interface is a reasonable
+// choice.
+*/
 DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned )
 {
+	return owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
+
+#if 0
 	DaoCdata *cdata = (DaoCdata*) DaoWrappers_Find( data );
 	if( cdata && cdata->type == DAO_CDATA && cdata->ctype == type ) return cdata;
 	cdata = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
 	DaoWrappers_Insert( data, (DaoValue*) cdata );
 	return cdata;
+#endif
 }
 
 
