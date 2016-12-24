@@ -176,7 +176,8 @@ enum DaoOptions
 
 enum DaoCtypeWrapOptions
 {
-	DAO_CTYPE_INVAR  = 1
+	DAO_CTYPE_INVAR      = 1,
+	DAO_CTYPE_UNITHREAD  = 2
 };
 
 
@@ -501,6 +502,26 @@ struct DaoHandler
 {
 	void (*PrintNote)( DaoHandler *self, DaoValue *value );
 	void (*PrintError)( DaoHandler *self, const char *msg, const char *file, int start, int end );
+
+	int  (*MigrateCall)( DaoHandler *self, DaoProcess *process );
+	/*
+	// MigrateCall(): migrating a C/C++ function call to another thread.
+	//
+	// This handler method will be used only for calls on C/C++ types that
+	// have been marked for call migration, but it will be upto this handler
+	// to decide whether to migrate the call.
+	//
+	// The function and call arguments are already pushed into the process and
+	// ready to be executed with DaoProcess_Execute(). If the call needs no
+	// migration, the handler should just call DaoProcess_Execute() directly
+	// and return its result. Otherwise the handler method is responsible for
+	// signaling the target thread to execute DaoProcess_Execute() on the process
+	// object, and block the current thread until the execution is finished.
+	//
+	// This method is mainly useful for migrating some calls that must be called
+	// in certain thread. For example, in some frameworks/toolkits, some calls
+	// must be executed in the main thread to deal with UI and graphics.
+	*/
 };
 
 typedef char* (*ReadLine)( const char *prompt, DString *buffer );

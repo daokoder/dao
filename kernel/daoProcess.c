@@ -749,11 +749,23 @@ DaoValue* DaoProcess_Eval( DaoProcess *self, DaoNamespace *nspace, const char *s
 }
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {
+	int migrate = 0;
 	int ret = DaoProcess_PushCall( self, M, O, P, N );
 	if( ret ) goto Done;
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );
-	ret = DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
+	if( self->vmSpace->handler && self->vmSpace->handler->MigrateCall ){
+		DaoType *hostype = self->topFrame->routine->routHost;
+		if( hostype && (hostype->tid == DAO_CSTRUCT || hostype->tid == DAO_CDATA) ){
+			migrate = hostype->aux->xCtype.attribs & DAO_CLS_UNITHREAD;
+		}
+	}
+	if( migrate ){
+		ret = self->vmSpace->handler->MigrateCall( self->vmSpace->handler, self );
+	}else{
+		ret = DaoProcess_Execute( self );
+	}
+	ret = ret == 0 ? DAO_ERROR : 0;
 Done:
 	DaoProcess_FlushStdStreams( self );
 	return ret;

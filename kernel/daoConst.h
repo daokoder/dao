@@ -213,7 +213,8 @@ enum DaoClassAttrib
 	DAO_CLS_AUTO_INITOR   = (1<<1),
 	DAO_CLS_PRIVATE_VAR   = (1<<2),
 	DAO_CLS_PROTECTED_VAR = (1<<3),
-	DAO_CLS_ASYNCHRONOUS  = (1<<4)
+	DAO_CLS_ASYNCHRONOUS  = (1<<4),
+	DAO_CLS_UNITHREAD     = (1<<5)
 };
 enum DaoRoutineAttrib
 {

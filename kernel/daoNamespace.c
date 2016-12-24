@@ -604,6 +604,7 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeCore *core, i
 	ctype_type = DaoNamespace_MakeCdataType( self, core, tid );
 	cdata_type = ctype_type->kernel->abtype;
 	if( options & DAO_CTYPE_INVAR ) cdata_type->aux->xCtype.attribs |= DAO_CLS_INVAR;
+	if( options & DAO_CTYPE_UNITHREAD ) cdata_type->aux->xCtype.attribs |= DAO_CLS_UNITHREAD;
 	ctype_type->kernel->SetupValues = DaoNamespace_SetupValues;
 	ctype_type->kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, core->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
