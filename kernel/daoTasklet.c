@@ -188,7 +188,7 @@ struct DaoTaskletThread
 {
 	DaoTaskletServer  *server;
 	DThread            thread;
-	DThreadData       *thdData;
+	DThread           *thdData;
 	DThreadTask        taskFunc;  /* first task; */
 	void              *taskParam;
 	void              *taskOwner;
@@ -236,12 +236,12 @@ static DaoTaskletThread* DaoTaskletThread_New( DaoTaskletServer *server, DThread
 	self->server = server;
 	self->taskFunc = func;
 	self->taskParam = param;
+	self->thdData = & self->thread;
 	DThread_Init( & self->thread );
 	return self;
 }
 static void DaoTaskletThread_Delete( DaoTaskletThread *self )
 {
-	// XXX self->thdData
 	DThread_Destroy( & self->thread );
 	dao_free( self );
 }
@@ -958,7 +958,6 @@ static void DaoTaskletThread_Run( DaoTaskletThread *self )
 	double wt = 0.001;
 	daoint i, count, timeout;
 
-	self->thdData = DThread_GetSpecific();
 	if( self->taskFunc ){
 		self->taskFunc( self->taskParam );
 		self->taskOwner = NULL;
@@ -969,7 +968,7 @@ static void DaoTaskletThread_Run( DaoTaskletThread *self )
 		DThreadTask function = NULL;
 		void *parameter = NULL;
 
-		if( self->thdData != NULL ) self->thdData->state = 0;
+		self->thdData->state = 0;
 		DMutex_Lock( & server->mutex );
 		server->idle += 1;
 		server->vacant += self->taskOwner == NULL;
@@ -1084,6 +1083,7 @@ void DaoVmSpace_StopTasklets( DaoVmSpace *self )
 	server->finishing = 1;
 
 	taskthd = DaoTaskletThread_New( server, NULL, NULL );
+	taskthd->thdData = DThread_GetCurrent();
 	DMutex_Lock( & server->mutex );
 	server->total += 1;
 	DMutex_Unlock( & server->mutex );

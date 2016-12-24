@@ -46,6 +46,15 @@
 
 static dao_thdspec_t thdSpecKey = 0;
 
+static DThread mainThread;
+
+
+struct DThreadData
+{
+	DThread  *thdObject;
+};
+
+
 #ifdef UNIX
 
 void DMutex_Init( DMutex *self )
@@ -113,6 +122,10 @@ void DCondVar_BroadCast( DCondVar *self )
 
 void DThread_Init( DThread *self )
 {
+	self->running = 0;
+	self->state = 0;
+	self->vmpause = 0;
+	self->vmstop = 0;
 	self->cleaner = NULL;
 	self->myThread = 0;
 	self->taskFunc = NULL;
@@ -120,9 +133,12 @@ void DThread_Init( DThread *self )
 	self->thdSpecData = NULL;
 	DCondVar_Init( & self->condv );
 }
+
 void DThread_Destroy( DThread *self )
 {
 	DCondVar_Destroy( & self->condv );
+	pthread_setspecific( thdSpecKey, NULL );
+	//if( self->thdSpecData ) dao_free( self->thdSpecData );
 }
 
 static void* DThread_Wrapper( void *p )
@@ -132,7 +148,9 @@ static void* DThread_Wrapper( void *p )
 		self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
 		self->thdSpecData->thdObject = self;
 	}
-	self->thdSpecData->state = 0;
+	self->state = 0;
+	self->vmpause = 0;
+	self->vmstop = 0;
 	pthread_setspecific( thdSpecKey, self->thdSpecData );
 
 	if( self->cleaner ){
@@ -152,23 +170,17 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 	self->taskArg = arg;
 	return pthread_create( & self->myThread, NULL, & DThread_Wrapper, (void*)self ) == 0;
 }
+
 void DThread_Join( DThread *self )
 {
 	pthread_join( self->myThread, NULL );
 }
+
 void DThread_Exit( DThread *self )
 {
 	pthread_exit( NULL );
 }
 
-dao_thread_t DThread_Self()
-{
-	return pthread_self();
-}
-int DThread_Equal( dao_thread_t x, dao_thread_t y )
-{
-	return pthread_equal( x, y );
-}
 DThreadData* DThread_GetSpecific()
 {
 	return (DThreadData*) pthread_getspecific( thdSpecKey );
@@ -176,10 +188,22 @@ DThreadData* DThread_GetSpecific()
 
 static void DaoThread_SysInit()
 {
+	DThread *self = & mainThread;
+
 	pthread_key_create( & thdSpecKey, free );
+
+	DThread_Init( self );
+
+	self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
+	self->thdSpecData->thdObject = self;
+	pthread_setspecific( thdSpecKey, self->thdSpecData );
 }
+
 static void DaoThread_SysQuit()
 {
+	DThread *self = & mainThread;
+
+	DThread_Destroy( self );
 	pthread_key_delete( thdSpecKey );
 }
 
@@ -284,6 +308,10 @@ void DCondVar_BroadCast( DCondVar *self )
 
 void DThread_Init( DThread *self )
 {
+	self->running = 0;
+	self->state = 0;
+	self->vmpause = 0;
+	self->vmstop = 0;
 	self->myThread = 0;
 	self->thdSpecData = NULL;
 	self->cleaner = NULL;
@@ -291,13 +319,15 @@ void DThread_Init( DThread *self )
 	self->taskArg = NULL;
 	DCondVar_Init( & self->condv );
 }
+
 void DThread_Destroy( DThread *self )
 {
+	if( self->thdSpecData ) GlobalFree( self->thdSpecData );
 	if( self->myThread ) CloseHandle( self->myThread );
 	DCondVar_Destroy( & self->condv );
-	GlobalFree( self->thdSpecData );
 	self->thdSpecData = NULL;
 }
+
 void DThread_Wrapper( void *object )
 {
 	DThread *self = (DThread*)object;
@@ -307,12 +337,15 @@ void DThread_Wrapper( void *object )
 		self->thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
 		self->thdSpecData->thdObject = self;
 	}
-	self->thdSpecData->state = 0;
+	self->state = 0;
+	self->vmpause = 0;
+	self->vmstop = 0;
 	TlsSetValue( thdSpecKey, self->thdSpecData );
 
 	if( self->taskFunc ) self->taskFunc( self->taskArg );
 	DThread_Exit( self );
 }
+
 int DThread_Start( DThread *self, DThreadTask task, void *arg )
 {
 	self->taskFunc = task;
@@ -320,18 +353,12 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 	self->myThread = (HANDLE)_beginthread( DThread_Wrapper, 0, (void*)self );
 	return (self->myThread != 0);
 }
+
 void DThread_Join( DThread *self )
 {
 	if( self->running ) DCondVar_Wait( & self->condv, NULL );
 }
-dao_thread_t DThread_Self()
-{
-	return GetCurrentThread();
-}
-int DThread_Equal( dao_thread_t x, dao_thread_t y )
-{
-	return ( x == y );
-}
+
 void DThread_Exit( DThread *thd )
 {
 	thd->running = 0;
@@ -346,9 +373,6 @@ DThreadData* DThread_GetSpecific()
 	return (DThreadData*) TlsGetValue( thdSpecKey );
 }
 
-/* DThread object for the main thread, used for join() */
-DThread mainThread;
-
 static void DaoThread_SysInit()
 {
 	thdSpecKey = (dao_thdspec_t)TlsAlloc();
@@ -356,7 +380,6 @@ static void DaoThread_SysInit()
 
 	mainThread.thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
 	mainThread.thdSpecData->thdObject = & mainThread;
-	mainThread.thdSpecData->state = 0;
 
 	TlsSetValue( thdSpecKey, mainThread.thdSpecData );
 }
@@ -367,27 +390,52 @@ static void DaoThread_SysQuit()
 }
 #endif /* WIN32	*/
 
-static dao_thread_t daoMainThreadID;
+
 void DaoInitThread()
 {
 	DaoThread_SysInit();
-	daoMainThreadID = DThread_Self();
 }
+
 void DaoQuitThread()
 {
 	DaoThread_SysQuit();
 }
+
+DThread* DThread_GetCurrent()
+{
+	DThreadData *thdata = DThread_GetSpecific();
+	return thdata->thdObject;
+}
+
 int DThread_IsMain()
 {
-	dao_thread_t threadid = DThread_Self();
-	return DThread_Equal( threadid, daoMainThreadID );
+	DThread *thread = DThread_GetCurrent();
+	return thread == & mainThread;
 }
+
+int DThread_SetVmPause( int pause )
+{
+	DThread *thread = DThread_GetCurrent();
+	int ret = thread->vmpause;
+	thread->vmpause = pause;
+	return ret;
+}
+
+int DThread_SetVmStop( int stop )
+{
+	DThread *thread = DThread_GetCurrent();
+	int ret = thread->vmstop;
+	thread->vmstop = stop;
+	return ret;
+}
+
 #else
 
 int DThread_IsMain()
 {
 	return 1;
 }
+
 #endif /* DAO_WITH_THREAD */
 
 

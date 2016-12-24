@@ -1323,8 +1323,8 @@ void DaoCGC_Finish()
 void DaoCGC_TryBlock()
 {
 	if( gcWorker.idleList->size >= gcWorker.gcMax ){
-		DThreadData *thdData = DThread_GetSpecific();
-		if( thdData && ! (thdData->state & DTHREAD_NO_PAUSE) ){
+		DThread *thread = DThread_GetCurrent();
+		if( thread && ! (thread->state & DTHREAD_NO_PAUSE) ){
 			DMutex_Lock( & gcWorker.mutex_block_mutator );
 			DCondVar_TimedWait( & gcWorker.condv_block_mutator, & gcWorker.mutex_block_mutator, 0.001 );
 			DMutex_Unlock( & gcWorker.mutex_block_mutator );

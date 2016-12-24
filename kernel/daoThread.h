@@ -105,40 +105,41 @@ enum DThreadState
 	DTHREAD_NO_PAUSE = (1<<1)
 };
 
-struct DThreadData
-{
-	DThread *thdObject;
-	int      state;
-};
 
 typedef void (*DThreadCleanUp)( void *thread );
 
 struct DThread
 {
 	dao_thread_t     myThread;
-	DThreadCleanUp   cleaner;
-
-	/* in windows, condv will signal when the thread need to be cancelled,
-	   used to emulate pthread: */
-	DCondVar         condv;
-
-	DThreadData     *thdSpecData;
-	int running;
-
 	DThreadTask      taskFunc;
 	void            *taskArg;
+	uchar_t          state;
+	uchar_t          running;
+	uchar_t          vmpause;
+	uchar_t          vmstop;
+
+	DThreadData     *thdSpecData;
+	DThreadCleanUp   cleaner;
+
+	/*
+	// In windows, condv will signal when the thread need to be cancelled,
+	// used to emulate pthread:
+	*/
+	DCondVar  condv;
 };
+
 DAO_DLL void DThread_Init( DThread *self );
 DAO_DLL void DThread_Destroy( DThread *self );
 
 DAO_DLL int DThread_Start( DThread *self, DThreadTask task, void *arg );
 DAO_DLL void DThread_Exit( DThread *self );
 DAO_DLL void DThread_Join( DThread *self );
-DAO_DLL dao_thread_t DThread_Self();
-DAO_DLL int DThread_Equal( dao_thread_t x, dao_thread_t y );
+
+DAO_DLL DThread* DThread_GetCurrent();
 DAO_DLL int DThread_IsMain();
 
-DAO_DLL DThreadData* DThread_GetSpecific();
+DAO_DLL int DThread_SetVmPause( int pause );
+DAO_DLL int DThread_SetVmStop( int stop );
 
 DAO_DLL void DaoInitThread();
 DAO_DLL void DaoQuitThread();
@@ -146,6 +147,7 @@ DAO_DLL void DaoQuitThread();
 #else
 
 typedef int DMutex;
+typedef int DThread;
 
 #define DMutex_Init( x ) {}
 #define DMutex_Destroy( x ) {}
