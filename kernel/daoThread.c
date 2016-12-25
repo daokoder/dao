@@ -52,6 +52,7 @@ static DThread mainThread;
 struct DThreadData
 {
 	DThread  *thdObject;
+	DThread   thdBuffer;  /* Used for foreign threads; */
 };
 
 
@@ -125,33 +126,44 @@ void DThread_Init( DThread *self )
 	self->running = 0;
 	self->state = 0;
 	self->vmpause = 0;
+	self->vmpaused = 0;
 	self->vmstop = 0;
+	self->vmstopped = 0;
 	self->cleaner = NULL;
 	self->myThread = 0;
 	self->taskFunc = NULL;
 	self->taskArg = NULL;
 	self->thdSpecData = NULL;
 	DCondVar_Init( & self->condv );
+	DMutex_Init( & self->mutex );
 }
 
 void DThread_Destroy( DThread *self )
 {
+	DMutex_Destroy( & self->mutex );
 	DCondVar_Destroy( & self->condv );
 	pthread_setspecific( thdSpecKey, NULL );
-	//if( self->thdSpecData ) dao_free( self->thdSpecData );
+}
+
+static DThreadData* DThreadData_New()
+{
+	DThreadData *self = (DThreadData*) dao_calloc( 1, sizeof(DThreadData) );
+	pthread_setspecific( thdSpecKey, self );
+	return self;
 }
 
 static void* DThread_Wrapper( void *p )
 {
 	DThread *self = (DThread*) p;
 	if( self->thdSpecData == NULL ){
-		self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
+		self->thdSpecData = DThreadData_New();
 		self->thdSpecData->thdObject = self;
 	}
 	self->state = 0;
 	self->vmpause = 0;
+	self->vmpaused = 0;
 	self->vmstop = 0;
-	pthread_setspecific( thdSpecKey, self->thdSpecData );
+	self->vmstopped = 0;
 
 	if( self->cleaner ){
 		pthread_cleanup_push( self->cleaner, self->taskArg );
@@ -194,9 +206,8 @@ static void DaoThread_SysInit()
 
 	DThread_Init( self );
 
-	self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
+	self->thdSpecData = DThreadData_New();
 	self->thdSpecData->thdObject = self;
-	pthread_setspecific( thdSpecKey, self->thdSpecData );
 }
 
 static void DaoThread_SysQuit()
@@ -311,13 +322,16 @@ void DThread_Init( DThread *self )
 	self->running = 0;
 	self->state = 0;
 	self->vmpause = 0;
+	self->vmpaused = 0;
 	self->vmstop = 0;
+	self->vmstopped = 0;
 	self->myThread = 0;
 	self->thdSpecData = NULL;
 	self->cleaner = NULL;
 	self->taskFunc = NULL;
 	self->taskArg = NULL;
 	DCondVar_Init( & self->condv );
+	DMutex_Init( & self->mutex );
 }
 
 void DThread_Destroy( DThread *self )
@@ -325,7 +339,15 @@ void DThread_Destroy( DThread *self )
 	if( self->thdSpecData ) GlobalFree( self->thdSpecData );
 	if( self->myThread ) CloseHandle( self->myThread );
 	DCondVar_Destroy( & self->condv );
+	DMutex_Destroy( & self->mutex );
 	self->thdSpecData = NULL;
+}
+
+static DThreadData* DThreadData_New()
+{
+	DThreadData *self = (DThreadData*) GlobalAlloc( GPTR, sizeof(DThreadData) );
+	TlsSetValue( thdSpecKey, self->thdSpecData );
+	return self;
 }
 
 void DThread_Wrapper( void *object )
@@ -334,13 +356,14 @@ void DThread_Wrapper( void *object )
 	self->running = 1;
 
 	if( self->thdSpecData == NULL ){
-		self->thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
+		self->thdSpecData = DThreadData_New();
 		self->thdSpecData->thdObject = self;
 	}
 	self->state = 0;
 	self->vmpause = 0;
+	self->vmpaused = 0;
 	self->vmstop = 0;
-	TlsSetValue( thdSpecKey, self->thdSpecData );
+	self->vmstopped = 0;
 
 	if( self->taskFunc ) self->taskFunc( self->taskArg );
 	DThread_Exit( self );
@@ -378,11 +401,10 @@ static void DaoThread_SysInit()
 	thdSpecKey = (dao_thdspec_t)TlsAlloc();
 	DThread_Init( & mainThread );
 
-	mainThread.thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
+	mainThread.thdSpecData = DThreadData_New();
 	mainThread.thdSpecData->thdObject = & mainThread;
-
-	TlsSetValue( thdSpecKey, mainThread.thdSpecData );
 }
+
 static void DaoThread_SysQuit()
 {
 	DThread_Destroy( & mainThread );
@@ -404,6 +426,11 @@ void DaoQuitThread()
 DThread* DThread_GetCurrent()
 {
 	DThreadData *thdata = DThread_GetSpecific();
+	if( thdata == NULL ){
+		thdata = DThreadData_New();
+		thdata->thdObject = & thdata->thdBuffer;
+		DThread_Init( thdata->thdObject );
+	}
 	return thdata->thdObject;
 }
 
@@ -413,20 +440,27 @@ int DThread_IsMain()
 	return thread == & mainThread;
 }
 
-int DThread_SetVmPause( int pause )
+void DThread_PauseVM( DThread *another )
 {
-	DThread *thread = DThread_GetCurrent();
-	int ret = thread->vmpause;
-	thread->vmpause = pause;
-	return ret;
+	another->vmpause = 1;
+	DMutex_Lock( & another->mutex );
+	if( ! another->vmpaused ){
+		DCondVar_TimedWait( & another->condv, & another->mutex, 0.01 );
+	}
+	DMutex_Unlock( & another->mutex );
 }
 
-int DThread_SetVmStop( int stop )
+void DThread_ResumeVM( DThread *another )
 {
-	DThread *thread = DThread_GetCurrent();
-	int ret = thread->vmstop;
-	thread->vmstop = stop;
-	return ret;
+	another->vmpause = 0;
+	DMutex_Lock( & another->mutex );
+	DCondVar_Signal( & another->condv );
+	DMutex_Unlock( & another->mutex );
+}
+
+void DThread_StopVM( DThread *another )
+{
+	another->vmstop = 1;
 }
 
 #else

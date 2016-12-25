@@ -116,7 +116,9 @@ struct DThread
 	uchar_t          state;
 	uchar_t          running;
 	uchar_t          vmpause;
+	uchar_t          vmpaused;
 	uchar_t          vmstop;
+	uchar_t          vmstopped;
 
 	DThreadData     *thdSpecData;
 	DThreadCleanUp   cleaner;
@@ -126,6 +128,7 @@ struct DThread
 	// used to emulate pthread:
 	*/
 	DCondVar  condv;
+	DMutex    mutex;
 };
 
 DAO_DLL void DThread_Init( DThread *self );
@@ -135,11 +138,18 @@ DAO_DLL int DThread_Start( DThread *self, DThreadTask task, void *arg );
 DAO_DLL void DThread_Exit( DThread *self );
 DAO_DLL void DThread_Join( DThread *self );
 
+/*
+// In a foreign thead, when DThread_GetCurrent() is called,
+// a new DThread object will be created for that foreign thread.
+// DThread_Destroy() should be called on the new DThread object
+// before that thread quits to avoid minor memory leaking.
+*/
 DAO_DLL DThread* DThread_GetCurrent();
 DAO_DLL int DThread_IsMain();
 
-DAO_DLL int DThread_SetVmPause( int pause );
-DAO_DLL int DThread_SetVmStop( int stop );
+DAO_DLL void DThread_PauseVM( DThread *another );
+DAO_DLL void DThread_ResumeVM( DThread *another );
+DAO_DLL void DThread_StopVM( DThread *another );
 
 DAO_DLL void DaoInitThread();
 DAO_DLL void DaoQuitThread();

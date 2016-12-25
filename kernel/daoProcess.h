@@ -133,6 +133,7 @@ struct DaoProcess
 	uchar_t         active;
 	ushort_t        depth;  /* number of nested calls by DaoProcess_Start(); */
 
+	DThread        *thread;
 	DaoFuture      *future;
 	DaoStream      *stdioStream;
 

@@ -112,7 +112,7 @@ static DaoVmCode dummyCallCode = {DVM_CALL,0,0,0};
 DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 {
 	int i;
-	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof( DaoProcess ) );
+	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof(DaoProcess) );
 	DaoValue_Init( self, DAO_PROCESS );
 	GC_IncRC( vms );
 	self->vmSpace = vms;
@@ -910,6 +910,23 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 }
 #endif
 
+#ifdef DAO_WITH_THREAD
+void DaoProcess_PauseThread( DaoProcess *self )
+{
+	self->thread->vmpaused = 1;
+	DMutex_Lock( & self->thread->mutex );
+	DCondVar_Signal( & self->thread->condv );
+	DMutex_Unlock( & self->thread->mutex );
+
+	DMutex_Lock( & self->thread->mutex );
+	while( self->thread->vmpause ){
+		DCondVar_TimedWait( & self->thread->condv, & self->thread->mutex, 0.01 );
+	}
+	DMutex_Unlock( & self->thread->mutex );
+	self->thread->vmpaused = 0;
+}
+#endif
+
 #ifdef DAO_WITH_CONCURRENT
 int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 #endif
@@ -1154,6 +1171,12 @@ int DaoProcess_Start( DaoProcess *self )
 	};
 #endif
 
+#ifdef DAO_WITH_THREAD
+	self->thread = DThread_GetCurrent();
+	self->thread->vmpause = 0;
+	self->thread->vmstop = 0;
+#endif
+
 	self->startFrame = self->topFrame;
 
 	self->depth += 1;
@@ -1203,6 +1226,10 @@ CallEntry:
 #endif
 
 	if( vmSpace->stopit ) goto FinishProcess;
+#ifdef DAO_WITH_THREAD
+	if( self->thread->vmstop ) goto FinishProcess;
+	if( self->thread->vmpause ) DaoProcess_PauseThread( self );
+#endif
 
 #ifdef DAO_USE_CODE_STATE
 	if( (vmSpace->options&DAO_OPTION_DEBUG) | (routine->body->exeMode&DAO_ROUT_MODE_DEBUG) )
@@ -1564,6 +1591,10 @@ CallEntry:
 				goto RaiseErrorInvalidOperation;
 		}OPNEXT() OPCASE( CALL ) OPCASE( MCALL ){
 			if( vmSpace->stopit ) goto FinishProcess;
+#ifdef DAO_WITH_THREAD
+			if( self->thread->vmstop ) goto FinishProcess;
+			if( self->thread->vmpause ) DaoProcess_PauseThread( self );
+#endif
 			DaoProcess_DoCall( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( ROUTINE ){
@@ -1585,6 +1616,10 @@ CallEntry:
 				if( DaoProcess_PushDefers( self, value ) ) goto CallEntry;
 			}
 			if( vmSpace->stopit ) goto FinishProcess;
+#ifdef DAO_WITH_THREAD
+			if( self->thread->vmstop ) goto FinishProcess;
+			if( self->thread->vmpause ) DaoProcess_PauseThread( self );
+#endif
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
 			int i, opb = vmc->b & 0xff;
@@ -2391,6 +2426,10 @@ CheckException:
 
 			locVars = self->activeValues;
 			if( vmSpace->stopit ) goto FinishProcess;
+#ifdef DAO_WITH_THREAD
+			if( self->thread->vmstop ) goto FinishProcess;
+			if( self->thread->vmpause ) DaoProcess_PauseThread( self );
+#endif
 			if( (++count) % 1000 == 0 ) DaoGC_TryInvoke( self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;
@@ -2442,6 +2481,11 @@ FinishProcess:
 	if( vmSpace->stopit ){
 		DList_Clear( self->exceptions );
 		DaoProcess_RaiseError( self, NULL, "Execution cancelled" );
+#ifdef DAO_WITH_THREAD
+	}else if( self->thread->vmstop ){
+		DList_Clear( self->exceptions );
+		DaoProcess_RaiseError( self, NULL, "Execution cancelled" );
+#endif
 	}
 	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
 	DaoProcess_PopFrames( self, rollback );
