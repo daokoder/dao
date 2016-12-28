@@ -1271,6 +1271,7 @@ DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 
 	DString_SetChars( path, file );
 	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
+	case DAO_MODULE_NONE : ns = DaoVmSpace_FindNamespace( self, path ); break;
 	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, run ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, path ); break;
@@ -2005,7 +2006,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 	ns = DaoVmSpace_FindNamespace( self, libpath );
 
 	tm = Dao_FileChangedTime( libpath->chars );
-	/* printf( "time = %lli,  %s  %p\n", tm, libpath->chars, node ); */
+	/* printf( "time = %lli,  %s  %p\n", tm, libpath->chars, ns ); */
 	if( ns && ns->time >= tm ){
 		if( run ) goto ExecuteImplicitMain;
 		goto LoadingDone;
@@ -2917,19 +2918,15 @@ void DaoQuit()
 	DaoQuitThread();
 #endif
 }
-DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
-{
-	DaoNamespace* ns = DaoVmSpace_FindNamespace( self, fname );
-	if( ns ) return ns;
-	DaoVmSpace_CompleteModuleName( self, fname, 0 );
-	return DaoVmSpace_FindNamespace( self, fname );
-}
+
 void DaoParser_Warn( DaoParser *self, int code, DString *ext );
+
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser *parser )
 {
 	DString *name = DString_Copy( fname );
 	DaoNamespace *ns = NULL;
 	switch( DaoVmSpace_CompleteModuleName( self, fname, 0 ) ){
+	case DAO_MODULE_NONE : ns = DaoVmSpace_FindNamespace( self, fname ); break;
 	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;

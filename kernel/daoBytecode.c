@@ -2917,16 +2917,7 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	spath = DString_Copy( path->value->xString.value );
 
-	/* See comments in DaoParser_ParseLoadStatement(); */
 	ns = DaoVmSpace_LoadModule( self->vmspace, spath, NULL );
-	if( ns == NULL && mod == NULL ){
-		ns = DaoVmSpace_FindModule( self->vmspace, spath );
-		if( ns && DaoNamespace_CyclicParent( ns, self->nspace ) ){ 
-			DaoByteCoder_Error3( self, block, "Cyclic module loading for %s!", spath->chars );
-			ns = NULL;
-		}    
-
-	}
 	if( ns == NULL ){
 		self->error = 1;
 		DaoByteCoder_Error3( self, block, "Module loading failed for %s!", spath->chars );

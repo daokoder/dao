@@ -191,7 +191,6 @@ DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run );
 
 DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *name, DaoParser *parser );
-DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *name );
 DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name );
 
 DAO_DLL int DaoVmSpace_TestFile( DaoVmSpace *self, DString *fname );
