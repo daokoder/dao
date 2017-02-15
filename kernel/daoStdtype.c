@@ -101,10 +101,18 @@ int DaoType_CheckRangeIndex( DaoType *self )
 	return 1;
 }
 
-static daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc )
+daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc )
 {
 	if( index < 0 ) index += size;
 	if( index >= 0 && index < size ) return index;
+	DaoProcess_RaiseError( proc, "Index::Range", NULL );
+	return -1;
+}
+
+daoint Dao_CheckNumberEndIndex( daoint index, daoint size, DaoProcess *proc )
+{
+	if( index < 0 ) index += size;
+	if( index >= 0 && index <= size ) return index;
 	DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	return -1;
 }
@@ -130,7 +138,7 @@ static DIndexRange Dao_CheckRangeIndex( DaoTuple *range, daoint size, DaoProcess
 	if( range->values[1]->type == DAO_NONE ) end = size;
 
 	pos = Dao_CheckNumberIndex( pos, size, proc );
-	end = Dao_CheckNumberIndex( end, size + 1, proc ); /* Open index; TODO: check other places; */
+	end = Dao_CheckNumberEndIndex( end, size, proc ); /* Open index; TODO: check other places; */
 	if( pos < 0 || end < 0 ) return res;
 	if( pos > end ){
 		DaoProcess_RaiseError( proc, "Index::Range", NULL );

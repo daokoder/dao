@@ -589,13 +589,10 @@ static int Dao_SliceInterval( DArray *slices, daoint N, daoint first, daoint len
 	*count = len;
 	return 1;
 }
-static daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc )
-{
-	if( index < 0 ) index += size;
-	if( index >= 0 && index < size ) return index;
-	if( proc ) DaoProcess_RaiseError( proc, "Index::Range", NULL );
-	return -1;
-}
+
+extern daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc );
+extern daoint Dao_CheckNumberEndIndex( daoint index, daoint size, DaoProcess *proc );
+
 static void Dao_MakeSlice( DaoProcess *proc, DaoValue *idvalue, daoint N, DArray *slices )
 {
 	daoint pos, end, size = slices->size;
@@ -628,7 +625,7 @@ static void Dao_MakeSlice( DaoProcess *proc, DaoValue *idvalue, daoint N, DArray
 			if( range->values[1]->type == DAO_NONE ) end = N;
 
 			pos = Dao_CheckNumberIndex( pos, N, NULL );
-			end = Dao_CheckNumberIndex( end, N + 1, NULL );
+			end = Dao_CheckNumberEndIndex( end, N, NULL );
 			if( pos < 0 || end < 0 ) goto InvalidRange;
 			if( pos > end ) goto InvalidRange;
 			Dao_SliceRange( slices, N, pos, end );

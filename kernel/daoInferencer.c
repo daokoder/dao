@@ -2402,6 +2402,10 @@ static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *ro
 	if( DaoType_MatchTo( routype, rout->routType, defs3 ) >= DAO_MT_EQ ) return rout;
 	if( rout->original ) rout = orig = rout->original;
 
+	/* Do not specialize if the routine is not compiled yet! */
+	if( rout->body == NULL ) return rout;
+	if( rout->body->vmCodes->size == 0 ) return rout;
+
 	/* Do not share function body. It may be thread unsafe to share: */
 	rout = DaoRoutine_Copy( rout, 0, 1, 0 );
 	DaoRoutine_Finalize( rout, orig, NULL, defs2 );
