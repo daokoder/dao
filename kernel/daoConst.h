@@ -105,6 +105,10 @@ enum DaoContainerDataTypes
 //    DAO_MT_THTX instead of DAO_MT_ANY;
 // -- Undefined types are treated as type holder types.
 //    They simply hold some types that are not successfully inferred;
+// -- Matching to direct and indirect base types gives different scores;
+//    Matching to direct base type will give DAO_MT_SUB, and to indirect
+//    bases will give DAO_MT_SUB minus the distance between the source
+//    type and the target type;
 // -- DAO_MT_THT should have higher score than DAO_MT_SUB and DAO_MT_SIM.
 //    Because DAO_MT_THT means starting a type association for the type
 //    holder type, and should be considered more or less as precise as
@@ -114,17 +118,18 @@ enum DaoContainerDataTypes
 */
 enum DaoTypeMatchState
 {
-	DAO_MT_NOT   = 0  , /* Type not matching; */
-	DAO_MT_LOOSE = 10 , /* Loose matching not covered by the following cases; */
-	DAO_MT_THTX  = 20 , /* Loose matching of a type holder type (THT) to any other type; */
-	DAO_MT_ANYX  = 30 , /* Loose matching of the "any" type to any other type; */
-	DAO_MT_EMPTY = 40 , /* Loose matching of an empty container value to a container type; */
-	DAO_MT_ANY   = 50 , /* Matching of any type to the "any" type; */
-	DAO_MT_SIM   = 60 , /* Matching of a type to a compatible type (eg, int to float); */
-	DAO_MT_SUB   = 70 , /* Matching of a sub type to a parent type; */
-	DAO_MT_THT   = 80 , /* Matching of any type to a type holder type; */
-	DAO_MT_EQ    = 90 , /* Type precisely matching; */
-	DAO_MT_EXACT = 100  /* Type and value precisely matching; */
+	DAO_MT_NOT   = 0    , /* Type not matching; */
+	DAO_MT_LOOSE = 100  , /* Loose matching not covered by the following cases; */
+	DAO_MT_THTX  = 200  , /* Matching of a type holder type (THT) to any other type; */
+	DAO_MT_ANYX  = 300  , /* Matching of the "any" type to any other type; */
+	DAO_MT_EMPTY = 400  , /* Matching of an empty container value to a container type; */
+	DAO_MT_ANY   = 500  , /* Matching of any type to the "any" type; */
+	DAO_MT_SIM   = 600  , /* Matching of a type to a compatible type (eg, int to float); */
+	DAO_MT_SUBX  = 700  , /* Matching of a sub type to an ancestor type (lower bound); */
+	DAO_MT_SUB   = 800  , /* Matching of a sub type to a parent type; */
+	DAO_MT_THT   = 900  , /* Matching of any type to a type holder type; */
+	DAO_MT_EQ    = 1000 , /* Type precisely matching; */
+	DAO_MT_EXACT = 1100   /* Type and value precisely matching; */
 };
 
 enum DaoVarDeclaration

@@ -3539,7 +3539,7 @@ SkipChecking:
 					return DaoInferencer_ErrorTypeNotMatching( self, at, types[opc] );
 				}
 
-				if( k == DAO_MT_SUB && at != ct ){
+				if( k == DAO_MT_SIM && at != ct ){
 					/* L = { 1.5, 2.5 }; L = { 1, 2 }; L[0] = 3.5 */
 					if( at->tid && at->tid <= DAO_COMPLEX && types[opc]->tid == DAO_COMPLEX ){
 						if( at->tid < DAO_FLOAT ){

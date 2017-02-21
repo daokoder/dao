@@ -13,6 +13,8 @@ class AA
 
 	interface routine Virt(){ io.writeln( "AA::Virt()" ) }
 	routine CallVirt(){ Virt() }
+
+	routine Test( obj: AA ){ io.writeln( "AA::Test()" ) }
 }
 
 class BB : AA
@@ -25,6 +27,8 @@ class BB : AA
 
 	routine Meth(){ io.writeln( "BB::Meth()" ); return "abc"; }
 	routine Virt(){ io.writeln( "BB::Virt()" ) }
+
+	routine Test( obj: BB ){ io.writeln( "BB::Test()" ) }
 }
 
 class CC : BB
@@ -78,7 +82,7 @@ return 0C
 c.Meth()
 @[test(code_01)]
 @[test(code_01)]
-AA::Meth()
+BB::Meth()
 @[test(code_01)]
 
 
@@ -89,6 +93,15 @@ c.Meth(1)
 @[test(code_01)]
 @[test(code_01)]
 AA::Meth(a)
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+c.Test( c )
+@[test(code_01)]
+@[test(code_01)]
+BB::Test()
 @[test(code_01)]
 
 

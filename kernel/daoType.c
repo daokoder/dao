@@ -247,7 +247,7 @@ DaoTypeCore* DaoType_GetCoreByID( short type )
 }
 
 
-static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
+static unsigned short dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
 
 void DaoType_Init()
 {
@@ -836,8 +836,12 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs, int 
 	if( self->bases == NULL || self->bases->size == 0 ) return DAO_MT_NOT;
 	for(i=0,n=self->bases->size; i<n; i++){
 		k = DaoType_MatchToParent( self->bases->items.pType[i], type, defs, dep );
+		if( k >= DAO_MT_EQ ){
+			return DAO_MT_SUB;
+		}else if( k > DAO_MT_SUBX && k <= DAO_MT_SUB ){
+			k = k - 1;
+		}
 		if( k > mt ) mt = k;
-		if( k >= DAO_MT_EQ ) return DAO_MT_SUB;
 	}
 	return mt;
 }
@@ -1028,7 +1032,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		type = type->aux->xCinType.target;
 	}else if( type->tid == DAO_INTERFACE ){
 		/* Matching to "interface": */
-		if( type->aux == NULL ) return DAO_MT_SUB * (self->tid == DAO_INTERFACE);
+		if( type->aux == NULL ) return DAO_MT_SUBX * (self->tid == DAO_INTERFACE);
 		if( DaoInterface_GetConcrete( (DaoInterface*) type->aux, self ) ) return DAO_MT_SIM;
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}else if( type->tid == DAO_VARIANT ){
@@ -1082,7 +1086,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		case DAO_LIST  : if( self == dao_type_list_empty )  return DAO_MT_ANY; break;
 		case DAO_MAP   : if( self == dao_type_map_empty )   return DAO_MT_ANY; break;
 		}
-		if( type->args == NULL || type->args->size == 0 ) return DAO_MT_SUB;
+		if( type->args == NULL || type->args->size == 0 ) return DAO_MT_SUBX;
 		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_LOOSE;
 		if( self->args->size != type->args->size ) return DAO_MT_NOT;
 		for(i=0,n=self->args->size; i<n; i++){
@@ -1174,7 +1178,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			int hascb1 = self->cbtype != NULL;
 			int hascb2 = type->cbtype != NULL;
 			/* match to "routine" or "routine[...]"; */
-			return DAO_MT_SUB * (hascb1 == hascb2);
+			return DAO_MT_SUBX * (hascb1 == hascb2);
 		}
 		if( self->args->size < type->args->size ) return DAO_MT_NOT;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
@@ -1203,7 +1207,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	case DAO_CLASS :
 	case DAO_OBJECT :
 		/* par : class */
-		if( type->aux == NULL && self->tid == DAO_CLASS ) return DAO_MT_SUB;
+		if( type->aux == NULL && self->tid == DAO_CLASS ) return DAO_MT_SUBX;
 		if( self->aux == type->aux ) return DAO_MT_EQ;
 		return DaoType_MatchToParent( self, type, defs, dep );
 	case DAO_CTYPE :
@@ -1345,7 +1349,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		break;
 	case DAO_INTERFACE :
 		/* Matching to "interface": */
-		if( self->aux == NULL ) return DAO_MT_SUB * (value->type == DAO_INTERFACE);
+		if( self->aux == NULL ) return DAO_MT_SUBX * (value->type == DAO_INTERFACE);
 		if( self->aux->xInterface.concretes != NULL ){
 			DaoInterface *inter = (DaoInterface*) self->aux;
 			DNode *it;
@@ -1369,7 +1373,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	case DAO_ENUM :
 		other = & value->xEnum;
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
-		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SUB;
+		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SUBX;
 		if( self->realnum && value->xEnum.subtype == DAO_ENUM_SYM ) return DAO_MT_NOT;
 		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
@@ -1479,7 +1483,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		if( tp ) return DaoType_MatchTo( tp, self, NULL );
 		break;
 	case DAO_CLASS :
-		if( self->aux == NULL ) return DAO_MT_SUB; /* par : class */
+		if( self->aux == NULL ) return DAO_MT_SUBX; /* par : class */
 		if( self->aux == value ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( value->xClass.clsType, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
@@ -1515,7 +1519,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		tp = & value->xType;
 		if( self->tid != DAO_TYPE ) return 0;
 		/* generic "type"; */
-		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUB;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUBX;
 		mt = DaoType_MatchTo( tp, self->args->items.pType[0], defs );
 		if( mt >= DAO_MT_EQ ) return mt;
 		return 0;
