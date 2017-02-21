@@ -6417,6 +6417,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	int end = size - 1;
 	int regLast = -1;
 	int reg, rb, cst = 0;
+	int scoped = 0;
 
 	/*
 	   int i; for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string.chars);printf("\n");
@@ -6630,6 +6631,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		int curStart = self->curToken;
 		int regcount = self->regCount;
 		int postart = start - 1;
+		int lastScoped = scoped;
+
+		scoped = 0;
+
 		tkn = DaoParser_CurrentTokenName( self );
 		if( tokens[self->curToken]->line != tokens[self->curToken-1]->line ){
 			if( tkn != DTOK_DOT && tkn != DTOK_COLON2 ) return result;
@@ -6646,10 +6651,12 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			{
 				int rb, rb2, mode = 0, konst = 0, code = DVM_CALL;
 				DaoInode *inode;
+
 				rb = rb2 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 				if( rb < 0 ) return error;
 				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
+				if( lastScoped ) mode |= DAO_CALL_NOVIRT;
 				if( (rb+1) <= end ){
 					if( tokens[rb+1]->name == DTOK_BANG2 ){
 						mode |= DAO_CALL_ASYNC;
@@ -6749,6 +6756,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				}
 				call = self->vmcLast;
 				call->b |= DAO_CALL_BLOCK;
+				if( lastScoped ) call->b |= DAO_CALL_NOVIRT;
 
 				if( DaoParser_PushOuterRegOffset( self, start, rb ) == 0 )
 					goto InvalidSection;
@@ -7004,6 +7012,7 @@ InvalidSection:
 				result.lvalue = 1;
 				result.reg = regLast;
 				result.last = result.update = self->vmcLast;
+				scoped = 1;
 				self->curToken += 1;
 				break;
 			}

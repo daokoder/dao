@@ -352,7 +352,8 @@ static void DaoProcess_CopyStackParams( DaoProcess *self )
 		GC_Assign( & frameValues[i], value );
 	}
 }
-void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
+
+static void DaoProcess_PushRoutineMode( DaoProcess *self, DaoRoutine *routine, DaoObject *object, int mode )
 {
 	DaoStackFrame *frame;
 	DaoProfiler *profiler = self->vmSpace->profiler;
@@ -368,7 +369,7 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 		}
 	}
 
-	if( routine->attribs & DAO_ROUT_INTERFACE ){
+	if( (routine->attribs & DAO_ROUT_INTERFACE) && !(mode & DAO_CALL_NOVIRT) ){
 		DaoObject *that = object->rootObject;
 		DMap *vtable = that->defClass->interMethods;
 		DNode *it = vtable ? DMap_Find( vtable, routine ) : NULL;
@@ -386,6 +387,12 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 	DaoProcess_CopyStackParams( self );
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
+
+void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
+{
+	DaoProcess_PushRoutineMode( self, routine, object, 0 );
+}
+
 void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 {
 	DaoProfiler *profiler = self->vmSpace->profiler;
@@ -3706,7 +3713,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		}
 	}
 	if( noasync == 0 ) DaoProcess_TryTailCall( self, rout, O, vmc );
-	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );
+	DaoProcess_PushRoutineMode( self, rout, DaoValue_CastObject( O ), vmc->b & 0xff00 );
 	if( noasync ) return;
 	DaoProcess_TryAsynCall( self, vmc );
 }

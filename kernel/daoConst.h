@@ -191,8 +191,9 @@ enum DaoCallMode
 	DAO_CALL_EXPAR  = (1<<10), /* expand the last parameter of tuple type; */
 	DAO_CALL_BLOCK  = (1<<11), /* call with code block; */
 	DAO_CALL_ASYNC  = (1<<12), /* asynchronous call; */
-	DAO_CALL_TAIL   = (1<<13), /* may do tail call; */
-	DAO_CALL_FAST   = (1<<14)  /* may do fast call; */
+	DAO_CALL_NOVIRT = (1<<13), /* none virtual call; */
+	DAO_CALL_TAIL   = (1<<14), /* may do tail call; */
+	DAO_CALL_FAST   = (1<<15), /* may do fast call; */
 };
 enum DaoProcessPauseType
 {
