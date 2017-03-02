@@ -472,6 +472,8 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 {
 	DaoType *partype;
 	DParamNode *param, *it;
+	ushort_t m = DAO_ROUT_CODESECT | DAO_ROUT_INITOR | DAO_ROUT_CASTOR;
+
 	if( pid >= (int)routine->routType->args->size ){
 		/* If a routine with the same parameter signature is found, return it: */
 		for(it=self->first; it; it=it->next){
@@ -480,7 +482,7 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 			// exactly the same parameter signatures (map::keys()).
 			// But they differ in attributes.
 			*/
-			if( it->routine && it->routine->attribs == routine->attribs ) return it;
+			if( it->routine && (it->routine->attribs & m) == (routine->attribs & m) ) return it;
 		}
 		param = DParamNode_New();
 		param->routine = routine;

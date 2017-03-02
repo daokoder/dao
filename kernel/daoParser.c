@@ -2659,39 +2659,7 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 //     Test( 123 )  # Not allowed, Test() is not overloaded in this scope;
 //     rout = MakeRoutine()
 //     rout( 123 )  # Allowed;
-//
-// ---------
-// OBSOLETE:
-// Routine definition nested insided other routines is not supported.
-// Anonymous routines or closures should be used instead if local routines
-// encapsulated inside a routine are preferred.
-//
-// There are reasons not supporting normal routines nested inside routines.
-// The primary reason is that a reasonable support for such routines would
-// require to support them in exactly the same way as anonymous routines and
-// closures, namely allowing accession of the outer variables of the host routines,
-// and running time creation of the routine (closure) if it does access the outer
-// variables. Another issue with supporting normal routines inside other routines
-// is about overloading, as support for overloading is naturally expected for
-// normal routines. But in some cases, there are serious issues related to
-// overloading for nested normal routines. For example,
-//
-//     routine Test( a: string ) { io.writeln( "Test(a:string)" ) }
-//     routine MakeRoutine(){
-//         var loc = 123
-//         routine Test( a: int ) {
-//             io.writeln( "MakeRoutine::Test(a:int)" )
-//             return a + loc
-//         }
-//         Test( 'abc' )  # Should be allowed, so overloading is required;
-//         return Test    # What Test should it be?
-//     }
-//     test = MakeRoutine()
-//     test( 'abc' )  # Allowed? Does it make sense to allow or not allow it?
-//
-// With this example, the problem of supporting normal routines nested in other
-// routines can be clearly seen. Anonymous routine and closure have no such issues.
- */
+*/
 static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int from, int to, int attribs )
 {
 	DaoToken *ptok, **tokens = self->tokens->items.pToken;

@@ -2026,20 +2026,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 			while( core->methods[ size ].proto != NULL ) size ++;
 		}
 
-		for( i=0; i<size; i++ ){
-			const char *proto = core->methods[i].proto;
-			cur = DaoNamespace_ParseSignature( self, proto, parser, defparser );
-			if( cur == NULL ){
-				printf( "  In function: %s::%s\n", core->name, proto );
-				continue;
-			}
-			cur->pFunc = core->methods[i].fpter;
-			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
-				cur->attribs |= DAO_ROUT_INITOR;
-				DaoTypeKernel_InsertInitor( hostype->kernel, self, hostype, cur );
-			}
-			DaoMethods_Insert( methods, cur, self, hostype );
-		}
 		if( kernel->abtype->bases != NULL ){
 			for(i=0; i<kernel->abtype->bases->size; ++i){
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
@@ -2062,6 +2048,20 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 					}
 				}
 			}
+		}
+		for( i=0; i<size; i++ ){
+			const char *proto = core->methods[i].proto;
+			cur = DaoNamespace_ParseSignature( self, proto, parser, defparser );
+			if( cur == NULL ){
+				printf( "  In function: %s::%s\n", core->name, proto );
+				continue;
+			}
+			cur->pFunc = core->methods[i].fpter;
+			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
+				cur->attribs |= DAO_ROUT_INITOR;
+				DaoTypeKernel_InsertInitor( hostype->kernel, self, hostype, cur );
+			}
+			DaoMethods_Insert( methods, cur, self, hostype );
 		}
 		if( hostype->tid == DAO_INTERFACE ){
 			DMap_Assign( hostype->aux->xInterface.methods, methods );
