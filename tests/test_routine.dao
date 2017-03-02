@@ -342,3 +342,82 @@ testing( 2.5, "b" )
 int .*
 float .*
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine Test( a: string )
+{
+    io.writeln( "Test(a:string)" )
+}
+routine MakeRoutine()
+{
+    var loc = 123
+    routine Test( a: int )
+    {
+        var x = loc + 1;
+        io.writeln( "MakeRoutine::Test(a:int)" )
+    }
+    Test( 'abc' )
+    return Test
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Symbol not defined}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine Test( a: string )
+{
+    io.writeln( "Test(a:string)" )
+}
+routine MakeRoutine()
+{
+    var loc = 123
+    routine Test( a: int )
+    {
+        io.writeln( "MakeRoutine::Test(a:int)" )
+    }
+    Test( 'abc' )
+    return Test
+}
+Test( 123 )
+@[test(code_01)]
+@[test(code_01)]
+{{Invalid parameter type --- " 'int' for 'string' "}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine Test( a: string )
+{
+    io.writeln( "Test(a:string)" )
+}
+routine MakeRoutine()
+{
+    var loc = 123
+    routine Test( a: int )
+    {
+        io.writeln( "MakeRoutine::Test(a:int)" )
+    }
+    Test( 'abc' )
+    return Test
+}
+Test( "abc" )
+rout = MakeRoutine()
+rout( 123 )
+@[test(code_01)]
+@[test(code_01)]
+Test(a:string)
+Test(a:string)
+MakeRoutine::Test(a:int)
+@[test(code_01)]

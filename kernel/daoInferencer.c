@@ -297,6 +297,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	for(i=0; i<NS->constants->size; ++i){
 		DaoRoutine *rout = DaoValue_CastRoutine( NS->constants->items.pConst[i]->value );
 		if( rout != NULL && rout->body != NULL && rout != routine && rout->nameSpace == NS ){
+			if( rout->attribs & DAO_ROUT_MAIN ) continue;
 			if( rout->body->codeStart >= beginLine && rout->body->codeEnd <= endLine ){
 				DList_Append( self->routines, rout );
 			}

@@ -2627,12 +2627,41 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 	rout->body->codeEnd = newrout->body->codeEnd;
 	return rout;
 }
+
 /*
 // Parse routines:
 // 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig )
-// 'operator' { Identifier '::' } OverloadableOperator ParamReturn
+// 'routine' { Identifier '::' } OverloadableOperator ParamReturn
 //
 // NOTES:
+// Routine definition nested inside routines is supported as the following:
+// 1. Like normal routines, it can not access outer local variables;
+// 2. Routine overloading is localized in the current outer routine;
+// 3. Nesting inside control blocks is not allowed;
+//
+// For example:
+//
+//     routine Test( a: string )
+//     {
+//         io.writeln( "Test(a:string)" )
+//     }
+//     routine MakeRoutine()
+//     {
+//         var loc = 123
+//         routine Test( a: int )  # Overloading Test(a:string);
+//         {
+//             var x = loc + 1;  # Not allowed;
+//             io.writeln( "MakeRoutine::Test(a:int)" )
+//         }
+//         Test( 'abc' )  # Allowed;
+//         return Test    # Return overloaded Test();
+//     }
+//     Test( 123 )  # Not allowed, Test() is not overloaded in this scope;
+//     rout = MakeRoutine()
+//     rout( 123 )  # Allowed;
+//
+// ---------
+// OBSOLETE:
 // Routine definition nested insided other routines is not supported.
 // Anonymous routines or closures should be used instead if local routines
 // encapsulated inside a routine are preferred.
@@ -2811,7 +2840,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		parser->hostType = self->hostType;
 		DaoMethods_Insert( self->hostCinType->methods, rout, NS, rout->routHost );
 	}else{
-		/* Nested normal routine not allowed: */
+		/* Nesting normal routine inside controls is not allowed: */
 		if( self->lexLevel != 0 ) goto InvalidDefinition; /* TODO: better information; */
 
 		parser = DaoParser_NewRoutineParser( self, start, attribs );
@@ -2819,18 +2848,76 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( right < 0 ) goto InvalidDefinition;
 
 		rout = parser->routine;
-		id = DaoNamespace_FindConst( NS, parser->routine->routName );
-		declared = (DaoRoutine*) DaoNamespace_GetConst( NS, id );
-		if( declared ){
-			rout = DaoParser_CheckDeclared( self, parser->routine, declared );
-			if( rout == NULL ) goto InvalidDefinition;
-		}
 
-		if( rout == parser->routine ){
-			if( strcmp( rout->routName->chars, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
-			DaoNamespace_AddConst( NS, rout->routName, (DaoValue*) rout, perm );
+		if( self->routine != self->nameSpace->mainRoutine ){
+			DString *name = parser->routine->routName;
+			DNode *it = DMap_Find( self->lookupTables->items.pMap[0], name );
+			DaoValue *val;
+			if( it == NULL ) it = DMap_Find( NS->lookupTable, name );
+			if( it == NULL ){
+				id = LOOKUP_BIND_LC( self->routine->routConsts->value->size );
+				DMap_Insert( self->lookupTables->items.pMap[0], name, IntToPointer(id) );
+				DaoRoutine_AddConstant( self->routine, (DaoValue*) parser->routine );
+			}else if( LOOKUP_ST( it->value.pInt ) == DAO_LOCAL_CONSTANT ){
+				id = LOOKUP_ID( it->value.pInt );
+				val = self->routine->routConsts->value->items.pValue[id];
+				if( val->type != DAO_ROUTINE ){
+					goto InvalidDefinition; /* TODO: message; */
+				}
+				declared = (DaoRoutine*) val;
+				if( ! DString_EQ( declared->routName, name ) ){
+					/* May be: const x = some_routine; */
+					goto InvalidDefinition; /* TODO: message; */
+				}
+				rout = DaoParser_CheckDeclared( self, parser->routine, declared );
+				if( rout == NULL ) goto InvalidDefinition;
+				if( rout == parser->routine ){
+					DaoRoutine *mroutine = DaoRoutines_New( NS, NULL, parser->routine );
+					mroutine->trait |= DAO_VALUE_CONST;
+					DaoRoutines_Add( mroutine, declared );
+
+					id = LOOKUP_BIND_LC( self->routine->routConsts->value->size );
+					DMap_Insert( self->lookupTables->items.pMap[0], name, IntToPointer(id) );
+					DaoRoutine_AddConstant( self->routine, (DaoValue*) mroutine );
+				}else{
+					parser->routine = rout;
+				}
+			}else if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ){
+				goto InvalidDefinition; /* TODO: message; */
+			}else{
+				id = LOOKUP_ID( it->value.pInt );
+				val = NS->constants->items.pConst[id]->value;
+				declared = DaoValue_CastRoutine( val );
+				if( declared == NULL || DString_EQ( declared->routName, name ) == 0 ){
+					id = LOOKUP_BIND_LC( self->routine->routConsts->value->size );
+					DMap_Insert( self->lookupTables->items.pMap[0], name, IntToPointer(id) );
+					DaoRoutine_AddConstant( self->routine, (DaoValue*) parser->routine );
+				}else{
+					DaoRoutine *mroutine = DaoRoutines_New( NS, NULL, parser->routine );
+					mroutine->trait |= DAO_VALUE_CONST;
+					DaoRoutines_Add( mroutine, declared );
+
+					id = LOOKUP_BIND_LC( self->routine->routConsts->value->size );
+					DMap_Insert( self->lookupTables->items.pMap[0], name, IntToPointer(id) );
+					DaoRoutine_AddConstant( self->routine, (DaoValue*) mroutine );
+				}
+			}
 		}else{
-			parser->routine = rout;
+			id = DaoNamespace_FindConst( NS, parser->routine->routName );
+			declared = (DaoRoutine*) DaoNamespace_GetConst( NS, id );
+			if( declared ){
+				rout = DaoParser_CheckDeclared( self, parser->routine, declared );
+				if( rout == NULL ) goto InvalidDefinition;
+			}
+
+			if( rout == parser->routine ){
+				if( strcmp( rout->routName->chars, "main" ) == 0 ){
+					rout->attribs |= DAO_ROUT_MAIN;
+				}
+				DaoNamespace_AddConst( NS, rout->routName, (DaoValue*) rout, perm );
+			}else{
+				parser->routine = rout;
+			}
 		}
 	}
 	if( attribs && rout->routHost == NULL ){
