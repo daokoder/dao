@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -244,6 +244,7 @@ DaoTypeCore daoNoneCore =
 	"none",                                          /* name */
 	sizeof(DaoNone),                                 /* size */
 	{ NULL },                                        /* bases */
+	{ NULL },                                        /* casts */
 	NULL,                                            /* numbers */
 	NULL,                                            /* methods */
 	NULL,                     NULL,                  /* GetField */
@@ -412,6 +413,7 @@ DaoTypeCore daoBooleanCore =
 	"bool",                                                /* name */
 	sizeof(DaoBoolean),                                    /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
 	NULL,                        NULL,                     /* GetField */
@@ -625,6 +627,7 @@ DaoTypeCore daoIntegerCore =
 	"int",                                                 /* name */
 	sizeof(DaoInteger),                                    /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
 	NULL,                        NULL,                     /* GetField */
@@ -813,6 +816,7 @@ DaoTypeCore daoFloatCore =
 	"float",                                           /* name */
 	sizeof(DaoFloat),                                  /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	NULL,                        NULL,                 /* GetField */
@@ -1198,6 +1202,7 @@ DaoTypeCore daoComplexCore =
 	"complex",                                             /* name */
 	sizeof(DaoComplex),                                    /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
 	DaoComplex_CheckGetField,    DaoComplex_DoGetField,    /* GetField */
@@ -2322,6 +2327,7 @@ DaoTypeCore daoStringCore =
 	"string",                                            /* name */
 	sizeof(DaoString),                                   /* size */
 	{ NULL },                                            /* bases */
+	{ NULL },                                            /* casts */
 	NULL,                                                /* numbers */
 	daoStringMeths,                                      /* methods */
 	DaoValue_CheckGetField,     DaoValue_DoGetField,     /* GetField */
@@ -2780,6 +2786,7 @@ DaoTypeCore daoEnumCore =
 	"enum",                                          /* name */
 	sizeof(DaoEnum),                                 /* size */
 	{ NULL },                                        /* bases */
+	{ NULL },                                        /* casts */
 	NULL,                                            /* numbers */
 	NULL,                                            /* methods */
 	NULL,                     NULL,                  /* GetField */
@@ -4113,6 +4120,7 @@ DaoTypeCore daoListCore =
 	"list<@T=any>",                                  /* name */
 	sizeof(DaoList),                                 /* size */
 	{ NULL },                                        /* bases */
+	{ NULL },                                        /* casts */
 	NULL,                                            /* numbers */
 	daoListMeths,                                    /* methods */
 	DaoValue_CheckGetField,   DaoValue_DoGetField,   /* GetField */
@@ -5065,6 +5073,7 @@ DaoTypeCore daoMapCore =
 	"map<@K=any,@V=any>",                           /* name */
 	sizeof(DaoMap),                                 /* size */
 	{ NULL },                                       /* bases */
+	{ NULL },                                       /* casts */
 	NULL,                                           /* numbers */
 	daoMapMeths,                                    /* methods */
 	DaoValue_CheckGetField,   DaoValue_DoGetField,  /* GetField */
@@ -5608,6 +5617,7 @@ DaoTypeCore daoTupleCore =
 	"tuple",                                           /* name */
 	sizeof(DaoTuple),                                  /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	DaoTuple_CheckGetField,    DaoTuple_DoGetField,    /* GetField */
@@ -5670,6 +5680,7 @@ DaoTypeCore daoNameValueCore =
 	"NameValue",           /* name */
 	sizeof(DaoNameValue),  /* size */
 	{ NULL },              /* bases */
+	{ NULL },              /* casts */
 	NULL,                  /* numbers */
 	NULL,                  /* methods */
 	NULL,  NULL,           /* GetField */
@@ -5843,6 +5854,7 @@ DaoTypeCore daoCtypeCore =
 	"ctype",                                           /* name */
 	sizeof(DaoCtype),                                  /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	DaoCtype_CheckGetField,    DaoCtype_DoGetField,    /* GetField */
@@ -6121,6 +6133,20 @@ DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *c
 	return NULL;
 }
 
+static void* DaoType_DownCastCxxData( DaoType *self, DaoType *totype, void *data )
+{
+	daoint i, n;
+	if( self == totype || totype == NULL || data == NULL ) return data;
+	for(i=0,n=totype->bases->size; i<n; i++){
+		void *p = DaoType_DownCastCxxData( self, totype->bases->items.pType[i], data );
+		if( p ){
+			if( totype->core->casts[i] ) return (*totype->core->casts[i])( p, 1 );;
+			return p;
+		}
+	}
+	return NULL;
+}
+
 DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoRoutine *rout;
@@ -6132,7 +6158,10 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 			if( core == NULL || core->Copy == NULL ) return NULL;  /* Cannot be copied; */
 			/* It will be copied when moved to the destination; */
 		}
-		return self;
+		return self;  /* See DaoObject_CastToBase(); */
+	}else if( self->type == DAO_CDATA && DaoType_ChildOf( type, self->xCdata.ctype ) ){
+		void *data = DaoType_DownCastCxxData( self->xCdata.ctype, type, self->xCdata.data );
+		if( data ) return (DaoValue*) DaoWrappers_MakeCdata( type, data, 0 ); 
 	}
 
 	buffer = DString_NewChars( "(" );
@@ -6250,6 +6279,7 @@ DaoTypeCore daoCstructCore =
 	"cstruct",                                             /* name */
 	sizeof(DaoCstruct),                                    /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	NULL,                                                  /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
@@ -6347,19 +6377,27 @@ DaoObject* DaoCdata_GetObject( DaoCdata *self )
 	return (DaoObject*)self->object;
 }
 
+
+static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
+{
+	daoint i, n;
+	if( self == totype || totype == NULL || data == NULL ) return data;
+	if( self->bases == NULL ) return NULL;
+	for(i=0,n=self->bases->size; i<n; i++){
+		void *p = self->core->casts[i] ? (*self->core->casts[i])( data, 0 ) : data;
+		p = DaoType_CastCxxData( self->bases->items.pType[i], totype, p );
+		if( p ) return p;
+	}
+	return NULL;
+}
+
 /*
 // The "totype" should be a base or derived type of this cdata type:
 */
 void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 {
-	DaoValue *value;
-
 	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
-	if( self->ctype->core->DoConversion == NULL ) return self->data;
-
-	value = self->ctype->core->DoConversion( (DaoValue*) self, totype, 0, NULL );
-	if( value == NULL || value->type != DAO_CDATA ) return NULL;
-	return value->xCdata.data;
+	return DaoType_CastCxxData( self->ctype, totype, self->data );
 }
 
 
@@ -6368,6 +6406,7 @@ DaoTypeCore daoCdataCore =
 	"cdata",              /* name */
 	sizeof(DaoCdata),     /* size */
 	{ NULL },             /* bases */
+	{ NULL },             /* casts */
 	NULL,                 /* numbers */
 	NULL,                 /* methods */
 	NULL,  NULL,          /* GetField */
@@ -6684,6 +6723,7 @@ static DaoTypeCore daoExceptionCore =
 	"Exception",                                           /* name */
 	sizeof(DaoException),                                  /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	daoExceptionMeths,                                     /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
@@ -6718,6 +6758,7 @@ static DaoTypeCore daoExceptionWarningCore =
 	"Exception::Warning",                                  /* name */
 	sizeof(DaoException),                                  /* size */
 	{ & daoExceptionCore, NULL },                          /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	daoExceptionWarningMeths,                              /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
@@ -6753,6 +6794,7 @@ static DaoTypeCore daoExceptionErrorCore =
 	"Exception::Error",                                    /* name */
 	sizeof(DaoException),                                  /* size */
 	{ & daoExceptionCore, NULL },                          /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	daoExceptionErrorMeths,                                /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */

@@ -258,6 +258,7 @@ static DaoTypeCore daoUserPodTypeCore =
 	"UserPodType",                                              /* name */
 	sizeof(DaoxUserPodType),                                    /* size */
 	{ NULL },                                                   /* bases */
+	{ NULL },                                                   /* casts */
 	NULL,                                                       /* numbers */
 	userPodTypeMeths,                                           /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,         /* GetField */

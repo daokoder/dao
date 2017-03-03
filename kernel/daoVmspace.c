@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -180,7 +180,7 @@ const char *const dao_copy_notice =
 "  Target: " TARGET_PLAT "\n"
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
-"  Copyright(C) 2006-2016, Limin Fu\n"
+"  Copyright(C) 2006-2017, Limin Fu\n"
 "  Dao is released under the terms of the Simplified BSD License\n"
 "  Dao Language website: http://daoscript.org\n"
 ;

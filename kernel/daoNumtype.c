@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2771,6 +2771,7 @@ DaoTypeCore daoArrayCore =
 	"array<@T<none|bool|int|float|complex>=none>",     /* name */
 	sizeof(DaoArray),                                  /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoArrayMeths,                                     /* methods */
 	DaoValue_CheckGetField,    DaoValue_DoGetField,    /* GetField */

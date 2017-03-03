@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -411,6 +411,7 @@ DaoTypeCore daoInterfaceCore =
 	"interface",                          /* name */
 	sizeof(DaoInterface),                 /* size */
 	{ NULL },                             /* bases */
+	{ NULL },                             /* casts */
 	NULL,                                 /* numbers */
 	NULL,                                 /* methods */
 	DaoInterface_CheckGetField,    NULL,  /* GetField */
@@ -541,6 +542,7 @@ DaoTypeCore daoCinTypeCore =
 	"CinType",                                         /* name */
 	sizeof(DaoCinType),                                /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	DaoCinType_CheckGetField,  DaoCinType_DoGetField,  /* GetField */
@@ -1029,6 +1031,7 @@ DaoTypeCore daoCinValueCore =
 	"CinValue",                                              /* name */
 	sizeof(DaoCinValue),                                     /* size */
 	{ NULL },                                                /* bases */
+	{ NULL },                                                /* casts */
 	NULL,                                                    /* numbers */
 	NULL,                                                    /* methods */
 	DaoCinValue_CheckGetField,    DaoCinValue_DoGetField,    /* GetField */

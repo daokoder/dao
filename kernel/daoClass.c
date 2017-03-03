@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1406,6 +1406,7 @@ DaoTypeCore daoClassCore =
 	"class",                                           /* name */
 	sizeof(DaoClass),                                  /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	DaoClass_CheckGetField,    DaoClass_DoGetField,    /* GetField */

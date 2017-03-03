@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -794,6 +794,7 @@ DaoTypeCore daoDeviceCore =
 	"Device",        /* name */
 	0,               /* size */
 	{ NULL },        /* bases */
+	{ NULL },        /* casts */
 	NULL,            /* numbers */
 	daoDeviceMeths,  /* methods */
 	NULL,  NULL,     /* GetField */
@@ -820,6 +821,7 @@ DaoTypeCore daoStreamCore =
 	"Stream",                                          /* name */
 	sizeof(DaoStream),                                 /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoStreamMeths,                                    /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */

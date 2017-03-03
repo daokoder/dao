@@ -2301,6 +2301,7 @@ static DaoTypeCore daoMakeUnitCore =
 	"Unit",                                            /* name */
 	sizeof(DaoMakeUnit),                               /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoMakeUnitMeths,                                  /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -2377,6 +2378,7 @@ static DaoTypeCore daoMakeObjectsCore =
 	"Objects",                                         /* name */
 	sizeof(DaoMakeObjects),                            /* size */
 	{ & daoMakeUnitCore, NULL },                       /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoMakeObjectsMeths,                               /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -2567,6 +2569,7 @@ static DaoTypeCore daoMakeTargetCore =
 	"Target",                                          /* name */
 	sizeof(DaoMakeTarget),                             /* size */
 	{ & daoMakeUnitCore, NULL },                       /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoMakeTargetMeths,                                /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -2886,6 +2889,7 @@ static DaoTypeCore daoMakeProjectCore =
 	"Project",                                         /* name */
 	sizeof(DaoMakeProject),                            /* size */
 	{ & daoMakeUnitCore, NULL },                       /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoMakeProjectMeths,                               /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -2949,6 +2953,7 @@ static DaoTypeCore daoMakeVariablesCore =
 	"Variables",                                       /* name */
 	0,                                                 /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoMakeVariablesMeths,                             /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */

@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -266,6 +266,7 @@ typedef struct DaoType         DaoType;
 #define DMap_(KeyType,ValueType)   DMap
 #define DHash_(KeyType,ValueType)  DMap
 
+typedef void* (*DaoCxxCast)( void *data, int down_casting );
 typedef void (*DaoDeleteFunction)( DaoValue *self );
 typedef void (*DaoCFunction)( DaoProcess *process, DaoValue *argv[], int argc );
 typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
@@ -332,10 +333,32 @@ struct DaoTypeCore
 	// Mainly used by DaoCstruct_CopyPOD() for Plain Old Data;
 	*/
 
-	DaoTypeCore  *bases[8];
+	DaoTypeCore  *bases[DAO_MAX_BASE_TYPES];
 	/*
 	// Type core for the base types:
 	// Multiple inheritance is supported for interfaces and C++ classes;
+	*/
+
+	DaoCxxCast    casts[DAO_MAX_BASE_TYPES];
+	/*
+	// Functions for casting C/C++ objects to and from their parent types:
+	//
+	// Usually they can simply be set to null. But to wrap C++ classes
+	// with virtual methods, it is necessary to provide casting functions
+	// in the following form:
+	//
+	//   void* cast_Sub_Base( void *data, int down_casting ) {
+	//       if( down_casting ) return static_cast<Sub*>( (Base*)data );
+	//       return dynamic_cast<Base*>( (Sub*)data );
+	//   }
+	//
+	// Or:
+	//
+	//   void* cast_Sub_Base( void *data, int down_casting ) {
+	//       if( down_casting ) return dynamic_cast<Sub*>( (Base*)data );
+	//       return dynamic_cast<Base*>( (Sub*)data );
+	//   }
+	// for class with virtual bases.
 	*/
 
 	DaoNumberEntry  *numbers;

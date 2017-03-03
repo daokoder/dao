@@ -259,6 +259,7 @@ static DaoTypeCore daoUserTypeCore =
 	"UserType",                                            /* name */
 	sizeof(DaoxUserType),                                  /* size */
 	{ NULL },                                              /* bases */
+	{ NULL },                                              /* casts */
 	NULL,                                                  /* numbers */
 	userTypeMeths,                                         /* methods */
 	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */

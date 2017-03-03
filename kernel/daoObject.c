@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -160,12 +160,24 @@ DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 	if( sup->type == DAO_OBJECT ){
 		if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
 	}else if( sup->type == DAO_CSTRUCT && host->tid == DAO_CSTRUCT ){
+		/*
+		// It is OK to return "sup". 
+		// Because it must be binary-compatiable to the target type "host";
+		*/
 		if( DaoType_ChildOf( sup->xCstruct.ctype, host ) ) return sup;
 	}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
+		/*
+		// It is also OK to return "sup".
+		// Because if it wraps a C struct, it must be binary-compatiable
+		// to the target type "host"; And if it wraps a C++ object, the
+		// real casting of the wrapped pointer will happen before using
+		// in wrapped functions with DaoValue_TryCastCdata();
+		*/
 		if( DaoType_ChildOf( sup->xCstruct.ctype, host ) ) return sup;
 	}
 	return NULL;
 }
+
 void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 {
 	DaoObject *child = NULL;
@@ -182,6 +194,7 @@ void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 		}
 	}
 }
+
 DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
@@ -189,6 +202,7 @@ DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 	if( p && (p->type == DAO_CSTRUCT || p->type == DAO_CDATA) ) return (DaoCstruct*) p;
 	return NULL;
 }
+
 DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoCstruct *p = DaoObject_CastCstruct( self, type );
@@ -199,6 +213,7 @@ DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data )
 {
 }
+
 int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject *hostObject )
 {
 	DNode *node;
@@ -749,6 +764,7 @@ DaoTypeCore daoObjectCore =
 	"object",                                            /* name */
 	sizeof(DaoObject),                                   /* size */
 	{ NULL },                                            /* bases */
+	{ NULL },                                            /* casts */
 	NULL,                                                /* numbers */
 	NULL,                                                /* methods */
 	DaoObject_CheckGetField,    DaoObject_DoGetField,    /* GetField */

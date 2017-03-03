@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2016, Limin Fu
+// Copyright (c) 2006-2017, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -120,6 +120,7 @@ static DaoTypeCore daoAnyCore =
 	"any",                          /* name */
 	0,                              /* size */
 	{ NULL },                       /* bases */
+	{ NULL },                       /* casts */
 	NULL,                           /* numbers */
 	NULL,                           /* methods */
 	DaoType_CheckGetFieldAny,    NULL,  /* GetField */
@@ -187,6 +188,7 @@ static DaoTypeCore daoVariantCore =
 	"variant",                          /* name */
 	0,                                  /* size */
 	{ NULL },                           /* bases */
+	{ NULL },                           /* casts */
 	NULL,                               /* numbers */
 	NULL,                               /* methods */
 	DaoType_CheckGetFieldVariant,    NULL,  /* GetField */
@@ -2147,6 +2149,7 @@ DaoTypeCore daoTypeCore =
 	"type",              /* name */
 	sizeof(DaoType),     /* size */
 	{ NULL },            /* bases */
+	{ NULL },            /* casts */
 	NULL,                /* numbers */
 	NULL,                /* methods */
 	NULL,  NULL,         /* GetField */
@@ -2211,6 +2214,7 @@ DaoTypeCore daoTypeKernelCore =
 	"kernel",                  /* name */
 	sizeof(DaoTypeKernel),     /* size */
 	{ NULL },                  /* bases */
+	{ NULL },                  /* casts */
 	NULL,                      /* numbers */
 	NULL,                      /* methods */
 	NULL,  NULL,               /* GetField */

@@ -542,6 +542,7 @@ DaoTypeCore daoFileStreamCore =
 	"FileStream",                                      /* name */
 	sizeof(DaoFileStream),                             /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoFileStreamMeths,                                /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -576,6 +577,7 @@ DaoTypeCore daoPipeStreamCore =
 	"PipeStream",                                      /* name */
 	sizeof(DaoPipeStream),                             /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoPipeStreamMeths,                                /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -611,6 +613,7 @@ DaoTypeCore daoStringStreamCore =
 	"StringStream",                                    /* name */
 	sizeof(DaoStringStream),                           /* size */
 	{ NULL },                                          /* bases */
+	{ NULL },                                          /* casts */
 	NULL,                                              /* numbers */
 	daoStringStreamMeths,                              /* methods */
 	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
@@ -643,6 +646,7 @@ DaoTypeCore daoSeekableDeviceCore =
 	"SeekableDevice",        /* name */
 	0,                       /* size */
 	{ NULL },                /* bases */
+	{ NULL },                /* casts */
 	NULL,                    /* numbers */
 	daoSeekableDeviceMeths,  /* methods */
 	NULL,  NULL,             /* GetField */
