@@ -777,17 +777,35 @@ Done:
 	DaoProcess_FlushStdStreams( self );
 	return ret;
 }
-void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
+
+static void DaoProcess_CallNativeFunction( DaoProcess *self )
 {
+	DaoStackFrame *frame = self->topFrame;
 	daoint m = self->factory->size;
 	daoint cur = self->stackReturn;
+	int migrate = 0;
+
+#ifdef DEBUG
+	assert( frame->routine->pFunc != NULL );
+#endif
 
 	self->stackReturn = -1;
-	func->pFunc( self, p, n );
+
+	if( self->vmSpace->handler && self->vmSpace->handler->MigrateCall ){
+		DaoType *hostype = self->topFrame->routine->routHost;
+		if( hostype && (hostype->tid == DAO_CSTRUCT || hostype->tid == DAO_CDATA) ){
+			migrate = hostype->aux->xCtype.attribs & DAO_CLS_UNITHREAD;
+		}
+	}
+	if( migrate ){
+		self->vmSpace->handler->MigrateCall( self->vmSpace->handler, self );
+	}else{
+		frame->routine->pFunc( self, self->stackValues + frame->stackBase, frame->parCount );
+	}
 	if( self->stackReturn == -1 ){
-		if( self->topFrame->retmode == DVM_RET_PROCESS ){
+		if( frame->retmode == DVM_RET_PROCESS ){
 			GC_Assign( self->stackValues, dao_none_value );
-		}else if( self->topFrame->retmode == DVM_RET_FRAME ){
+		}else if( frame->retmode == DVM_RET_FRAME ){
 			int opc = self->activeCode->c;
 			int optype = DaoVmCode_GetOpcodeType( self->activeCode );
 			int ret = (optype >= DAO_CODE_GETC) & (optype <= DAO_CODE_GETM);
@@ -803,21 +821,24 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 	// If yes, move the value from the regular location to the start of
 	// the stack.
 	*/
-	if( self->topFrame->retmode == DVM_RET_PROCESS && self->stackReturn > 0 ){
+	if( frame->retmode == DVM_RET_PROCESS && self->stackReturn > 0 ){
 		DaoValue *returned = self->stackValues[ self->stackReturn ];
 		GC_Assign( self->stackValues, returned );
 	}
 	if( self->factory->size > m ) DList_Erase( self->factory, m, -1 );
 	self->stackReturn = cur;
 }
+
 DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self )
 {
 	return self->topFrame->routine;
 }
+
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
 	return self->stackValues[0];
 }
+
 static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 {
 	DaoStackFrame *f, *frame = self->topFrame;
@@ -1213,10 +1234,7 @@ CallEntry:
 	if( self->topFrame->state & DVM_FRAME_FINISHED ) goto FinishCall;
 
 	if( routine->pFunc ){
-		DaoValue **p = self->stackValues + topFrame->stackBase;
-		if( self->status == DAO_PROCESS_STACKED ){
-			DaoProcess_CallFunction( self, topFrame->routine, p, topFrame->parCount );
-		}
+		if( self->status == DAO_PROCESS_STACKED ) DaoProcess_CallNativeFunction( self );
 		DaoProcess_PopFrame( self );
 		goto CallEntry;
 	}
@@ -3745,7 +3763,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		GC_Assign( & self->topFrame->retype, retype );
 	}
 #endif
-	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, self->parCount );
+	DaoProcess_CallNativeFunction( self );
 	status = self->status;
 	DaoProcess_PopFrame( self );
 
@@ -3779,7 +3797,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_PushFunction( self, rout );
 		DaoProcess_SetActiveFrame( self, self->firstFrame ); /* return value in stackValues[0] */
 		self->topFrame->active = self->firstFrame;
-		DaoProcess_CallFunction( self, rout, self->stackValues + self->topFrame->stackBase, self->parCount );
+		DaoProcess_CallNativeFunction( self );
 		DaoProcess_PopFrame( self );
 
 		ret = self->stackValues[0];
@@ -4002,14 +4020,14 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		if( rout->pFunc == NULL ) DaoProcess_TryTailCall( self, rout, NULL, vmc );
 		if( rout->pFunc ){
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->parCount );
-			DaoValue **values = self->stackValues + frame->stackBase;
 			GC_Assign( & frame->routine, rout );
 			frame->active = frame->prev->active;
+			frame->parCount = rout->parCount;
 			self->status = DAO_PROCESS_STACKED;
 			ret = DaoProcess_FastPassParams( self, partypes, parbuf, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
-			DaoProcess_CallFunction( self, rout, values, rout->parCount );
+			DaoProcess_CallNativeFunction( self );
 			status = self->status;
 			DaoProcess_PopFrame( self );
 			if( status == DAO_PROCESS_SUSPENDED ) self->status = status;

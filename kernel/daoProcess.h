@@ -177,7 +177,6 @@ DAO_DLL DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine
 
 DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 
-DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 
 /*
 // Execute from the top of the calling stack.
