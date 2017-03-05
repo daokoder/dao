@@ -829,6 +829,21 @@ static void DaoProcess_CallNativeFunction( DaoProcess *self )
 	self->stackReturn = cur;
 }
 
+int DaoProcess_ExecuteCall( DaoProcess *self )
+{
+#ifdef DEBUG
+	assert( self->status == DAO_PROCESS_STACKED );
+#endif
+
+	if( self->topFrame->routine->pFunc ){
+		int errors = self->exceptions->size;
+		DaoStackFrame *frame = self->topFrame;
+		frame->routine->pFunc( self, self->stackValues + frame->stackBase, frame->parCount );
+		return self->exceptions->size == errors;
+	}
+	return DaoProcess_Execute( self );
+}
+
 DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self )
 {
 	return self->topFrame->routine;

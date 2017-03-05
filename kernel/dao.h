@@ -535,8 +535,8 @@ struct DaoHandler
 	// to decide whether to migrate the call.
 	//
 	// The function and call arguments are already pushed into the process and
-	// ready to be executed with DaoProcess_Execute(). If the call needs no
-	// migration, the handler should just call DaoProcess_Execute() directly
+	// ready to be executed with DaoProcess_ExecuteCall(). If the call needs no
+	// migration, the handler should just call DaoProcess_ExecuteCall() directly
 	// and return its result. Otherwise the handler method is responsible for
 	// signaling the target thread to execute DaoProcess_Execute() on the process
 	// object, and block the current thread until the execution is finished.
