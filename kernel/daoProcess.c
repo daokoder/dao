@@ -3735,7 +3735,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	if( noasync ) return;
 	DaoProcess_TryAsynCall( self, vmc );
 }
-static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
+static void DaoProcess_DoNativeCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], DaoType *T[], int N, int noasync )
 {
 	DaoRoutine *rout = func;
@@ -3835,7 +3835,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 	if( caller->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) caller;
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
+			DaoProcess_DoNativeCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
 			return;
 		}else if( rout->overloads == NULL && rout->body == NULL ){  /* function curry: */
 			DaoValue *caller = (DaoValue*) rout->original;
@@ -3860,7 +3860,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			goto InvalidParameter;
 		}
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
+			DaoProcess_DoNativeCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
 		}else{
 			DaoProcess_PrepareCall( self, rout, selfpar, params, types, npar, vmc, 0 );
 		}
@@ -3879,7 +3879,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL ) goto InvalidParameter;
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+			DaoProcess_DoNativeCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
 		}
@@ -3892,7 +3892,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
+		DaoProcess_DoNativeCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
 		if( self->exceptions->size ) return;
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
@@ -3913,7 +3913,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+		DaoProcess_DoNativeCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
 	}else if( caller->type == DAO_CINVALUE ){
 		rout = rout2 = DaoType_FindFunctionChars( caller->xCinValue.cintype->vatype, "()" );
 		if( rout == NULL ){
@@ -3923,7 +3923,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+			DaoProcess_DoNativeCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
 		}
@@ -3936,7 +3936,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
+		DaoProcess_DoNativeCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
 	}else{
 		DaoProcess_RaiseError( self, "Type", "object not callable" );
 	}

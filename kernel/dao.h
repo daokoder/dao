@@ -266,7 +266,7 @@ typedef struct DaoType         DaoType;
 #define DMap_(KeyType,ValueType)   DMap
 #define DHash_(KeyType,ValueType)  DMap
 
-typedef void* (*DaoCxxCast)( void *data, int down_casting );
+typedef void* (*DaoNativeCast)( void *data, int down_casting );
 typedef void (*DaoDeleteFunction)( DaoValue *self );
 typedef void (*DaoCFunction)( DaoProcess *process, DaoValue *argv[], int argc );
 typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
@@ -339,9 +339,9 @@ struct DaoTypeCore
 	// Multiple inheritance is supported for interfaces and C++ classes;
 	*/
 
-	DaoCxxCast    casts[DAO_MAX_BASE_TYPES];
+	DaoNativeCast casts[DAO_MAX_BASE_TYPES];
 	/*
-	// Functions for casting C/C++ objects to and from their parent types:
+	// Functions for casting native (C/C++) objects to and from their parent types:
 	//
 	// Usually they can simply be set to null. But to wrap C++ classes
 	// with virtual methods, it is necessary to provide casting functions

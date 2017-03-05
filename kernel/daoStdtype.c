@@ -6133,12 +6133,12 @@ DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *c
 	return NULL;
 }
 
-static void* DaoType_DownCastCxxData( DaoType *self, DaoType *totype, void *data )
+static void* DaoType_NativeDownCast( DaoType *self, DaoType *totype, void *data )
 {
 	daoint i, n;
 	if( self == totype || totype == NULL || data == NULL ) return data;
 	for(i=0,n=totype->bases->size; i<n; i++){
-		void *p = DaoType_DownCastCxxData( self, totype->bases->items.pType[i], data );
+		void *p = DaoType_NativeDownCast( self, totype->bases->items.pType[i], data );
 		if( p ){
 			if( totype->core->casts[i] ) return (*totype->core->casts[i])( p, 1 );;
 			return p;
@@ -6160,7 +6160,7 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 		}
 		return self;  /* See DaoObject_CastToBase(); */
 	}else if( self->type == DAO_CDATA && DaoType_ChildOf( type, self->xCdata.ctype ) ){
-		void *data = DaoType_DownCastCxxData( self->xCdata.ctype, type, self->xCdata.data );
+		void *data = DaoType_NativeDownCast( self->xCdata.ctype, type, self->xCdata.data );
 		if( data ) return (DaoValue*) DaoWrappers_MakeCdata( type, data, 0 ); 
 	}
 
@@ -6378,14 +6378,14 @@ DaoObject* DaoCdata_GetObject( DaoCdata *self )
 }
 
 
-static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
+static void* DaoType_NativeCast( DaoType *self, DaoType *totype, void *data )
 {
 	daoint i, n;
 	if( self == totype || totype == NULL || data == NULL ) return data;
 	if( self->bases == NULL ) return NULL;
 	for(i=0,n=self->bases->size; i<n; i++){
 		void *p = self->core->casts[i] ? (*self->core->casts[i])( data, 0 ) : data;
-		p = DaoType_CastCxxData( self->bases->items.pType[i], totype, p );
+		p = DaoType_NativeCast( self->bases->items.pType[i], totype, p );
 		if( p ) return p;
 	}
 	return NULL;
@@ -6397,7 +6397,7 @@ static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
 void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 {
 	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
-	return DaoType_CastCxxData( self->ctype, totype, self->data );
+	return DaoType_NativeCast( self->ctype, totype, self->data );
 }
 
 
