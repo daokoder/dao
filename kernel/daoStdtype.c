@@ -6159,9 +6159,16 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 			/* It will be copied when moved to the destination; */
 		}
 		return self;  /* See DaoObject_CastToBase(); */
+	}else if( self->type == DAO_CDATA && type->tid == DAO_OBJECT ){
+		if( self->xCdata.object == NULL ) return NULL;
+		return DaoType_CastToParent( (DaoValue*) self->xCdata.object, type );
 	}else if( self->type == DAO_CDATA && DaoType_ChildOf( type, self->xCdata.ctype ) ){
 		void *data = DaoType_NativeDownCast( self->xCdata.ctype, type, self->xCdata.data );
-		if( data ) return (DaoValue*) DaoWrappers_MakeCdata( type, data, 0 ); 
+		if( data ){
+			DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
+			GC_Assign( & cdata->object, self->xCdata.object );
+			return (DaoValue*) cdata;
+		}
 	}
 
 	buffer = DString_NewChars( "(" );
