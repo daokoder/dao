@@ -3965,43 +3965,45 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 	DaoValue **dests = self->stackValues + self->topFrame->stackBase;
 	for(i=0; i<npar; ++i){
 		DaoValue *param = params[i];
-		if( dests[i] && dests[i]->xBase.refCount == 1 && param->type == dests[i]->type ){
-			switch( param->type ){
-			case DAO_BOOLEAN :
-				dests[i]->xBoolean.value = param->xBoolean.value;
-				break;
-			case DAO_INTEGER :
-				dests[i]->xInteger.value = param->xInteger.value;
-				break;
-			case DAO_FLOAT :
-				dests[i]->xFloat.value = param->xFloat.value;
-				break;
-			case DAO_COMPLEX :
-				dests[i]->xComplex.value = param->xComplex.value;
-				break;
-			case DAO_STRING :
-				DString_Assign( dests[i]->xString.value, param->xString.value );
-				break;
-			case DAO_ENUM :
-				if( dests[i]->xEnum.etype != param->xEnum.etype ){
-					GC_Assign( & dests[i]->xEnum.etype, param->xEnum.etype );
+		if( param->type <= DAO_ENUM ){
+			if( dests[i] && dests[i]->xBase.refCount == 1 && param->type == dests[i]->type ){
+				switch( param->type ){
+				case DAO_BOOLEAN :
+					dests[i]->xBoolean.value = param->xBoolean.value;
+					break;
+				case DAO_INTEGER :
+					dests[i]->xInteger.value = param->xInteger.value;
+					break;
+				case DAO_FLOAT :
+					dests[i]->xFloat.value = param->xFloat.value;
+					break;
+				case DAO_COMPLEX :
+					dests[i]->xComplex.value = param->xComplex.value;
+					break;
+				case DAO_STRING :
+					DString_Assign( dests[i]->xString.value, param->xString.value );
+					break;
+				case DAO_ENUM :
+					if( dests[i]->xEnum.etype != param->xEnum.etype ){
+						GC_Assign( & dests[i]->xEnum.etype, param->xEnum.etype );
+					}
+					dests[i]->xEnum.value = param->xEnum.value;
+					break;
+				default : break;
 				}
-				dests[i]->xEnum.value = param->xEnum.value;
-				break;
-			default :
-				GC_Assign( & dests[i], param );
-				break;
+			}else{
+				DaoType *partype = partypes[i];
+				if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
+				DaoValue_CopyX( param, dests + i, partype );
 			}
-		}else if( param->type >= DAO_ARRAY ){
-			switch( param->type ){
-			case DAO_OBJECT : if( param->xObject.isNull ) return 0; break;
-			case DAO_CDATA  : if( param->xCdata.data == NULL ) return 0; break;
-			}
-			GC_Assign( & dests[i], param );
-		}else{
+		}else if( param->type >= DAO_OBJECT && param->type <= DAO_CDATA ){
 			DaoType *partype = partypes[i];
 			if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
-			DaoValue_CopyX( param, dests + i, partype );
+
+			/* There might be cases where casting or null pointer checking is necessary: */
+			if( DaoValue_Move( param, dests + i, partype ) == 0 ) return 0;
+		}else{
+			GC_Assign( & dests[i], param );
 		}
 	}
 	return 1;

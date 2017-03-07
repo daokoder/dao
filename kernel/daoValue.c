@@ -478,6 +478,17 @@ void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D, int nocopying )
 	}
 }
 
+static int DaoType_IsNullable( DaoType *self )
+{
+	if( self->tid == DAO_NONE || self->tid == DAO_ANY ){
+		return 1;
+	}else if( self->tid == DAO_VARIANT ){
+		if( DaoType_GetVariantItem( self, DAO_NONE ) ) return 1;
+		return DaoType_GetVariantItem( self, DAO_ANY ) != NULL;
+	}
+	return 0;
+}
+
 int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs )
 {
 	DaoCinType *cintype;
@@ -502,7 +513,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	switch( S->type ){
 	case DAO_ENUM : if( S->xEnum.subtype == DAO_ENUM_SYM && T->realnum ) return 0; break;
 	case DAO_OBJECT : if( S->xObject.isNull ) return 0; break;
-	case DAO_CDATA  : if( S->xCdata.data == NULL ) return 0; break;
+	case DAO_CDATA  : if( S->xCdata.data == NULL && ! DaoType_IsNullable(T) ) return 0; break;
 	}
 	if( !(S->xBase.trait & DAO_VALUE_CONST) ){
 		DaoType *ST = NULL;
@@ -527,6 +538,9 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( (T->tid == DAO_OBJECT || T->tid == DAO_CSTRUCT || T->tid == DAO_CDATA) && S->type == DAO_OBJECT ){
 		if( S->xObject.defClass != & T->aux->xClass ){
 			S = DaoObject_CastToBase( S->xObject.rootObject, T );
+			if( S != NULL && S->type == DAO_CDATA && S->xCdata.data == NULL ){
+				if( ! DaoType_IsNullable( T ) ) return 0;
+			}
 			tm = (S != NULL);
 		}
 	}else if( (T->tid == DAO_CLASS || T->tid == DAO_CTYPE) && S->type == DAO_CLASS ){
@@ -616,6 +630,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	return 1;
 }
+
 int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
 {
 	int matched = 0;
@@ -634,6 +649,7 @@ int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
 	}
 	return matched;
 }
+
 int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs )
 {
 	DaoValue *D2 = *D;
@@ -670,6 +686,9 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		if( DaoValue_FastMatchTo( S, T ) ){
+			if( S->type == DAO_CDATA && S->xCdata.data == NULL ){
+				if( ! DaoType_IsNullable( T ) ) return 0;
+			}
 			if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
 				DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
 			}else if( S->type == DAO_CINVALUE ){
@@ -734,21 +753,15 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	return 1;
 }
+
 int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {
 	return DaoValue_Move5( S, D, T, T, NULL );
 }
+
 int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 {
-	int rc = DaoValue_Move5( S, D, T, T, defs );
-	if( rc == 0 || T == NULL ) return rc;
-	if( S->type <= DAO_TUPLE || S->type != T->tid ) return rc;
-	if( S->type == DAO_CDATA ){
-		if( S->xCdata.data == NULL ) rc = 0;
-	}else{
-		if( S == T->value ) rc = 0;
-	}
-	return rc;
+	return DaoValue_Move5( S, D, T, T, defs );
 }
 
 DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
