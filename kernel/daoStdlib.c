@@ -114,8 +114,11 @@ static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 
 	DList_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetData( name ), runim );
-	DaoProcess_PutValue( proc, (DaoValue*) ns );
-	if( ns == NULL ) DaoProcess_RaiseError( proc, NULL, "loading failed" );
+	if( ns != NULL ){
+		DaoProcess_PutValue( proc, (DaoValue*) ns );
+	}else{
+		DaoProcess_RaiseError( proc, NULL, "loading failed" );
+	}
 	DList_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }

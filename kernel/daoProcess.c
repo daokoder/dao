@@ -5017,7 +5017,8 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	DaoException_Init( except, self, info, NULL );
 	DList_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
-		if( self->vmSpace->stopit ==0 ){
+		DaoDebugger *debugger = self->vmSpace->debugger;
+		if( self->vmSpace->stopit == 0 && debugger && debugger->Debug ){
 			DaoProcess_Trace( self, 10 );
 			DaoProcess_PrintException( self, NULL, 0 );
 			DaoSTD_Debug( self, NULL, 0 );
