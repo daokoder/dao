@@ -177,6 +177,12 @@ void DaoProcess_Delete( DaoProcess *self )
 }
 
 
+DaoVmSpace* DaoProcess_GetVmSpace( DaoProcess *self )
+{
+	return self->vmSpace;
+}
+
+
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
 	daoint i, N = self->stackTop + size;
@@ -2825,7 +2831,7 @@ DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 	if( type->core->Copy != NULL ){
 		return DaoProcess_CopyCdata( self, data, type );
 	}else{
-		DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 1 );
+		DaoCdata *cdata = DaoVmSpace_MakeCdata( self->vmSpace, type, data, 1 );
 		if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 		DaoGC_TryDelete( (DaoValue*) cdata );
 	}
@@ -2842,7 +2848,7 @@ DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 	if( type->core->Copy != NULL ){
 		return DaoProcess_CopyCdata( self, data, type );
 	}else{
-		DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
+		DaoCdata *cdata = DaoVmSpace_MakeCdata( self->vmSpace, type, data, 0 );
 		if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 		DaoGC_TryDelete( (DaoValue*) cdata );
 	}
@@ -5500,7 +5506,7 @@ DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type )
 
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {
-	DaoCdata *res = DaoWrappers_MakeCdata( type, data, owned );
+	DaoCdata *res = DaoVmSpace_MakeCdata( self->vmSpace, type, data, owned );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }

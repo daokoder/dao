@@ -135,6 +135,8 @@ struct DaoVmSpace
 	DMap   *typeKernels;
 	DMap   *spaceData;
 
+	DMap   *cdataWrappers;  /* VM space unique wrappers for Cdata objects; */
+
 	DMap   *allProcesses;
 	DMap   *allRoutines;
 	DMap   *allParsers;
@@ -225,5 +227,10 @@ DAO_DLL void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *infe
 DAO_DLL void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
 
 void DaoAux_Delete( DMap *aux );
+
+DAO_DLL DaoCdata* DaoVmSpace_MakeCdata( DaoVmSpace *self, DaoType *type, void *data, int own );
+DAO_DLL void DaoVmSpace_ReleaseCdata( DaoVmSpace *self, DaoType *type, void *data );
+DAO_DLL void DaoVmSpace_UpdateCdata( DaoVmSpace *self, DaoCdata *cdata, void *data );
+DAO_DLL void DaoVmSpace_ClearGarbage( DaoVmSpace *self );
 
 #endif

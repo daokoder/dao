@@ -618,7 +618,6 @@ DAO_DLL DString*  DaoValue_TryGetString( DaoValue *self );
 DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL void*     DaoValue_TryGetArray( DaoValue *self );
 DAO_DLL void*     DaoValue_TryGetCdata( DaoValue *self );
-DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
 
 /*
 // DaoValue_TryCastCdata() will cast the data of the cdata to the type
@@ -974,16 +973,16 @@ DAO_DLL DaoValue* DaoCstruct_CopyPOD( DaoValue *self, DaoValue *target );
 
 
 
-DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
-DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_New( DaoVmSpace *vmspace, DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data );
 DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
 DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
 DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
 DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
 DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
 DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
-DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
 DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
+DAO_DLL DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self );
 
 
 DAO_DLL DaoStream* DaoStream_New();
@@ -1011,6 +1010,7 @@ DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int 
 
 
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
+DAO_DLL DaoVmSpace* DaoProcess_GetVmSpace( DaoProcess *self );
 DAO_DLL DaoNamespace* DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *s );
 DAO_DLL DaoValue* DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *s );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );

@@ -579,8 +579,9 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
-	self->typeKernels = DHash_New( 0, 0 );
-	self->spaceData = DHash_New( 0, 0 );
+	self->cdataWrappers = DHash_New(0,0);
+	self->typeKernels = DHash_New(0,0);
+	self->spaceData = DHash_New(0,0);
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -735,6 +736,7 @@ static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
+	DMap_Delete( self->cdataWrappers );
 	DMap_Delete( self->typeKernels );
 	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
@@ -3087,3 +3089,110 @@ void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key )
 	if( node ) return node->value.pVoid;
 	return NULL;
 }
+
+
+
+static void DaoVmSpace_PrintWarning( DaoVmSpace *self, const char *message )
+{
+	DaoStream_WriteChars( self->errorStream, "[[WARNING]] " );
+	DaoStream_WriteChars( self->errorStream, message );
+	DaoStream_WriteChars( self->errorStream, "\n" );
+}
+
+static DaoCdata* DaoVmSpace_MakeCdata2( DaoVmSpace *self, DaoType *type, void *data, int own )
+{
+	DNode *node = DMap_Find( self->cdataWrappers, data );
+	DaoCdata *cdata = NULL;
+
+	if( node ) cdata = (DaoCdata*) node->value.pValue;
+
+	printf( "DaoVmSpace_MakeCdata 1: %s %p %p\n", type->name->chars, data, cdata );
+	if( cdata && cdata->ctype == type ) return cdata;
+	printf( "DaoVmSpace_MakeCdata 2: %s %p %p\n", type->name->chars, data, cdata );
+
+	if( cdata ) cdata->vmSpace = NULL;  /* Set to NULL when removed from the cache; */
+
+	cdata = DaoCdata_Allocate( type, data, own );
+	cdata->vmSpace = self;
+	if( data ) DMap_Insert( self->cdataWrappers, data, cdata );
+	return cdata;
+}
+
+static void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
+{
+	DNode *node = DMap_Find( self->cdataWrappers, data );
+	DaoCdata *cdata = NULL;
+
+	if( node ) cdata = (DaoCdata*) node->value.pValue;
+
+	if( cdata && cdata->ctype == type ){
+		cdata->vmSpace = NULL;
+		DMap_EraseNode( self->cdataWrappers, node );
+	}
+}
+
+static void DaoVmSpace_UpdateCdata2( DaoVmSpace *self, DaoCdata *cdata, void *data )
+{
+	DNode *node;
+
+	if( cdata->data == data ) return;
+
+	node = DMap_Find( self->cdataWrappers, data );
+	if( node ){
+		DaoCdata *cd = (DaoCdata*) node->value.pValue;
+		if( cd != cdata ){
+			DaoVmSpace_PrintWarning( self, "Cdata cache inconsistency is detected!" );
+		}
+		DMap_EraseNode( self->cdataWrappers, node );
+	}
+
+	cdata->data = data;
+	if( data ) DMap_Insert( self->cdataWrappers, data, cdata );
+}
+
+
+#ifdef DAO_WITH_THREAD
+
+DaoCdata* DaoVmSpace_MakeCdata( DaoVmSpace *self, DaoType *type, void *data, int own )
+{
+	DaoCdata *cdata;
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_LockCache( self );
+	cdata = DaoVmSpace_MakeCdata2( self, type, data, own );
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_UnlockCache( self );
+	return cdata;
+}
+
+void DaoVmSpace_ReleaseCdata( DaoVmSpace *self, DaoType *type, void *data )
+{
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_LockCache( self );
+	DaoVmSpace_ReleaseCdata2( self, type, data );
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_UnlockCache( self );
+}
+
+void DaoVmSpace_UpdateCdata( DaoVmSpace *self, DaoCdata *cdata, void *data )
+{
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_LockCache( self );
+	DaoVmSpace_UpdateCdata2( self, cdata, data );
+	if( DaoGC_IsConcurrent() ) DaoVmSpace_UnlockCache( self );
+}
+
+#else
+
+DaoCdata* DaoVmSpace_MakeCdata( DaoVmSpace *self, DaoType *type, void *data, int own )
+{
+	return DaoVmSpace_MakeCdata2( self, type, data, own );
+}
+
+void DaoVmSpace_ReleaseCdata( DaoVmSpace *self, DaoType *type, void *data )
+{
+	DaoVmSpace_ReleaseCdata2( self, type, data );
+}
+
+void DaoVmSpace_UpdateCdata( DaoVmSpace *self, DaoCdata *cdata, void *data )
+{
+	DaoVmSpace_UpdateCdata2( self, cdata, data );
+}
+
+
+#endif
+

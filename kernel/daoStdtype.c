@@ -4619,15 +4619,15 @@ int DaoMap_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 	iterator->values[0]->xBoolean.value = self->xMap.value->size > 0;
 	if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
 		/*
-		// Do not use DaoWrappers_MakeCdata()!
-		// DaoWrappers_MakeCdata() will make a wrapper that is unique
+		// Do not use DaoVmSpace_MakeCdata()!
+		// DaoVmSpace_MakeCdata() will make a wrapper that is unique
 		// for the wrapped data "node", since the wrapped data will be
 		// updated during each iteration, the correspondence between
 		// wrapped data and the wrapper will be invalidated.
 		// As a consequence, nested for-in loop on the same map will
 		// not work!
 		*/
-		DaoCdata *it = DaoCdata_Wrap( dao_type_cdata, node );
+		DaoCdata *it = DaoCdata_Allocate( dao_type_cdata, node, 0 );
 		GC_Assign( & data[1], it );
 	}else{
 		data[1]->xCdata.data = node;
@@ -6165,7 +6165,7 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	}else if( self->type == DAO_CDATA && DaoType_ChildOf( type, self->xCdata.ctype ) ){
 		void *data = DaoType_NativeDownCast( self->xCdata.ctype, type, self->xCdata.data );
 		if( data ){
-			DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 0 );
+			DaoCdata *cdata = DaoVmSpace_MakeCdata( proc->vmSpace, type, data, 0 );
 			GC_Assign( & cdata->object, self->xCdata.object );
 			return (DaoValue*) cdata;
 		}
@@ -6316,11 +6316,11 @@ DaoTypeCore* DaoCstruct_GetDefaultCore()
 
 
 
-DaoCdata* DaoCdata_New( DaoType *type, void *data )
+DaoCdata* DaoCdata_Allocate( DaoType *type, void *data, int owned )
 {
 	DaoCdata *self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
-	self->subtype = DAO_CDATA_CXX;
+	self->subtype = owned ? DAO_CDATA_CXX : DAO_CDATA_PTR;
 	self->data = data;
 #ifdef DAO_USE_GC_LOGGER
 	if( type == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -6328,16 +6328,25 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 	return self;
 }
 
-DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
+DaoCdata* DaoCdata_New( DaoVmSpace *vmspace, DaoType *type, void *data )
 {
-	DaoCdata *self = DaoCdata_New( type, data );
-	self->subtype = DAO_CDATA_PTR;
-	return self;
+	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 1 );
+	return DaoVmSpace_MakeCdata( vmspace, type, data, 1 );
+}
+
+DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data )
+{
+	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 0 );
+	return DaoVmSpace_MakeCdata( vmspace, type, data, 0 );
 }
 
 void DaoCdata_Delete( DaoCdata *self )
 {
 	DaoTypeCore *core = self->ctype->core;
+	if( self->vmSpace != NULL && self->data != NULL ){
+		DaoVmSpace_ReleaseCdata( self->vmSpace, self->ctype, self->data );
+	}
+
 	if( self->subtype != DAO_CDATA_PTR && self->data != NULL && core != NULL ){
 		if( core->Delete != NULL && core->Delete != (void*) DaoCdata_Delete ){
 			core->Delete( (DaoValue*) self );
@@ -6366,7 +6375,11 @@ void DaoCdata_SetType( DaoCdata *self, DaoType *type )
 
 void DaoCdata_SetData( DaoCdata *self, void *data )
 {
-	self->data = data;
+	if( self->vmSpace != NULL ){
+		DaoVmSpace_UpdateCdata( self->vmSpace, self, data );
+	}else{
+		self->data = data;
+	}
 }
 
 void* DaoCdata_GetData( DaoCdata *self )
@@ -6374,14 +6387,14 @@ void* DaoCdata_GetData( DaoCdata *self )
 	return self->data;
 }
 
-void** DaoCdata_GetData2( DaoCdata *self )
-{
-	return & self->data;
-}
-
 DaoObject* DaoCdata_GetObject( DaoCdata *self )
 {
-	return (DaoObject*)self->object;
+	return self->object;
+}
+
+DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self )
+{
+	return self->vmSpace;
 }
 
 

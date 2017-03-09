@@ -553,7 +553,6 @@ struct DaoGarbageCollector
 	DList   *cstructLists;   /* List buffer for scanning wrapped objects; */
 	DList   *cstructMaps;    /* Map buffer for scanning wrapped objects; */
 	DList   *temporary;      /* Temporary list; */
-	DMap    *wrappers;       /* Globally unique wrappers for Cdata objects; */
 
 	uchar_t   fullgc;
 	uchar_t   finalizing;
@@ -583,6 +582,11 @@ struct DaoGarbageCollector
 };
 static DaoGarbageCollector gcWorker = { NULL, NULL, NULL };
 
+
+int DaoGC_IsConcurrent()
+{
+	return gcWorker.concurrent;
+}
 
 int DaoGC_Min( int n )
 {
@@ -625,7 +629,6 @@ void DaoGC_Init()
 	gcWorker.cstructLists = DList_New(0);
 	gcWorker.cstructMaps = DList_New(0);
 	gcWorker.temporary = DList_New(0);
-	gcWorker.wrappers = DHash_New(0,DAO_DATA_VALUE);
 
 	gcWorker.delayMask = DAO_VALUE_DELAYGC;
 	gcWorker.fullgc = 0;
@@ -675,112 +678,6 @@ void DaoCGC_Start()
 
 
 
-static void DaoWrappers_ClearGarbage2()
-{
-	int count = 0;
-	void *keys[1000];
-	DNode *it;
-
-	for(it=DMap_First(gcWorker.wrappers); it; it=DMap_Next(gcWorker.wrappers,it)){
-		if( it->value.pValue->xBase.refCount == 1 ){
-			keys[count++] = it->key.pVoid;
-			if( count >= 1000 ) break;
-		}
-	}
-	while( count ) DMap_Erase( gcWorker.wrappers, keys[--count] );
-}
-
-#ifdef DAO_WITH_THREAD
-static DaoValue* DaoWrappers_Find( void *data )
-{
-	DNode *node;
-	DaoValue *value = NULL;
-
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
-	node = DMap_Find( gcWorker.wrappers, data );
-	if( node ) value = (DaoValue*) node->value.pVoid;
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
-	return value;
-}
-static void DaoWrappers_Insert( void *data, DaoValue *wrap )
-{
-	if( data == NULL ) return;
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
-	// Problematic for VM space sandboxing!
-	DMap_Insert( gcWorker.wrappers, data, wrap );
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
-}
-static void DaoWrappers_Erase( void *data )
-{
-	if( data == NULL ) return;
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
-	DMap_Erase( gcWorker.wrappers, data );
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
-}
-static void DaoWrappers_ClearGarbage()
-{
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
-	DaoWrappers_ClearGarbage2();
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
-}
-#else
-static DaoValue* DaoWrappers_Find( void *data )
-{
-	DNode *node = DMap_Find( gcWorker.wrappers, data );
-	if( node ) return (DaoValue*) node->value.pVoid;
-	return NULL;
-}
-static void DaoWrappers_Insert( void *data, DaoValue *wrap )
-{
-	if( data == NULL ) return;
-	DMap_Insert( gcWorker.wrappers, data, wrap );
-}
-static void DaoWrappers_Erase( void *data )
-{
-	if( data == NULL ) return;
-	DMap_Erase( gcWorker.wrappers, data );
-}
-static void DaoWrappers_ClearGarbage()
-{
-	DaoWrappers_ClearGarbage2();
-}
-#endif
-
-
-
-/*
-// TODO: Remove cdata wrapper caching;
-//
-// Note:
-// The DaoCdata objects were required to be unique for the wrapped data,
-// mainly for type casting (from C/C++ types to derived Dao classes).
-// But this might be impossible to guarantee for C++ objects that may
-// be casted to different pointers with different values due to multiple
-// inheritance. Now the better way to handle type casting for C++ types,
-// is to implement the type conversion method for the type core, and do
-// type casting using dynamic_cast<T>().
-//
-// Unfortunately for C objects, there is no similar way to do this.
-// However, casting from C types to derived Dao classes is not a common
-// use case, so it is not really necessary to support wrapper caching.
-//
-// In fact, deriving from C types or C++ types without deep wrapping
-// through intermediate classes should be discouraged. To add additional
-// functionalities to C/C++ objects, concrete interface is a reasonable
-// choice.
-*/
-DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned )
-{
-	return owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
-
-#if 0
-	DaoCdata *cdata = (DaoCdata*) DaoWrappers_Find( data );
-	if( cdata && cdata->type == DAO_CDATA && cdata->ctype == type ) return cdata;
-	cdata = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
-	DaoWrappers_Insert( data, (DaoValue*) cdata );
-	return cdata;
-#endif
-}
 
 
 static void DaoGC_DeleteSimpleData( DaoValue *value )
@@ -918,7 +815,6 @@ void DaoGC_Finish()
 {
 	daoint i;
 
-	DMap_Clear( gcWorker.wrappers );
 	if( gcWorker.concurrent ){
 #ifdef DAO_WITH_THREAD
 		DaoCGC_Finish();
@@ -928,8 +824,6 @@ void DaoGC_Finish()
 	}
 
 	DaoObjectLogger_SwitchBuffer();
-
-	DMap_Delete( gcWorker.wrappers );
 
 #ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
@@ -1396,8 +1290,6 @@ void DaoCGC_DeregisterModules()
 	daoint i;
 	DList *workList = gcWorker.workList;
 
-	DaoWrappers_ClearGarbage();
-
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
@@ -1628,8 +1520,6 @@ void DaoIGC_DeregisterModules()
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint k = 0;
-
-	DaoWrappers_ClearGarbage();
 
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 
@@ -2406,7 +2296,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			cstruct->ctype = ctype;
 			cstruct->trait |= DAO_VALUE_BROKEN;
 			DaoGC_ScanCstruct( cstruct, DAO_GC_BREAK );
-			if( value->type == DAO_CDATA ) DaoWrappers_Erase( value->xCdata.data );
+			if( value->type == DAO_CDATA ) DaoCdata_SetData( (DaoCdata*) value, NULL );
 			break;
 		}
 	case DAO_ROUTINE :

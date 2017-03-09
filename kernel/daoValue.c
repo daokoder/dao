@@ -1296,11 +1296,6 @@ void* DaoValue_TryGetCdata( DaoValue *self )
 	if( self->type != DAO_CDATA ) return NULL;
 	return self->xCdata.data;
 }
-void** DaoValue_TryGetCdata2( DaoValue *self )
-{
-	if( self->type != DAO_CDATA ) return NULL;
-	return & self->xCdata.data;
-}
 void DaoValue_ClearAll( DaoValue *v[], int n )
 {
 	int i;

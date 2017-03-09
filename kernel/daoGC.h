@@ -47,6 +47,7 @@ DAO_DLL void DaoObjectLogger_LogDelete( DaoValue *object );
 DAO_DLL void DaoObjectLogger_PrintProfile();
 #endif
 
+DAO_DLL int DaoGC_IsConcurrent();
 DAO_DLL int DaoGC_Min( int n );
 DAO_DLL int DaoGC_Max( int n );
 

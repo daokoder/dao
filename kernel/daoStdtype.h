@@ -266,9 +266,14 @@ struct DaoCdata
 	DAO_CSTRUCT_COMMON;
 
 	void  *data;
+
+	DaoVmSpace  *vmSpace;  /* For caching, not null if cached, otherwise null; */
 };
 
 
+DAO_DLL DaoCdata* DaoCdata_Allocate( DaoType *type, void *data, int owned );
+DAO_DLL DaoCdata* DaoCdata_New( DaoVmSpace *vmspace, DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data );
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 DAO_DLL DaoType* DaoCdata_NewType( DaoTypeCore *typer, int tid );
 
