@@ -736,7 +736,6 @@ static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
-	DMap_Delete( self->cdataWrappers );
 	DMap_Delete( self->typeKernels );
 	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
@@ -760,6 +759,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->nsPlugins );
+	DMap_Delete( self->cdataWrappers );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->moduleMutex );
 	DMutex_Destroy( & self->cacheMutex );
@@ -3137,7 +3137,7 @@ static void DaoVmSpace_UpdateCdata2( DaoVmSpace *self, DaoCdata *cdata, void *da
 
 	if( cdata->data == data ) return;
 
-	node = DMap_Find( self->cdataWrappers, data );
+	node = DMap_Find( self->cdataWrappers, cdata->data );
 	if( node ){
 		DaoCdata *cd = (DaoCdata*) node->value.pValue;
 		if( cd != cdata ){
