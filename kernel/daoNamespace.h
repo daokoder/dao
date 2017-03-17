@@ -53,6 +53,7 @@ struct DaoNamespace
 	DList_(DaoValue*)          *auxData;     /* only for GC; */
 
 	DaoRoutine  *mainRoutine;
+	DaoRoutine  *executedMain;
 
 	void  *libHandle;
 	int    cstUser;

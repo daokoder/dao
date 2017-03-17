@@ -111,6 +111,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "RETURN",     DVM_RETURN,     DAO_CODE_EXPLIST, 0 },
 	{ "YIELD",      DVM_YIELD,      DAO_CODE_YIELD,   0 },
 	{ "SECT",       DVM_SECT,       DAO_CODE_EXPLIST, 0 },
+	{ "MAIN",       DVM_MAIN,       DAO_CODE_NOP,     0 },
 	{ "JITC",       DVM_JITC,       DAO_CODE_NOP,     0 },
 	{ "DATA_B",     DVM_DATA_B,     DAO_CODE_GETC,    0 },
 	{ "DATA_I",     DVM_DATA_I,     DAO_CODE_GETC,    0 },

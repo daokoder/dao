@@ -1286,7 +1286,7 @@ DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 }
 DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file )
 {
-	return DaoVmSpace_LoadEx( self, file, 0 );
+	return DaoVmSpace_LoadEx( self, file, DAO_MODULE_MAIN_ONCE );
 }
 /*
 // Link "ns" to the module/namespace corresponding to "mod".
@@ -2010,7 +2010,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 	tm = Dao_FileChangedTime( libpath->chars );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->chars, ns ); */
 	if( ns && ns->time >= tm ){
-		if( run ) goto ExecuteImplicitMain;
+		if( run == DAO_MODULE_MAIN_ALWAYS ) goto ExecuteImplicitMain;
 		goto LoadingDone;
 	}
 	ns = NULL;
@@ -2075,7 +2075,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 	}
 
 ExecuteImplicitMain :
-	if( ns->mainRoutine->body->vmCodes->size > 1 ){
+	if( run && ns->mainRoutine->body->vmCodes->size > 1 ){
 		int status;
 		process = DaoVmSpace_AcquireProcess( self );
 		DaoVmSpace_Lock( self );
@@ -2111,7 +2111,7 @@ LoadingFailed :
 }
 DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 {
-	return DaoVmSpace_LoadDaoModuleExt( self, libpath, 0 );
+	return DaoVmSpace_LoadDaoModuleExt( self, libpath, DAO_MODULE_MAIN_NONE );
 }
 
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
@@ -3106,9 +3106,7 @@ static DaoCdata* DaoVmSpace_MakeCdata2( DaoVmSpace *self, DaoType *type, void *d
 
 	if( node ) cdata = (DaoCdata*) node->value.pValue;
 
-	printf( "DaoVmSpace_MakeCdata 1: %s %p %p\n", type->name->chars, data, cdata );
 	if( cdata && cdata->ctype == type ) return cdata;
-	printf( "DaoVmSpace_MakeCdata 2: %s %p %p\n", type->name->chars, data, cdata );
 
 	if( cdata ) cdata->vmSpace = NULL;  /* Set to NULL when removed from the cache; */
 

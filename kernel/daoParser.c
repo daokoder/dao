@@ -5135,6 +5135,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		goto ErrorLoad;
 	}
 	for(j=0; j<modpaths->size; ++j){
+		DaoConstant *konst;
+
 		mod = modlist->items.pNS[j];
 		DString_Assign( self->string, modpaths->items.pString[j] );
 		if( self->byteBlock ){
@@ -5145,6 +5147,10 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}else{
 			DaoNamespace_AddConst( nameSpace, modname, (DaoValue*) mod, perm );
 		}
+		DaoParser_PushTokenIndices( self, start, start+1, self->curToken );
+		DaoParser_AddCode( self, DVM_MAIN, nameSpace->constants->size, 0, 0 );
+		konst = DaoConstant_New( (DaoValue*) mod, DAO_GLOBAL_CONSTANT );
+		DList_Append( nameSpace->constants, konst );
 		if( cyclic ){
 			DaoParser_Error( self, DAO_LOAD_CYCLIC, NULL );
 			goto ErrorLoad;

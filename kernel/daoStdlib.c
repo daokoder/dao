@@ -112,6 +112,8 @@ static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	int runim = p[2]->xBoolean.value;
 	int res = 0;
 
+	runim = runim ? DAO_MODULE_MAIN_ALWAYS : DAO_MODULE_MAIN_ONCE;
+
 	DList_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetData( name ), runim );
 	if( ns != NULL ){

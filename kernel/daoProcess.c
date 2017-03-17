@@ -1121,6 +1121,7 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_CALL , && LAB_MCALL ,
 		&& LAB_RETURN , && LAB_YIELD ,
 		&& LAB_SECT ,
+		&& LAB_MAIN ,
 		&& LAB_JITC ,
 
 		&& LAB_DATA_B , && LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_C ,
@@ -1647,13 +1648,6 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_MakeRoutine( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( JITC ){
-			jitCallData.localValues = locVars;
-			jitCallData.globalValues = glbVars->items.pVar;
-			dao_jit.Execute( self, & jitCallData, vmc->a );
-			if( self->exceptions->size > exceptCount ) goto CheckException;
-			vmc += vmc->b;
-			OPJUMP()
 		}OPNEXT() OPCASE( RETURN ){
 			self->activeCode = vmc;
 			value = DaoProcess_DoReturn( self, vmc );
@@ -1703,6 +1697,29 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( SECT ){
 			goto ReturnFalse;
+		}OPNEXT() OPCASE( MAIN ){
+			DaoValue *nsvalue = routine->nameSpace->constants->items.pConst[vmc->a]->value;
+			DaoNamespace *NS = (DaoNamespace*) nsvalue;
+
+			self->activeCode = vmc;
+			if( NS == NULL || NS->type != DAO_NAMESPACE ){
+				DaoProcess_RaiseError( self, "", "Invalid module initialization" );
+				goto CheckException;
+			}
+			if( NS->executedMain == NS->mainRoutine ) goto CheckException;
+			NS->executedMain = NS->mainRoutine;
+			DaoProcess_PushRoutine( self, NS->mainRoutine, NULL );
+			if( self->status == DAO_PROCESS_STACKED ){
+				self->topFrame->retmode = DVM_RET_NOWHERE;
+			}
+			goto CheckException;
+		}OPNEXT() OPCASE( JITC ){
+			jitCallData.localValues = locVars;
+			jitCallData.globalValues = glbVars->items.pVar;
+			dao_jit.Execute( self, & jitCallData, vmc->a );
+			if( self->exceptions->size > exceptCount ) goto CheckException;
+			vmc += vmc->b;
+			OPJUMP()
 		}OPNEXT() OPCASE( DATA_B ){
 			locVars[vmc->c]->xBoolean.value = vmc->b != 0;
 		}OPNEXT() OPCASE( DATA_I ){

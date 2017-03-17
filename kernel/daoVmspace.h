@@ -53,6 +53,13 @@ enum DaoModuleTypes
 	DAO_MODULE_ANY  = DAO_MODULE_DAC|DAO_MODULE_DAO|DAO_MODULE_DLL
 };
 
+enum DaoModuleRunMode
+{
+	DAO_MODULE_MAIN_NONE ,
+	DAO_MODULE_MAIN_ONCE ,
+	DAO_MODULE_MAIN_ALWAYS
+};
+
 
 /*
 // Dao Virtual Machine Space:

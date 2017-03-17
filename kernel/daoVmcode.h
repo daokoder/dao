@@ -105,6 +105,7 @@ enum DaoOpcode
 	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional; */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
 	DVM_SECT ,  /* code section label, parameters: A,A+1,...,A+B-1; C, #explicit params; */
+	DVM_MAIN ,  /* run the __main__ function of module/namespace A; A, global const index; */
 	DVM_JITC ,  /* run Just-In-Time compiled Code A, and skip the next B instructions; */
 
 	/* optimized opcodes: */
