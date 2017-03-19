@@ -282,12 +282,6 @@ int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes )
 	return 1;
 }
 
-void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns )
-{
-	DList_Append( ns->sources, tokens );
-	self->body->source = (DList*) DList_Back( ns->sources );
-}
-
 
 void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes )
 {

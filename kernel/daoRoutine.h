@@ -91,7 +91,6 @@ DAO_DLL void DaoRoutine_Delete( DaoRoutine *self );
 DAO_DLL int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
 DAO_DLL int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes );
-DAO_DLL void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns );
 
 DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
@@ -125,8 +124,8 @@ struct DaoRoutineBody
 	uchar_t   exeMode;
 	uchar_t   hasStatic   : 4;
 	uchar_t   useNonLocal : 4;
-	ushort_t  codeStart;
-	ushort_t  codeEnd;
+	uint_t    codeStart;
+	uint_t    codeEnd;
 
 	DMap   *aux;
 

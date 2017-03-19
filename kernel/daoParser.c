@@ -1046,8 +1046,8 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;
 
-	routine->body->codeStart = tokens[left]->line;
-	routine->body->codeEnd = tokens[right]->line;
+	routine->body->codeStart = tokens[left]->index + 1;
+	routine->body->codeEnd = tokens[right]->index + 1;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	return right;
 }
@@ -2096,6 +2096,8 @@ int DaoParser_ParseScript( DaoParser *self )
 	DaoRoutine *routMain = self->routine; /* could be set in DaoVmSpace_Eval() */
 	daoint i, bl;
 
+	DList_Append( ns->sources, self->tokens );
+
 	if( routMain == NULL ) routMain = DaoRoutine_New( ns, NULL, 1 );
 
 	/*
@@ -2114,7 +2116,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	DString_SetChars( routMain->routName, "__main__" );
 
 	routMain->body->codeStart = 1;
-	routMain->body->codeEnd = self->lineCount;
+	routMain->body->codeEnd = self->tokens->size;
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
@@ -2737,7 +2739,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			for(; it; it=DMap_Next(signatures,it)){
 				DaoRoutine *meth = (DaoRoutine*) it->value.pValue;
 				if( DString_EQ( meth->routName, parser->routine->routName ) && meth->body ){
-					if( meth->body->codeStart ==0 ){
+					if( meth->body->codeStart == 0 ){
 						self->curLine = meth->defLine;
 						DaoParser_Error( self, DAO_ROUT_DECLARED_SIGNATURE, it->key.pString );
 					}
@@ -5028,7 +5030,8 @@ int DaoParser_PostParsing( DaoParser *self )
 	DaoVmCodeX **vmCodes;
 	int i, j, k;
 
-	DaoRoutine_SetSource( routine, self->tokens, self->nameSpace );
+	routine->body->source = (DList*) DList_Back( self->nameSpace->sources );
+
 	if( DaoParser_SetupBranching( self ) == 0 ) return 0;
 
 	routine->body->regCount = self->regCount;

@@ -298,7 +298,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		DaoRoutine *rout = DaoValue_CastRoutine( NS->constants->items.pConst[i]->value );
 		if( rout != NULL && rout->body != NULL && rout != routine && rout->nameSpace == NS ){
 			if( rout->attribs & DAO_ROUT_MAIN ) continue;
-			if( rout->body->codeStart >= beginLine && rout->body->codeEnd <= endLine ){
+			if( rout->body->codeStart > beginLine && rout->body->codeEnd < endLine ){
 				DList_Append( self->routines, rout );
 			}
 		}
@@ -3211,7 +3211,7 @@ SkipChecking:
 
 		while( nestedRoutIndex < self->routines->size ){
 			DaoRoutine *rout = self->routines->items.pRoutine[nestedRoutIndex];
-			if( rout->body->codeStart > inode->line ) break;
+			if( rout->body->codeStart >= inode->first ) break;
 			nestedRoutIndex += 1;
 			if( DaoRoutine_DoTypeInference( rout, self->silent ) == 0 ) return 0;
 		}

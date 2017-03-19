@@ -90,16 +90,20 @@ int DaoStdStream_ReadStdin( DaoStream *stream, DString *data, int count )
 int DaoStdStream_WriteStdout( DaoStream *stream, const void *data, int count )
 {
 	DaoStdStream *self = (DaoStdStream*) stream;
+	if( count == 0 ) return 0;
 	if( self->redirect && self->redirect->Write ){
-		return self->redirect->Write( self->redirect, data, count );
+		int k = self->redirect->Write( self->redirect, data, count );
+		if( k ) return k;
 	}
 	return DaoStream_WriteStdout( stream, data, count );
 }
 int DaoStdStream_WriteStderr( DaoStream *stream, const void *data, int count )
 {
 	DaoStdStream *self = (DaoStdStream*) stream;
+	if( count == 0 ) return 0;
 	if( self->redirect && self->redirect->Write ){
-		return self->redirect->Write( self->redirect, data, count );
+		int k = self->redirect->Write( self->redirect, data, count );
+		if( k ) return k;
 	}
 	return DaoStream_WriteStderr( stream, data, count );
 }
