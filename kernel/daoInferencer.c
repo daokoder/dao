@@ -3380,7 +3380,9 @@ SkipChecking:
 				if( cintype ) bt = cintype->vatype;
 			}
 			ct = bt;
-			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
+			if( at->tid == DAO_UDT || at->tid == DAO_ANY ){
+			}else if( bt->tid == DAO_UDT || bt->tid == DAO_ANY ){
+			}else if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
 			}else if( at->tid == DAO_VARIANT ){
 				int mt1 = DaoType_MatchTo( at, bt, NULL );
 				int mt2 = DaoType_MatchTo( bt, at, NULL );
@@ -3407,6 +3409,8 @@ SkipChecking:
 				/* Variant type may have null core: */
 				ct = at->core->CheckConversion( at, bt, self->routine );
 				if( ct == NULL ) goto InvalidCasting;
+			}else{
+				goto InvalidCasting;
 			}
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
