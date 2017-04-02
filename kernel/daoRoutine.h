@@ -92,6 +92,8 @@ DAO_DLL int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
 DAO_DLL int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes );
 
+DAO_DLL void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, int max );
+
 DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 DAO_DLL void DaoRoutine_PrintCodeSnippet( DaoRoutine *self, DaoStream *stream, int k );
@@ -99,6 +101,8 @@ DAO_DLL void DaoRoutine_PrintCodeSnippet( DaoRoutine *self, DaoStream *stream, i
 DAO_DLL void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *origcopy, DMap *deftypes );
 DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *origcopy, DaoType *host, DMap *deftypes );
 DAO_DLL int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
+
+
 
 struct DaoRoutineBody
 {
@@ -125,7 +129,7 @@ struct DaoRoutineBody
 	uchar_t   hasStatic   : 4;
 	uchar_t   useNonLocal : 4;
 	uint_t    codeStart;
-	uint_t    codeEnd;
+	uint_t    codeCount;
 
 	DMap   *aux;
 
@@ -165,9 +169,9 @@ struct DParamNode
 
 struct DRoutines
 {
-	unsigned int   attribs;
-	DParamNode    *tree;
-	DParamNode    *mtree;    /* for routines with self parameter */
+	unsigned      attribs;
+	DParamNode   *tree;
+	DParamNode   *mtree;    /* for routines with self parameter */
 	DList        *routines; /* list of overloaded routines on both trees */
 	DList        *array;    /* list of all added routines (may not be on the trees) */
 	DList        *array2;

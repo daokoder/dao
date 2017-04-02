@@ -1046,8 +1046,8 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;
 
-	routine->body->codeStart = tokens[left]->index + 1;
-	routine->body->codeEnd = tokens[right]->index + 1;
+	routine->body->codeStart = self->routine->body->codeStart + left + 1;
+	routine->body->codeCount = right - left - 1;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	return right;
 }
@@ -2092,9 +2092,11 @@ static int DaoParser_Preprocess( DaoParser *self );
 int DaoParser_ParseScript( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
-	DaoVmSpace   *vmSpace = self->vmSpace;
+	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoRoutine *routMain = self->routine; /* could be set in DaoVmSpace_Eval() */
 	daoint i, bl;
+
+	for(i=0; i<self->tokens->size; i++) self->tokens->items.pToken[i]->index = i;
 
 	DList_Append( ns->sources, self->tokens );
 
@@ -2116,7 +2118,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	DString_SetChars( routMain->routName, "__main__" );
 
 	routMain->body->codeStart = 1;
-	routMain->body->codeEnd = self->tokens->size;
+	routMain->body->codeCount = self->tokens->size;
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
@@ -2626,7 +2628,7 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 		return NULL;
 	}
 	rout->body->codeStart = newrout->body->codeStart;
-	rout->body->codeEnd = newrout->body->codeEnd;
+	rout->body->codeCount = newrout->body->codeCount;
 	return rout;
 }
 
@@ -3038,8 +3040,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 
 	DString_Assign( parser->fileName, self->fileName );
 
-	right = tokens[start]->name == DTOK_LCB ?
-		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
+	right = DaoParser_ExtractRoutineBody( self, parser, start );
 	if( right < 0 ) goto ErrorInterfaceDefinition;
 
 	if( self->byteBlock ){
@@ -3056,7 +3057,6 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	}else{
 		DaoInterface_DeriveMethods( inter );
 	}
-	for(i=start+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
@@ -3272,15 +3272,13 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		parser->byteCoder = self->byteCoder;
 	}
 	begin = start;
-	right = tokens[start]->name == DTOK_LCB ?
-		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
 
+	right = DaoParser_ExtractRoutineBody( self, parser, start );
 	if( right < 0 ) goto ErrorClassDefinition;
 
 	if( DaoClass_DeriveClassData( klass ) == 0 ) goto ErrorClassDefinition;
 	DaoClass_DeriveObjectData( klass ); /* Moved before parsing the body, for bytecode; */
 
-	for(i=begin+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
 			DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
@@ -3529,7 +3527,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 
 	self->permission = DAO_PERM_PUBLIC;
 
-	if( from ==0 && (to+1) == self->tokens->size ){
+	if( from == 0 && (to+1) == self->tokens->size ){
 		for(i=0; i<self->tokens->size; i++) tokens[i]->index = i;
 	}
 

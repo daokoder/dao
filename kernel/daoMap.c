@@ -122,6 +122,8 @@ static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 	void *data = NULL;
 	int i, len = 0;
 
+	if( self == NULL ) return 0;
+
 	switch( self->type ){
 	case DAO_INTEGER :
 		data = & self->xInteger.value;  len = sizeof(dao_integer);  break;

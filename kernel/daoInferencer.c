@@ -252,8 +252,8 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	DaoNamespace *NS = routine->nameSpace;
 	DList *partypes = routine->routType->args;
 	daoint i, n, M = routine->body->regCount;
-	ushort_t beginLine = routine->body->codeStart;
-	ushort_t endLine = routine->body->codeEnd;
+	ushort_t codeStart = routine->body->codeStart;
+	ushort_t codeEnd = codeStart + routine->body->codeCount;
 
 	DaoInferencer_Reset( self );
 	self->silent = silent;
@@ -298,7 +298,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		DaoRoutine *rout = DaoValue_CastRoutine( NS->constants->items.pConst[i]->value );
 		if( rout != NULL && rout->body != NULL && rout != routine && rout->nameSpace == NS ){
 			if( rout->attribs & DAO_ROUT_MAIN ) continue;
-			if( rout->body->codeStart > beginLine && rout->body->codeEnd < endLine ){
+			if( rout->body->codeStart > codeStart && rout->body->codeStart < codeEnd ){
 				DList_Append( self->routines, rout );
 			}
 		}
@@ -1097,7 +1097,7 @@ static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 	DaoStream_WriteChars( stream, char50 );
 	DaoStream_WriteChars( stream, DaoTypingErrorString[error] );
 	DaoStream_WriteChars( stream, " --- \" " );
-	DaoLexer_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
+	DaoRoutine_AnnotateCode( routine, *vmc, mbs, 32 );
 	DaoStream_WriteString( stream, mbs );
 	if( error == DTE_FIELD_NOT_EXIST ){
 		DaoStream_WriteChars( stream, " for " );
@@ -1131,7 +1131,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		vmc2.middle = 0;
 		vmc2.first = annot_first;
 		vmc2.last = annot_last > annot_first ? annot_last - annot_first : 0;
-		DaoLexer_AnnotateCode( routine->body->source, vmc2, mbs, 32 );
+		DaoRoutine_AnnotateCode( routine, vmc2, mbs, 32 );
 	}else if( error == DTE_TYPE_NOT_MATCHING || error == DTE_TYPE_NOT_CONSISTENT ){
 		DString_SetChars( mbs, "'" );
 		DString_AppendChars( mbs, self->type_source ? self->type_source->name->chars : "none" );
@@ -1143,7 +1143,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		}
 		DString_AppendChar( mbs, '\'' );
 	}else{
-		DaoLexer_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
+		DaoRoutine_AnnotateCode( routine, *vmc, mbs, 32 );
 	}
 	DaoStream_WriteString( stream, mbs );
 	DaoStream_WriteChars( stream, " \";\n" );
@@ -3043,6 +3043,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	int nestedRoutIndex = 0;
 
 	if( self->inodes->size == 0 ) return 1;
+
 	/*
 	DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
 	*/
@@ -3133,7 +3134,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DMap_Assign( defs, (DMap*)DList_Back( self->typeMaps ) );
 
 #if 0
-		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
+		DaoRoutine_AnnotateCode( routine, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->chars, NULL );
 #endif
 

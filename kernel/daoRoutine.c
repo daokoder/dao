@@ -209,7 +209,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->annotCodes = DList_New( DAO_DATA_VMCODE );
 	self->localVarType = DMap_New(0,0);
 	self->simpleVariables = DList_New(0);
-	self->codeStart = self->codeEnd = 0;
+	self->codeStart = self->codeCount = 0;
 	self->aux = DMap_New(0,0);
 	self->jitData = NULL;
 #ifdef DAO_USE_GC_LOGGER
@@ -245,7 +245,7 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 	DList_Assign( self->simpleVariables, other->simpleVariables );
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
-	self->codeEnd = other->codeEnd;
+	self->codeCount = other->codeCount;
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
 {
@@ -350,6 +350,84 @@ static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
 "-------------------------------------------------------------------------\n";
 
+void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, int max )
+{
+	DList *source;
+	DaoToken *t1, *t2, **tokens;
+	daoint i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
+	int max2 = max/2;
+	int offset = 0;
+
+	if( m < 5 ) m = 5;
+	DString_Clear( annot );
+
+	if( self->body == NULL ) return;
+	source = self->body->source;
+
+	if( source == NULL ) return; /* DaoRoutine::source could be null */
+	if( vmc.middle > vmc.last ) return;
+
+	offset = self->body->codeStart - 1;
+	tokens = source->items.pToken;
+	for(i=0; i<vmc.middle; i++){
+		k = i + vmc.first + offset;
+		if( k >= source->size ) break;
+		t2 = tokens[k];
+		if( k != (daoint)vmc.first ){
+			t1 = tokens[k-1];
+			pos = t1->cpos + t1->string.size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
+		}
+		len = t2->string.size;
+		if( t2->type == DTOK_IDENTIFIER ){
+			if( len > max2 ) len = max2 - 3;
+		}else{
+			if( len > m+3 ) len = m;
+		}
+		if( annot->size + len >= max2 ) len = max2 - annot->size;
+		DString_AppendBytes( annot, t2->string.chars, len );
+		if( len != t2->string.size ){
+			DString_AppendChars( annot, "..." );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			else break;
+		}
+		if( (i+1) < vmc.middle && annot->size >= max2 ){
+			DString_AppendChars( annot, "..." );
+			break;
+		}
+	}
+	for(i=vmc.middle; i<=vmc.last; i++){
+		k = i + vmc.first + offset;
+		if( k >= source->size ) break;
+		t2 = tokens[k];
+		if( k != (daoint)vmc.first ){
+			t1 = tokens[k-1];
+			pos = t1->cpos + t1->string.size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
+		}
+		len = t2->string.size;
+		if( t2->type == DTOK_IDENTIFIER ){
+			if( len > max2 ) len = max2-3;
+		}else{
+			if( len > m+3 ) len = m;
+		}
+		if( annot->size + len >= max ) len = max - annot->size;
+		DString_AppendBytes( annot, t2->string.chars, len );
+		if( len != t2->string.size ){
+			DString_AppendChars( annot, "..." );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			else break;
+		}
+		if( i < vmc.last && annot->size >= max ){
+			DString_AppendChars( annot, "..." );
+			break;
+		}
+	}
+	DString_Change( annot, "{{\n}}", "\\n", 0 );
+}
+
 DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
 {
 	char buffer1[10];
@@ -360,7 +438,7 @@ DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DSt
 	DString_Clear( output );
 	name = DaoVmCode_GetOpcodeName( vmc.code );
 	sprintf( buffer1, "%5i :  ", i);
-	if( self->body->source ) DaoLexer_AnnotateCode( self->body->source, vmc, output, 24 );
+	if( self->body->source ) DaoRoutine_AnnotateCode( self, vmc, output, 24 );
 	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->chars );
 	DString_SetChars( output, buffer1 );
 	DString_AppendChars( output, buffer2 );
