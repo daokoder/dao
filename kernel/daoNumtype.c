@@ -1688,7 +1688,7 @@ static DaoType* DaoArray_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *c
 		return self;
 	case DVM_MINUS :
 	case DVM_TILDE : return self;
-	case DVM_SIZE  : return dao_type_int;
+	case DVM_SIZE  : return ctx->nameSpace->vmSpace->typeInt;
 	default: return NULL;
 	}
 	return NULL;
@@ -1758,6 +1758,7 @@ static DaoValue* DaoArray_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *pr
 
 static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
+	DaoVmSpace *vms = ctx->nameSpace->vmSpace;
 	DaoType *left = args[0];
 	DaoType *right = args[1];
 
@@ -1777,12 +1778,12 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 			if( left->args->size == 0 ) return NULL;
 			if( right->tid == DAO_NONE || right->tid > DAO_COMPLEX ) return NULL;
 			if( left->args->items.pType[0]->tid > right->tid ) return left;
-			return dao_array_types[ right->tid ];
+			return vms->typeArrays[ right->tid ];
 		}else if( right->tid == DAO_ARRAY ){
 			if( right->args->size == 0 ) return NULL;
 			if( left->tid == DAO_NONE || left->tid > DAO_COMPLEX ) return NULL;
 			if( right->args->items.pType[0]->tid > left->tid ) return right;
-			return dao_array_types[ left->tid ];
+			return vms->typeArrays[ left->tid ];
 		}
 		break;
 	case DVM_MOD : case DVM_POW :
@@ -1822,17 +1823,17 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
 		if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		if( right->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
-		return dao_type_bool;
+		return ctx->nameSpace->vmSpace->typeBool;
 	case DVM_EQ  : case DVM_NE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
 		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
 		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
-		return dao_type_bool;
+		return ctx->nameSpace->vmSpace->typeBool;
 	case DVM_IN :
 		if( left->tid == DAO_NONE ) return NULL;
 		if( left->tid > DAO_COMPLEX ) return NULL;
 		if( right->tid != DAO_ARRAY ) return NULL;
-		return dao_type_bool;
+		return ctx->nameSpace->vmSpace->typeBool;
 	default: return NULL;
 	}
 
@@ -1959,7 +1960,7 @@ static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, int copy,
 
 DaoType* DaoArray_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
-	return dao_type_iterator_int;
+	return ctx->nameSpace->vmSpace->typeIteratorInt;
 }
 
 int DaoArray_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *p )

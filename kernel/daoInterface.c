@@ -41,7 +41,7 @@ extern int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds,
 void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
 
 
-DaoInterface* DaoInterface_New( const char *name )
+DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name )
 {
 	DaoInterface *self = (DaoInterface*) dao_calloc( 1, sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
@@ -49,9 +49,11 @@ DaoInterface* DaoInterface_New( const char *name )
 	self->derived = 0;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
+	self->abtype = DaoType_New( nspace->vmSpace, name, DAO_INTERFACE, (DaoValue*)self, NULL );
 	self->abtype->kernel = DaoTypeKernel_New( NULL );
 	self->abtype->kernel->abtype = self->abtype;
+	self->nameSpace = nspace;
+	GC_IncRC( self->nameSpace );
 	GC_IncRC( self->abtype->kernel );
 	GC_IncRC( self->abtype );
 	GC_IncRC( self->abtype );
@@ -66,6 +68,7 @@ void DaoInterface_Delete( DaoInterface *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	if( self->concretes ) DMap_Delete( self->concretes );
+	GC_DecRC( self->nameSpace );
 	GC_DecRC( self->abtype );
 	DList_Delete( self->bases );
 	DMap_Delete( self->methods );
@@ -75,6 +78,7 @@ void DaoInterface_Delete( DaoInterface *self )
 void DaoInterface_DeriveMethods( DaoInterface *self )
 {
 	daoint i, k, m, N = self->bases->size;
+	DaoNamespace *ns = self->nameSpace;
 	DaoInterface *base;
 	DNode *it;
 	for(i=0; i<N; i++){
@@ -86,10 +90,10 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 				DRoutines *routs = it->value.pRoutine->overloads;
 				for(k=0,m=routs->routines->size; k<m; k++){
 					DaoRoutine *rout = routs->routines->items.pRoutine[i];
-					DaoMethods_Insert( self->methods, rout, NULL, self->abtype );
+					DaoMethods_Insert( self->methods, rout, ns, self->abtype );
 				}
 			}else{
-				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->abtype );
+				DaoMethods_Insert( self->methods, it->value.pRoutine, ns, self->abtype );
 			}
 		}
 	}
@@ -443,13 +447,16 @@ extern DaoTypeCore daoCinValueCore;
 DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 {
 	DaoCinType *self = (DaoCinType*) dao_calloc( 1, sizeof(DaoCinType) );
+	DaoVmSpace *vms = inter->nameSpace->vmSpace;
+	DString *name = inter->abtype->name;
+
 	DaoValue_Init( self, DAO_CINTYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->derived = 0;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->citype = DaoType_New( "interface<", DAO_CINTYPE, (DaoValue*)self, NULL );
-	self->vatype = DaoType_New( inter->abtype->name->chars, DAO_CINVALUE, (DaoValue*)self, NULL );
+	self->citype = DaoType_New( vms, "interface<", DAO_CINTYPE, (DaoValue*)self, NULL );
+	self->vatype = DaoType_New( vms, name->chars, DAO_CINVALUE, (DaoValue*)self, NULL );
 	self->abstract = inter;
 	self->target = target;
 	self->citype->core = & daoCinTypeCore;
@@ -493,6 +500,7 @@ void DaoCinType_Delete( DaoCinType *self )
 void DaoCinType_DeriveMethods( DaoCinType *self )
 {
 	daoint i, k, m, N = self->bases->size;
+	DaoNamespace *ns = self->abstract->nameSpace;
 	DaoCinType *base;
 	DNode *it;
 	for(i=0; i<N; i++){
@@ -506,10 +514,10 @@ void DaoCinType_DeriveMethods( DaoCinType *self )
 				DRoutines *routs = it->value.pRoutine->overloads;
 				for(k=0,m=routs->routines->size; k<m; k++){
 					DaoRoutine *rout = routs->routines->items.pRoutine[i];
-					DaoMethods_Insert( self->methods, rout, NULL, self->vatype );
+					DaoMethods_Insert( self->methods, rout, ns, self->vatype );
 				}
 			}else{
-				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->vatype );
+				DaoMethods_Insert( self->methods, it->value.pRoutine, ns, self->vatype );
 			}
 		}
 	}
@@ -614,7 +622,7 @@ static DaoValue* DaoCinValue_DoGetField( DaoValue *self, DaoString *name, DaoPro
 {
 	DaoValue *res = DaoType_DoGetField( self->xCinValue.cintype->vatype, self, name, proc );
 	if( res == NULL ){
-		DaoType *target = DaoValue_GetType( self->xCinValue.value );
+		DaoType *target = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 		if( target == NULL ) target = self->xCinValue.cintype->target;
 		if( target != NULL && target->core != NULL && target->core->DoGetField != NULL ){
 			res = target->core->DoGetField( self->xCinValue.value, name, proc );
@@ -639,7 +647,7 @@ static int DaoCinValue_DoSetField( DaoValue *self, DaoString *name, DaoValue *va
 {
 	int res = DaoType_DoSetField( self->xCinValue.cintype->vatype, self, name, value, proc );
 	if( res != DAO_OK ){
-		DaoType *target = DaoValue_GetType( self->xCinValue.value );
+		DaoType *target = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 		if( target == NULL ) target = self->xCinValue.cintype->target;
 		if( target != NULL && target->core != NULL && target->core->DoSetField != NULL ){
 			res = target->core->DoSetField( self->xCinValue.value, name, value, proc );
@@ -671,7 +679,7 @@ static DaoValue* DaoCinValue_DoGetItem( DaoValue *self, DaoValue *index[], int N
 		if( retc == DAO_OK ) return NULL;
 	}
 
-	type = DaoValue_GetType( self->xCinValue.value );
+	type = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 	if( type == NULL ) type = self->xCinValue.cintype->target;
 	if( type != NULL && type->core != NULL && type->core->DoGetItem != NULL ){
 		return type->core->DoGetItem( self->xCinValue.value, index, N, proc );
@@ -711,7 +719,7 @@ static int DaoCinValue_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoV
 		if( retc == DAO_OK ) return DAO_OK;
 	}
 
-	type = DaoValue_GetType( self->xCinValue.value );
+	type = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 	if( type == NULL ) type = self->xCinValue.cintype->target;
 	if( type != NULL && type->core != NULL && type->core->DoSetItem != NULL ){
 		return type->core->DoSetItem( self->xCinValue.value, index, N, value, proc );
@@ -773,7 +781,7 @@ DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	if( retc == 0 ) return NULL;
 
 TryTarget:
-	type = DaoValue_GetType( self->xCinValue.value );
+	type = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 	if( type == NULL ) type = self->xCinValue.cintype->target;
 	if( type != NULL && type->core != NULL && type->core->DoUnary != NULL ){
 		return type->core->DoUnary( self->xCinValue.value, op, proc );
@@ -871,7 +879,7 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 	if( retc == 0 ) return NULL;
 
 TryTarget:
-	type = DaoValue_GetType( self->xCinValue.value );
+	type = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 	if( type == NULL ) type = self->xCinValue.cintype->target;
 	if( type != NULL && type->core != NULL && type->core->DoBinary != NULL ){
 		DaoValue *args2[2];
@@ -971,7 +979,7 @@ int DaoCinValue_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc 
 		int retc = DaoProcess_PushCall( proc, rout, self, (DaoValue**) & iterator, 1 );
 		if( retc == DAO_OK ) return DAO_OK;
 	}
-	type = DaoValue_GetType( self->xCinValue.value );
+	type = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 	if( type == NULL ) type = self->xCinValue.cintype->target;
 	if( type != NULL && type->core != NULL && type->core->DoForEach != NULL ){
 		return type->core->DoForEach( self->xCinValue.value, iterator, proc );
@@ -998,7 +1006,7 @@ static void DaoCinValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, 
 	if( cycmap == NULL ) cycmap = DHash_New(0,0);
 	DMap_Insert( cycmap, self, self );
 
-	args[0] = (DaoValue*) dao_type_string;
+	args[0] = (DaoValue*) proc->vmSpace->typeString;
 	args[1] = (DaoValue*) stream;
 	meth = DaoType_FindFunctionChars( type, "(string)" );
 	if( meth ){

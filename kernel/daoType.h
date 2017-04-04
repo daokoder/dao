@@ -88,17 +88,17 @@ struct DaoType
 	uchar_t   konst     : 1; /* const type; ::invar is also set to one; */
 	uchar_t   invar     : 1; /* invar type; */
 	uchar_t   var       : 1; /* var type; */
-	uchar_t   valtype   : 1; /* value type */
-	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
-	uchar_t   realnum   : 1; /* for type of int/float/double */
-	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
-	uchar_t   recursive : 1; /* recursive type */
-	uchar_t   rntcount  : 4; /* real number type count */
-	uchar_t   ffitype   : 4; /* for modules using ffi */
-	DString  *name;   /* type name */
-	DString  *fname;  /* field name, or parameter name, or original name for enum types */
-	DList    *args;   /* type arguments */
-	DList    *bases;  /* base types */
+	uchar_t   valtype   : 1; /* value type; */
+	uchar_t   variadic  : 1; /* type for variadic tuple or routine; */
+	uchar_t   realnum   : 1; /* for type of int/float/double; */
+	uchar_t   noncyclic : 1; /* this type representing non-cyclic data; */
+	uchar_t   recursive : 1; /* recursive type; */
+	uchar_t   empty     : 1; /* empty flag for containter types; */
+	uchar_t   reserved  : 7; /* reserved; */
+	DString  *name;   /* type name; */
+	DString  *fname;  /* field name, or parameter name, or original name for enum types; */
+	DList    *args;   /* type arguments; */
+	DList    *bases;  /* base types; */
 	DMap     *mapNames;
 	DMap     *interfaces;
 
@@ -117,37 +117,10 @@ struct DaoType
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeCore    *core;   /* type core; */ 
+	DaoVmSpace     *vmspace;
 };
 
-DAO_DLL DaoType *dao_type_none;
-DAO_DLL DaoType *dao_type_udf;
-DAO_DLL DaoType *dao_type_tht;
-DAO_DLL DaoType *dao_type_any;
-DAO_DLL DaoType *dao_type_bool;
-DAO_DLL DaoType *dao_type_int;
-DAO_DLL DaoType *dao_type_float;
-DAO_DLL DaoType *dao_type_complex;
-DAO_DLL DaoType *dao_type_string;
-DAO_DLL DaoType *dao_type_enum;
-DAO_DLL DaoType *dao_type_tuple;
-DAO_DLL DaoType *dao_type_array;
-DAO_DLL DaoType *dao_type_array_empty;
-DAO_DLL DaoType *dao_type_list;
-DAO_DLL DaoType *dao_type_list_empty;
-DAO_DLL DaoType *dao_type_list_any;
-DAO_DLL DaoType *dao_type_map;
-DAO_DLL DaoType *dao_type_map_empty;
-DAO_DLL DaoType *dao_type_map_any;
-DAO_DLL DaoType *dao_type_routine;
-DAO_DLL DaoType *dao_type_cdata;
-DAO_DLL DaoType *dao_type_iterator_int;
-DAO_DLL DaoType *dao_type_iterator_any;
-DAO_DLL DaoType *dao_type_exception;
-DAO_DLL DaoType *dao_type_warning;
-DAO_DLL DaoType *dao_type_error;
-DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
-
-DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *args );
+DAO_DLL DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux, DList *args );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );
 DAO_DLL void DaoType_Delete( DaoType *self );
 
@@ -167,7 +140,6 @@ DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 
 /* define @X */
 DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
-DAO_DLL DaoType* DaoType_GetCommonType( int type, int subtype );
 
 /* all DAO_THT: @T ... */
 DAO_DLL void DaoType_ResetTypeHolders( DaoType *self, DMap *types );
@@ -268,6 +240,8 @@ DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count );
 
 DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count );
 DAO_DLL void DaoType_SpecializeMethods( DaoType *self );
+
+
 
 
 extern DaoTypeCore  daoNoneCore;

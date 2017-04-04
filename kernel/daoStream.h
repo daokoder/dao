@@ -95,12 +95,9 @@ struct DaoStdStream
 	DaoStream  *redirect;
 };
 
-DAO_DLL DaoType *dao_type_io_device;
-DAO_DLL DaoType *dao_type_stream;
 
-
-DAO_DLL DaoStream* DaoStream_New();
-DAO_DLL DaoStream* DaoStdStream_New();
+DAO_DLL DaoStream* DaoStream_New( DaoVmSpace *vms );
+DAO_DLL DaoStream* DaoStdStream_New( DaoVmSpace *vms );
 
 DAO_DLL void DaoStream_Delete( DaoStream *self );
 DAO_DLL void DaoStream_SetStringMode( DaoStream *self );

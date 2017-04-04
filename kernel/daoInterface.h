@@ -39,14 +39,15 @@ struct DaoInterface
 {
 	DAO_VALUE_COMMON;
 
-	int       derived;
-	DaoType  *abtype;    /* Type object for this interface; */
-	DList    *bases;     /* Base interfaces; */
-	DMap     *methods;   /* DHash<DString*,DaoRoutine*>; */
-	DMap     *concretes; /* Concrete interfaces for the abstract interfaces; */
+	DaoNamespace  *nameSpace;  /* Definition namespace; */
+	DaoType       *abtype;     /* Type object for this interface; */
+	DList         *bases;      /* Base interfaces; */
+	DMap          *methods;    /* DHash<DString*,DaoRoutine*>; */
+	DMap          *concretes;  /* Concrete interfaces for the abstract interfaces; */
+	int            derived;
 };
 
-DaoInterface* DaoInterface_New( const char *name );
+DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name );
 void DaoInterface_Delete( DaoInterface *self );
 
 void DaoInterface_DeriveMethods( DaoInterface *self );

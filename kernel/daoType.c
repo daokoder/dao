@@ -45,285 +45,84 @@
 #include"daoValue.h"
 
 
-DaoType *dao_type_udf = NULL;
-DaoType *dao_type_tht = NULL;
-DaoType *dao_type_none = NULL;
-DaoType *dao_type_any = NULL;
-DaoType *dao_type_bool = NULL;
-DaoType *dao_type_int = NULL;
-DaoType *dao_type_float = NULL;
-DaoType *dao_type_complex = NULL;
-DaoType *dao_type_string = NULL;
-DaoType *dao_type_enum = NULL;
-DaoType *dao_type_tuple = NULL;
-DaoType *dao_type_array = NULL;
-DaoType *dao_type_array_empty = NULL;
-DaoType *dao_type_list = NULL;
-DaoType *dao_type_list_empty = NULL;
-DaoType *dao_type_list_any = NULL;
-DaoType *dao_type_map = NULL;
-DaoType *dao_type_map_empty = NULL;
-DaoType *dao_type_map_any = NULL;
-DaoType *dao_type_routine = NULL;
-DaoType *dao_type_cdata = NULL;
-DaoType *dao_type_exception = NULL;
-DaoType *dao_type_warning = NULL;
-DaoType *dao_type_error = NULL;
-DaoType *dao_type_iterator_int = NULL;
-DaoType *dao_type_iterator_any = NULL;
-DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
-
-
-static DaoType* DaoType_CheckGetFieldAny( DaoType *self, DaoString *name, DaoRoutine *ctx )
-{
-	return self;
-}
-
-static int DaoType_CheckSetFieldAny( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
-{
-	return DAO_OK;
-}
-
-static DaoType* DaoType_CheckGetItemAny( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
-{
-	return self;
-}
-
-static int DaoType_CheckSetItemAny( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
-{
-	return DAO_OK;
-}
-
-static DaoType* DaoType_CheckUnaryAny( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
-{
-	return self;
-}
-
-static DaoType* DaoType_CheckBinaryAny( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
-{
-	return self;
-}
-
-static DaoType* DaoType_CheckConversionAny( DaoType *self, DaoType *type, DaoRoutine *ctx )
-{
-	return type;
-}
-
-static DaoType* DaoType_CheckForEachAny( DaoType *self, DaoRoutine *ctx )
-{
-	return DaoNamespace_MakeIteratorType( ctx->nameSpace, self );
-}
-
-
-static DaoTypeCore daoAnyCore =
-{
-	"any",                          /* name */
-	0,                              /* size */
-	{ NULL },                       /* bases */
-	{ NULL },                       /* casts */
-	NULL,                           /* numbers */
-	NULL,                           /* methods */
-	DaoType_CheckGetFieldAny,    NULL,  /* GetField */
-	DaoType_CheckSetFieldAny,    NULL,  /* SetField */
-	DaoType_CheckGetItemAny,     NULL,  /* GetItem */
-	DaoType_CheckSetItemAny,     NULL,  /* SetItem */
-	DaoType_CheckUnaryAny,       NULL,  /* Unary */
-	DaoType_CheckBinaryAny,      NULL,  /* Binary */
-	DaoType_CheckConversionAny,  NULL,  /* Conversion */
-	DaoType_CheckForEachAny,     NULL,  /* ForEach */
-	NULL,                           /* Print */
-	NULL,                           /* Slice */
-	NULL,                           /* Compare */
-	NULL,                           /* Hash */
-	NULL,                           /* Create */
-	NULL,                           /* Copy */
-	NULL,                           /* Delete */
-	NULL                            /* HandleGC */
-};
-
-
-static DaoType* DaoType_CheckGetFieldVariant( DaoType *self, DaoString *name, DaoRoutine *ctx )
-{
-	return dao_type_any;
-}
-
-static int DaoType_CheckSetFieldVariant( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
-{
-	return DAO_OK;
-}
-
-static DaoType* DaoType_CheckGetItemVariant( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
-{
-	return dao_type_any;
-}
-
-static int DaoType_CheckSetItemVariant( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
-{
-	return DAO_OK;
-}
-
-static DaoType* DaoType_CheckUnaryVariant( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
-{
-	return dao_type_any;
-}
-
-static DaoType* DaoType_CheckBinaryVariant( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
-{
-	return dao_type_any;
-}
-
-static DaoType* DaoType_CheckConversionVariant( DaoType *self, DaoType *type, DaoRoutine *ctx )
-{
-	return type;
-}
-
-static DaoType* DaoType_CheckForEachVariant( DaoType *self, DaoRoutine *ctx )
-{
-	return DaoNamespace_MakeIteratorType( ctx->nameSpace, dao_type_any );
-}
-
-
-static DaoTypeCore daoVariantCore =
-{
-	"variant",                          /* name */
-	0,                                  /* size */
-	{ NULL },                           /* bases */
-	{ NULL },                           /* casts */
-	NULL,                               /* numbers */
-	NULL,                               /* methods */
-	DaoType_CheckGetFieldVariant,    NULL,  /* GetField */
-	DaoType_CheckSetFieldVariant,    NULL,  /* SetField */
-	DaoType_CheckGetItemVariant,     NULL,  /* GetItem */
-	DaoType_CheckSetItemVariant,     NULL,  /* SetItem */
-	DaoType_CheckUnaryVariant,       NULL,  /* Unary */
-	DaoType_CheckBinaryVariant,      NULL,  /* Binary */
-	DaoType_CheckConversionVariant,  NULL,  /* Conversion */
-	DaoType_CheckForEachVariant,     NULL,  /* ForEach */
-	NULL,                               /* Print */
-	NULL,                               /* Slice */
-	NULL,                               /* Compare */
-	NULL,                               /* Hash */
-	NULL,                               /* Create */
-	NULL,                               /* Copy */
-	NULL,                               /* Delete */
-	NULL                                /* HandleGC */
-};
-
-
-DaoTypeCore* DaoType_GetCoreByID( short type )
-{
-	switch( type ){
-	case DAO_NONE      :  return & daoNoneCore;
-	case DAO_BOOLEAN   :  return & daoBooleanCore;
-	case DAO_INTEGER   :  return & daoIntegerCore;
-	case DAO_FLOAT     :  return & daoFloatCore;
-	case DAO_COMPLEX   :  return & daoComplexCore;
-	case DAO_ENUM      :  return & daoEnumCore;
-	case DAO_STRING    :  return & daoStringCore;
-	case DAO_LIST      :  return & daoListCore;
-	case DAO_MAP       :  return & daoMapCore;
-	case DAO_TUPLE     :  return & daoTupleCore;
-	case DAO_PAR_NAMED :  return & daoNameValueCore;
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY  :  return & daoArrayCore;
-#else
-	case DAO_ARRAY  :  return & daoNoneCore;
-#endif
-	case DAO_CTYPE     :  return & daoCtypeCore;
-	case DAO_CSTRUCT   :  return & daoCstructCore;
-	case DAO_CDATA     :  return & daoCdataCore;
-	case DAO_INTERFACE :  return & daoInterfaceCore;
-	case DAO_CINTYPE   :  return & daoCinTypeCore;
-	case DAO_CINVALUE  :  return & daoCinValueCore;
-	case DAO_CLASS     :  return & daoClassCore;
-	case DAO_OBJECT    :  return & daoObjectCore;
-	case DAO_ROUTINE   :  return & daoRoutineCore;
-	case DAO_NAMESPACE :  return & daoNamespaceCore;
-	case DAO_PROCESS   :  return & daoProcessCore;
-	case DAO_TYPE      :  return & daoTypeCore;
-	case DAO_TYPEKERNEL : return & daoTypeKernelCore;
-	case DAO_VARIANT    : return & daoVariantCore;
-	default : if( type & DAO_ANY ) return & daoAnyCore;
-	}
-	return NULL;
-}
-
-
 static unsigned short dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
 
-void DaoType_Init()
+
+void DaoType_MapNames( DaoType *self );
+void DaoType_CheckAttributes( DaoType *self );
+
+
+DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux, DList *nest )
 {
-	int i, j;
-	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
-	for(i=DAO_BOOLEAN; i<=DAO_FLOAT; i++){
-		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SIM;
-		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SIM;
-		for(j=DAO_BOOLEAN; j<=DAO_FLOAT; j++)
-			dao_type_matrix[i][j] = DAO_MT_SIM;
+	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
+	DaoValue_Init( self, DAO_TYPE );
+	self->trait |= DAO_VALUE_DELAYGC;
+	self->tid = tid;
+	self->name = DString_New();
+	self->core = DaoType_GetCoreByID( tid );
+	self->vmspace = vms;
+	//self->kernel = core->kernel;
+	//GC_IncRC( self->kernel );
+
+	//assert( tid != DAO_PAR_VALIST || aux != NULL );
+	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) vms->typeAny;
+
+	if( aux ){
+		self->aux = aux;
+		GC_IncRC( aux );
 	}
-	dao_type_matrix[DAO_NONE][DAO_NONE] = DAO_MT_EXACT;
-	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SIM;
-	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SIM;
-	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
-	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
-		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EXACT+2;
-		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
-		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
-
-		dao_type_matrix[i][DAO_CINVALUE] = DAO_MT_EXACT+1;
-		dao_type_matrix[DAO_CINVALUE][i] = DAO_MT_EXACT+1;
-		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
-		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
+	DString_SetChars( self->name, name );
+	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
+		self->fname = DString_New();
 	}
-	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
-
-	for(i=0; i<END_EXTRA_TYPES; ++i){
-		dao_type_matrix[i][DAO_UDT] = DAO_MT_THT;
-		dao_type_matrix[i][DAO_THT] = DAO_MT_THT;
-		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
-		dao_type_matrix[DAO_UDT][i] = DAO_MT_THTX;
-		dao_type_matrix[DAO_THT][i] = DAO_MT_THTX;
-		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
+	if( nest ){
+		self->args = DList_New( DAO_DATA_VALUE );
+		DList_Assign( self->args, nest );
+	}else if( tid == DAO_ROUTINE || tid == DAO_TUPLE ){
+		self->args = DList_New( DAO_DATA_VALUE );
 	}
-	for(i=DAO_ANY; i<=DAO_UDT; ++i){
-		for(j=DAO_ANY; j<=DAO_UDT; ++j){
-			dao_type_matrix[i][j] = DAO_MT_LOOSE;
-		}
+	switch( tid ){
+	case DAO_ENUM : self->mapNames = DMap_New( DAO_DATA_STRING, 0 ); break;
+	case DAO_TUPLE :
+	case DAO_ROUTINE : DaoType_MapNames( self );
 	}
-
-	dao_type_matrix[DAO_ANY][DAO_ANY] = DAO_MT_EQ;
-	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_THT;
-	dao_type_matrix[DAO_THT][DAO_THT] = DAO_MT_THTX;
-	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_THTX;
-
-	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EXACT+1;
-
-	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
+	DaoType_CheckAttributes( self );
+	DaoType_InitDefault( self );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
 }
 
 
+DaoType* DaoType_Copy( DaoType *other )
+{
+	DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
+	memcpy( self, other, sizeof(DaoType) );
+	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
+	self->trait |= DAO_VALUE_DELAYGC;
+	self->quadtype = NULL;
+	self->args = NULL;
+	self->bases = NULL;
+	self->vmspace = other->vmspace;
+	self->name = DString_Copy( other->name );
+	if( other->fname ) self->fname = DString_Copy( other->fname );
+	if( other->bases ) self->bases = DList_Copy( other->bases );
+	if( other->args ) self->args = DList_Copy( other->args );
+	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
+	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
+	self->aux = other->aux;
+	GC_IncRC( self->aux );
+	GC_IncRC( self->kernel );
+	GC_IncRC( self->cbtype );
+	/* DaoValue_Move() may fail for value type if self->value is null: */
+	GC_IncRC( self->value );
+	DaoValue_Move( other->value, & self->value, self ); /* needed for enum symbol types; */
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
 
 void DaoType_Delete( DaoType *self )
 {
@@ -344,40 +143,7 @@ void DaoType_Delete( DaoType *self )
 	if( self->interfaces ) DMap_Delete( self->interfaces );
 	dao_free( self );
 }
-extern DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc );
-static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
-{
-	DaoType *self = & self0->xType;
-	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
-	DNode *node;
-	if( self->mapNames == NULL || self->tid != DAO_ENUM ) goto ErrorNotExist;
-	node = DMap_Find( self->mapNames, name );
-	if( node == NULL ) goto ErrorNotExist;
-	DaoEnum_SetType( denum, self );
-	denum->value = node->value.pInt;
-	return;
-ErrorNotExist:
-	DaoProcess_RaiseError( proc, "Field::NotExist", DString_GetData( name ) );
-}
-static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	DaoType *self = & self0->xType;
-	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
-	DNode *node;
-	if( N != 1 || ids[0]->type != DAO_INTEGER ) goto ErrorNotExist;
-	if( self->mapNames == NULL || self->tid != DAO_ENUM ) goto ErrorNotExist;
-	for(node=DMap_First(self->mapNames);node;node=DMap_Next(self->mapNames,node)){
-		if( node->value.pInt == ids[0]->xInteger.value ){
-			DaoEnum_SetType( denum, self );
-			denum->value = node->value.pInt;
-			return;
-		}
-	}
-ErrorNotExist:
-	DaoProcess_RaiseError( proc, "Index", "not valid" );
-}
 
-void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self )
 {
 	daoint i, count = 0;
@@ -394,15 +160,9 @@ void DaoType_CheckAttributes( DaoType *self )
 		}
 	}
 
+	self->empty = 0;
 	self->noncyclic = self->tid <= DAO_TUPLE;
-	if( self->tid == DAO_TUPLE ){
-		self->rntcount = 0;
-		for(i=0; i<self->args->size; i++){
-			DaoType *it = self->args->items.pType[i];
-			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-			self->rntcount += it->tid >= DAO_BOOLEAN && it->tid <= DAO_FLOAT;
-		}
-	}else if( self->tid == DAO_THT ){
+	if( self->tid == DAO_THT ){
 		daoint pos = DString_FindChar( self->name, '<', 0 );
 		if( self->fname == NULL ) self->fname = DString_New();
 		DString_Assign( self->fname, self->name );
@@ -435,43 +195,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		}
 	}
 }
-DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *nest )
-{
-	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
-	DaoValue_Init( self, DAO_TYPE );
-	self->trait |= DAO_VALUE_DELAYGC;
-	self->tid = tid;
-	self->name = DString_New();
-	self->core = DaoType_GetCoreByID( tid );
-	//self->kernel = core->kernel;
-	//GC_IncRC( self->kernel );
-	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) dao_type_any;
-	if( aux ){
-		self->aux = aux;
-		GC_IncRC( aux );
-	}
-	DString_SetChars( self->name, name );
-	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
-		self->fname = DString_New();
-	}
-	if( nest ){
-		self->args = DList_New( DAO_DATA_VALUE );
-		DList_Assign( self->args, nest );
-	}else if( tid == DAO_ROUTINE || tid == DAO_TUPLE ){
-		self->args = DList_New( DAO_DATA_VALUE );
-	}
-	switch( tid ){
-	case DAO_ENUM : self->mapNames = DMap_New( DAO_DATA_STRING, 0 ); break;
-	case DAO_TUPLE :
-	case DAO_ROUTINE : DaoType_MapNames( self );
-	}
-	DaoType_CheckAttributes( self );
-	DaoType_InitDefault( self );
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
+
 void DaoType_InitDefault( DaoType *self )
 {
 	dao_complex com = {0.0,0.0};
@@ -541,33 +265,7 @@ void DaoType_InitDefault( DaoType *self )
 	GC_Assign( & self->value, value );
 	if( value ) value->xBase.trait |= DAO_VALUE_CONST;
 }
-DaoType* DaoType_Copy( DaoType *other )
-{
-	DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
-	memcpy( self, other, sizeof(DaoType) );
-	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
-	self->trait |= DAO_VALUE_DELAYGC;
-	self->quadtype = NULL;
-	self->args = NULL;
-	self->bases = NULL;
-	self->name = DString_Copy( other->name );
-	if( other->fname ) self->fname = DString_Copy( other->fname );
-	if( other->bases ) self->bases = DList_Copy( other->bases );
-	if( other->args ) self->args = DList_Copy( other->args );
-	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
-	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
-	self->aux = other->aux;
-	GC_IncRC( self->aux );
-	GC_IncRC( self->kernel );
-	GC_IncRC( self->cbtype );
-	/* DaoValue_Move() may fail for value type if self->value is null: */
-	GC_IncRC( self->value );
-	DaoValue_Move( other->value, & self->value, self ); /* needed for enum symbol types; */
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
+
 void DaoType_MapNames( DaoType *self )
 {
 	DaoType *tp;
@@ -788,6 +486,7 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	}
 	return m;
 }
+
 static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs, int dep )
 {
 	DaoType *template1 = self->kernel ? self->kernel->abtype : NULL;
@@ -827,6 +526,7 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 	}
 	return mt;
 }
+
 static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs, int dep )
 {
 	daoint i, k, n, mt = DAO_MT_NOT;
@@ -847,7 +547,9 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs, int 
 	}
 	return mt;
 }
+
 static int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode );
+
 static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs )
 {
 	int mt = DAO_MT_NOT;
@@ -867,6 +569,7 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	}
 	return mt;
 }
+
 static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode )
 {
 	int mt = DAO_MT_THT;
@@ -884,6 +587,7 @@ static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, 
 	if( defs ) MAP_Insert( defs, type, self );
 	return mt;
 }
+
 static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode )
 {
 	int i, n, mt = DAO_MT_NOT;
@@ -913,6 +617,7 @@ static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMa
 	}
 	return mt;
 }
+
 int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive )
 {
 	/*
@@ -924,6 +629,7 @@ int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive )
 	if( DaoType_IsImmutable( self ) ) return 1;
 	return type->tid == DAO_ANY || type->tid == DAO_THT;
 }
+
 int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode )
 {
 	DaoType *it1, *it2;
@@ -937,9 +643,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	if( self->konst && self->tid == type->tid ){
 		/* Empty array/list/map need to be handled as const types: */
 		switch( self->tid ){
-		case DAO_ARRAY : if( self == dao_type_array_empty ) return DAO_MT_ANY; break;
-		case DAO_LIST  : if( self == dao_type_list_empty )  return DAO_MT_ANY; break;
-		case DAO_MAP   : if( self == dao_type_map_empty )   return DAO_MT_ANY; break;
+		case DAO_ARRAY : if( self->empty ) return DAO_MT_ANY; break;
+		case DAO_LIST  : if( self->empty )  return DAO_MT_ANY; break;
+		case DAO_MAP   : if( self->empty )   return DAO_MT_ANY; break;
 		}
 	}
 
@@ -1084,9 +790,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE :
 		switch( self->tid ){
-		case DAO_ARRAY : if( self == dao_type_array_empty ) return DAO_MT_ANY; break;
-		case DAO_LIST  : if( self == dao_type_list_empty )  return DAO_MT_ANY; break;
-		case DAO_MAP   : if( self == dao_type_map_empty )   return DAO_MT_ANY; break;
+		case DAO_ARRAY : if( self->empty ) return DAO_MT_ANY; break;
+		case DAO_LIST  : if( self->empty )  return DAO_MT_ANY; break;
+		case DAO_MAP   : if( self->empty )   return DAO_MT_ANY; break;
 		}
 		if( type->args == NULL || type->args->size == 0 ) return DAO_MT_SUBX;
 		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_LOOSE;
@@ -1245,6 +951,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	if( mt > DAO_MT_EXACT ) mt = DAO_MT_NOT;
 	return mt;
 }
+
 int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode )
 {
 	DMap *binds2 = binds;
@@ -1283,13 +990,16 @@ int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int de
 	if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_THT;
 	return mt;
 }
+
 int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 {
 	return DaoType_Match( self, type, defs, NULL, 0, 0 );
 }
+
 int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 {
 	DaoInterface *dinterface;
+	DaoVmSpace *vms;
 	DaoType *tp;
 	DaoEnum *other;
 	DNode *node;
@@ -1370,7 +1080,10 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	dinterface = self->tid == DAO_INTERFACE ? (DaoInterface*) self->aux : NULL;
 	switch( value->type ){
 	case DAO_STRING :
-		if( dinterface ) return DaoType_MatchInterface( dao_type_string, dinterface, NULL );
+		if( dinterface ){
+			DaoVmSpace *vms = dinterface->nameSpace->vmSpace;
+			return DaoType_MatchInterface( vms->typeString, dinterface, NULL );
+		}
 		break;
 	case DAO_ENUM :
 		other = & value->xEnum;
@@ -1392,7 +1105,8 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		return DAO_MT_SUB;
 	case DAO_ARRAY :
 		if( value->xArray.size == 0 ) return DAO_MT_ANY;
-		tp = dao_array_types[ value->xArray.etype ];
+		vms = DaoType_GetVmSpace( self );
+		tp = vms->typeArrays[ value->xArray.etype ];
 		if( tp == self ) return DAO_MT_EQ;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		return DaoType_Match( tp, self, defs, NULL, 0, mode );
@@ -1401,7 +1115,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL || tp == dao_type_list_empty )
+		if( tp == NULL || tp->empty )
 			return value->xList.value->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_Match( tp, self, defs, NULL, 0, mode );
 	case DAO_MAP :
@@ -1409,7 +1123,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL || tp == dao_type_map_empty )
+		if( tp == NULL || tp->empty )
 			return value->xMap.value->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_Match( tp, self, defs, NULL, 0, mode );
 	case DAO_TUPLE :
@@ -1531,10 +1245,12 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	}
 	return (self->tid == value->type) ? DAO_MT_EQ : DAO_MT_NOT;
 }
+
 int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 {
 	return DaoType_MatchValueX( self, value, defs, 0 );
 }
+
 int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
 {
 	int m = DaoType_MatchValue( self, value, defs );
@@ -1546,41 +1262,14 @@ int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	return m;
 }
-DaoType* DaoType_GetCommonType( int type, int subtype )
-{
-	switch( type ){
-	case DAO_ARRAY :
-		if( subtype <= DAO_COMPLEX ) return dao_array_types[ subtype ];
-		break;
-	case DAO_LIST :
-		switch( subtype ){
-		case DAO_NONE : return dao_type_list_empty;
-		case DAO_ANY : return dao_type_list_any;
-		}
-		break;
-	case DAO_MAP  :
-		switch( subtype ){
-		case DAO_NONE : return dao_type_map_empty;
-		case DAO_ANY : return dao_type_map_any;
-		}
-		break;
-	case DAO_NONE    : return dao_type_none;
-	case DAO_ANY     : return dao_type_any;
-	case DAO_BOOLEAN : return dao_type_bool;
-	case DAO_INTEGER : return dao_type_int;
-	case DAO_FLOAT   : return dao_type_float;
-	case DAO_COMPLEX : return dao_type_complex;
-	case DAO_STRING  : return dao_type_string;
-	default : break;
-	}
-	return NULL;
-}
+
 int DaoType_ChildOf( DaoType *self, DaoType *other )
 {
 	if( self == NULL || other == NULL ) return 0;
 	if( self == other ) return 1;
 	return DaoType_MatchToParent( self, other, NULL, 0 );
 }
+
 DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 {
 	daoint i;
@@ -1621,11 +1310,13 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	}
 	return NULL;
 }
+
 DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived )
 {
 	/* TODO: */
 	return NULL;
 }
+
 static void DMap_Erase2( DMap *defs, void *p )
 {
 	DList *keys = DList_New(0);
@@ -1638,6 +1329,7 @@ static void DMap_Erase2( DMap *defs, void *p )
 	for(i=0,n=keys->size; i<n; i++) DMap_Erase( defs, keys->items.pVoid[i] );
 	DList_Delete( keys );
 }
+
 static int DaoType_CheckTypeMapping( DaoType *self, DMap *defs, DMap *chk )
 {
 	daoint i, n;
@@ -1662,6 +1354,7 @@ static int DaoType_CheckTypeMapping( DaoType *self, DMap *defs, DMap *chk )
 	}
 	return 0;
 }
+
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 {
 	DaoType *type, *copy = NULL;
@@ -1713,7 +1406,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		return self;
 	}
 
-	copy = DaoType_New( "", self->tid, NULL, NULL );
+	copy = DaoType_New( self->vmspace, "", self->tid, NULL, NULL );
 	GC_Assign( & copy->kernel, self->kernel );
 	copy->core = self->core;
 	copy->subtid = self->subtid;
@@ -1849,6 +1542,7 @@ DefFailed:
 	printf( "redefine failed\n" );
 	return NULL;
 }
+
 void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 {
 	daoint i, n;
@@ -1883,6 +1577,7 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 		}
 	}
 }
+
 int DaoType_Contains( DaoType *self, DaoType *type, DMap *checking )
 {
 	DMap *checking2 = checking;
@@ -1908,6 +1603,7 @@ int DaoType_Contains( DaoType *self, DaoType *type, DMap *checking )
 	if( checking2 == NULL ) DMap_Delete( checking );
 	return bl;
 }
+
 void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
 {
 	DNode *it;
@@ -1920,6 +1616,7 @@ void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
 		it = DMap_Next( types, it );
 	}
 }
+
 static void DaoType_SetupRecursive2( DaoType *self, DaoType *tht, DaoType *root, DMap *chk )
 {
 	daoint i, n;
@@ -1943,12 +1640,14 @@ static void DaoType_SetupRecursive2( DaoType *self, DaoType *tht, DaoType *root,
 	}
 	if( self->cbtype ) DaoType_SetupRecursive2( self->cbtype, tht, root, chk );
 }
+
 void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root )
 {
 	DMap *chk = DHash_New(0,0);
 	DaoType_SetupRecursive2( self, tht, root, chk );
 	DMap_Delete( chk );
 }
+
 void DaoType_ExportArguments( DaoType *self, DList *args, int noname )
 {
 	int i;
@@ -1963,6 +1662,8 @@ void DaoType_ExportArguments( DaoType *self, DList *args, int noname )
 
 DaoVmSpace* DaoType_GetVmSpace( DaoType *self )
 {
+	return self->vmspace;
+
 	if( self->kernel == NULL ) return NULL;
 	if( self->kernel->nspace == NULL ) return NULL;
 	return self->kernel->nspace->vmSpace;
@@ -2046,6 +1747,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 DaoType* DaoType_CheckGetField( DaoType *self, DaoString *name )
 {
 	DaoRoutine *rout = DaoType_FindFunction( self, name->value );
+	DaoType *argtype;
 	DString *buffer;
 
 	if( rout != NULL ) return rout->routType;
@@ -2059,7 +1761,8 @@ DaoType* DaoType_CheckGetField( DaoType *self, DaoString *name )
 	}else{
 		rout = DaoType_FindFunctionChars( self, "." );
 		if( rout == NULL ) return NULL;
-		rout = DaoRoutine_MatchByType( rout, self, & dao_type_string, 1, DVM_CALL );
+		argtype = rout->nameSpace->vmSpace->typeString;
+		rout = DaoRoutine_MatchByType( rout, self, & argtype, 1, DVM_CALL );
 	}
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
@@ -2088,8 +1791,9 @@ DaoValue* DaoType_DoGetField( DaoType *self, DaoValue *object, DaoString *name, 
 
 int DaoType_CheckSetField( DaoType *self, DaoString *name, DaoType *value )
 {
-	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
+	DaoRoutine *rout;
+	DaoType *args[2];
 
 	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
@@ -2100,11 +1804,11 @@ int DaoType_CheckSetField( DaoType *self, DaoString *name, DaoType *value )
 		rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 		if( rout == NULL ) return DAO_ERROR_VALUE;
 	}else{
-		DaoType *args[2];
-		args[0] = dao_type_string;
-		args[1] = value;
 		rout = DaoType_FindFunctionChars( self, ".=" );
 		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+
+		args[0] = rout->nameSpace->vmSpace->typeString;
+		args[1] = value;
 		rout = DaoRoutine_MatchByType( rout, self, args, 2, DVM_CALL );
 		if( rout == NULL ) return DAO_ERROR_VALUE;
 	}
@@ -2174,6 +1878,18 @@ DaoTypeCore daoTypeCore =
 
 
 
+
+DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *core )
+{
+	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) );
+	DaoValue_Init( self, DAO_TYPEKERNEL );
+	self->trait |= DAO_VALUE_DELAYGC;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
 #ifdef DAO_USE_GC_LOGGER
@@ -2186,18 +1902,6 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	dao_free( self );
 }
 
-
-
-DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *core )
-{
-	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) );
-	DaoValue_Init( self, DAO_TYPEKERNEL );
-	self->trait |= DAO_VALUE_DELAYGC;
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
 
 void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine )
 {
@@ -2411,7 +2115,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	// Specialized cdata type will be initialized with the same kernel as the template type.
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
-	ctype = DaoCtype_New( self->core, self->tid );
+	ctype = DaoCtype_New( self->vmspace, self->core, self->tid );
 	sptype = ctype->valueType;
 	sptype2 = ctype->classType;
 	GC_Assign( & sptype->kernel, self->kernel );
@@ -2482,7 +2186,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	// Specialized type will be initialized with the same kernel as the template type.
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
-	sptype = DaoType_New( self->name->chars, self->tid, NULL, NULL );
+	sptype = DaoType_New( self->vmspace, self->name->chars, self->tid, NULL, NULL );
 	GC_Assign( & sptype->kernel, self->kernel );
 	sptype->tid = self->tid;
 	sptype->args = DList_New( DAO_DATA_VALUE );
@@ -2712,3 +2416,255 @@ void DaoType_SpecializeMethods( DaoType *self )
 	}
 	DMutex_Unlock( & mutex_methods_setup );
 }
+
+
+
+static DaoType* DaoType_CheckGetFieldAny( DaoType *self, DaoString *name, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static int DaoType_CheckSetFieldAny( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckGetItemAny( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static int DaoType_CheckSetItemAny( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckUnaryAny( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
+{
+	return self;
+}
+
+static DaoType* DaoType_CheckBinaryAny( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
+{
+	return self;
+}
+
+static DaoType* DaoType_CheckConversionAny( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	return type;
+}
+
+static DaoType* DaoType_CheckForEachAny( DaoType *self, DaoRoutine *ctx )
+{
+	return DaoNamespace_MakeIteratorType( ctx->nameSpace, self );
+}
+
+
+static DaoTypeCore daoAnyCore =
+{
+	"any",                              /* name */
+	0,                                  /* size */
+	{ NULL },                           /* bases */
+	{ NULL },                           /* casts */
+	NULL,                               /* numbers */
+	NULL,                               /* methods */
+	DaoType_CheckGetFieldAny,    NULL,  /* GetField */
+	DaoType_CheckSetFieldAny,    NULL,  /* SetField */
+	DaoType_CheckGetItemAny,     NULL,  /* GetItem */
+	DaoType_CheckSetItemAny,     NULL,  /* SetItem */
+	DaoType_CheckUnaryAny,       NULL,  /* Unary */
+	DaoType_CheckBinaryAny,      NULL,  /* Binary */
+	DaoType_CheckConversionAny,  NULL,  /* Conversion */
+	DaoType_CheckForEachAny,     NULL,  /* ForEach */
+	NULL,                               /* Print */
+	NULL,                               /* Slice */
+	NULL,                               /* Compare */
+	NULL,                               /* Hash */
+	NULL,                               /* Create */
+	NULL,                               /* Copy */
+	NULL,                               /* Delete */
+	NULL                                /* HandleGC */
+};
+
+
+static DaoType* DaoType_CheckGetFieldVariant( DaoType *self, DaoString *name, DaoRoutine *ctx )
+{
+	return ctx->nameSpace->vmSpace->typeAny;
+}
+
+static int DaoType_CheckSetFieldVariant( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckGetItemVariant( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	return ctx->nameSpace->vmSpace->typeAny;
+}
+
+static int DaoType_CheckSetItemVariant( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	return DAO_OK;
+}
+
+static DaoType* DaoType_CheckUnaryVariant( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
+{
+	return ctx->nameSpace->vmSpace->typeAny;
+}
+
+static DaoType* DaoType_CheckBinaryVariant( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
+{
+	return ctx->nameSpace->vmSpace->typeAny;
+}
+
+static DaoType* DaoType_CheckConversionVariant( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	return type;
+}
+
+static DaoType* DaoType_CheckForEachVariant( DaoType *self, DaoRoutine *ctx )
+{
+	return DaoNamespace_MakeIteratorType( ctx->nameSpace, ctx->nameSpace->vmSpace->typeAny );
+}
+
+
+static DaoTypeCore daoVariantCore =
+{
+	"variant",                              /* name */
+	0,                                      /* size */
+	{ NULL },                               /* bases */
+	{ NULL },                               /* casts */
+	NULL,                                   /* numbers */
+	NULL,                                   /* methods */
+	DaoType_CheckGetFieldVariant,    NULL,  /* GetField */
+	DaoType_CheckSetFieldVariant,    NULL,  /* SetField */
+	DaoType_CheckGetItemVariant,     NULL,  /* GetItem */
+	DaoType_CheckSetItemVariant,     NULL,  /* SetItem */
+	DaoType_CheckUnaryVariant,       NULL,  /* Unary */
+	DaoType_CheckBinaryVariant,      NULL,  /* Binary */
+	DaoType_CheckConversionVariant,  NULL,  /* Conversion */
+	DaoType_CheckForEachVariant,     NULL,  /* ForEach */
+	NULL,                                   /* Print */
+	NULL,                                   /* Slice */
+	NULL,                                   /* Compare */
+	NULL,                                   /* Hash */
+	NULL,                                   /* Create */
+	NULL,                                   /* Copy */
+	NULL,                                   /* Delete */
+	NULL                                    /* HandleGC */
+};
+
+
+
+DaoTypeCore* DaoType_GetCoreByID( short type )
+{
+	switch( type ){
+	case DAO_NONE      :  return & daoNoneCore;
+	case DAO_BOOLEAN   :  return & daoBooleanCore;
+	case DAO_INTEGER   :  return & daoIntegerCore;
+	case DAO_FLOAT     :  return & daoFloatCore;
+	case DAO_COMPLEX   :  return & daoComplexCore;
+	case DAO_ENUM      :  return & daoEnumCore;
+	case DAO_STRING    :  return & daoStringCore;
+	case DAO_LIST      :  return & daoListCore;
+	case DAO_MAP       :  return & daoMapCore;
+	case DAO_TUPLE     :  return & daoTupleCore;
+	case DAO_PAR_NAMED :  return & daoNameValueCore;
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY  :  return & daoArrayCore;
+#else
+	case DAO_ARRAY  :  return & daoNoneCore;
+#endif
+	case DAO_CTYPE     :  return & daoCtypeCore;
+	case DAO_CSTRUCT   :  return & daoCstructCore;
+	case DAO_CDATA     :  return & daoCdataCore;
+	case DAO_INTERFACE :  return & daoInterfaceCore;
+	case DAO_CINTYPE   :  return & daoCinTypeCore;
+	case DAO_CINVALUE  :  return & daoCinValueCore;
+	case DAO_CLASS     :  return & daoClassCore;
+	case DAO_OBJECT    :  return & daoObjectCore;
+	case DAO_ROUTINE   :  return & daoRoutineCore;
+	case DAO_NAMESPACE :  return & daoNamespaceCore;
+	case DAO_PROCESS   :  return & daoProcessCore;
+	case DAO_TYPE      :  return & daoTypeCore;
+	case DAO_TYPEKERNEL : return & daoTypeKernelCore;
+	case DAO_VARIANT    : return & daoVariantCore;
+	default : if( type & DAO_ANY ) return & daoAnyCore;
+	}
+	return NULL;
+}
+
+
+
+void DaoType_Init()
+{
+	int i, j;
+	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
+	for(i=DAO_BOOLEAN; i<=DAO_FLOAT; i++){
+		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SIM;
+		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SIM;
+		for(j=DAO_BOOLEAN; j<=DAO_FLOAT; j++)
+			dao_type_matrix[i][j] = DAO_MT_SIM;
+	}
+	dao_type_matrix[DAO_NONE][DAO_NONE] = DAO_MT_EXACT;
+	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SIM;
+	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SIM;
+	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
+	for(i=0; i<END_EXTRA_TYPES; i++){
+		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
+		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
+
+		dao_type_matrix[i][DAO_CINVALUE] = DAO_MT_EXACT+1;
+		dao_type_matrix[DAO_CINVALUE][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
+	}
+	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
+
+	for(i=0; i<END_EXTRA_TYPES; ++i){
+		dao_type_matrix[i][DAO_UDT] = DAO_MT_THT;
+		dao_type_matrix[i][DAO_THT] = DAO_MT_THT;
+		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
+		dao_type_matrix[DAO_UDT][i] = DAO_MT_THTX;
+		dao_type_matrix[DAO_THT][i] = DAO_MT_THTX;
+		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
+	}
+	for(i=DAO_ANY; i<=DAO_UDT; ++i){
+		for(j=DAO_ANY; j<=DAO_UDT; ++j){
+			dao_type_matrix[i][j] = DAO_MT_LOOSE;
+		}
+	}
+
+	dao_type_matrix[DAO_ANY][DAO_ANY] = DAO_MT_EQ;
+	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_THT;
+	dao_type_matrix[DAO_THT][DAO_THT] = DAO_MT_THTX;
+	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_THTX;
+
+	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EXACT+1;
+
+	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
+}
+

@@ -1026,13 +1026,13 @@ static DaoType* DaoParser_ParseCodeBlockType( DaoParser *self, int start, int *n
 
 static DaoType* DaoParser_MakeVarTypeHolder( DaoParser *self )
 {
-	DaoType *type = DaoType_New( "@X", DAO_THT, NULL, NULL );
+	DaoType *type = DaoType_New( self->vmSpace, "@X", DAO_THT, NULL, NULL );
 	DList_Append( self->nameSpace->auxData, type );
 	return type;
 }
 static DaoType* DaoParser_MakeParTypeHolder( DaoParser *self, DString *name )
 {
-	DaoType *type = DaoType_New( "@", DAO_THT, NULL, NULL );
+	DaoType *type = DaoType_New( self->vmSpace, "@", DAO_THT, NULL, NULL );
 	DString_Append( type->name, name );
 	DMap_Insert( self->initTypes, type->name, type );
 	return type;
@@ -1211,10 +1211,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				type = DaoParser_ParseType( self, i+1, right-1, &i, NULL );
 				if( type == NULL ) goto ErrorParamParsing;
 			}
-			if( invarpar ){
-				if( type == NULL ) type = dao_type_any;
-				type = DaoType_GetInvarType( type );
-			}
+			if( type == NULL ) type = self->vmSpace->typeAny;
+			if( invarpar ) type = DaoType_GetInvarType( type );
 			type = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, (DaoValue*)type, NULL, 0 );
 		}else if( tki == DTOK_ID_THTYPE ){
 			type = DaoParser_ParseType( self, i, right-1, &i, NULL );
@@ -1368,7 +1366,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	DString_AppendChars( pname, "=>" );
 	DString_Append( pname, retype->name );
 	DString_AppendChars( pname, ">" );
-	type = DaoType_New( pname->chars, DAO_ROUTINE, (DaoValue*) retype, nested );
+	type = DaoType_New( self->vmSpace, pname->chars, DAO_ROUTINE, (DaoValue*) retype, nested );
 	DList_Append( NS->auxData, type );
 	if( cbtype ){
 		GC_Assign( & type->cbtype, cbtype );
@@ -1595,7 +1593,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoNamespace_MakeValueType( ns, dao_none_value );
 	}else if( token->name == DTOK_ID_THTYPE ){
 		DMap *initypes = self->innerParser ? self->innerParser->initTypes : self->initTypes;
-		type = DaoType_New( token->string.chars, DAO_THT, NULL, NULL );
+		type = DaoType_New( self->vmSpace, token->string.chars, DAO_THT, NULL, NULL );
 		DMap_Insert( initypes, type->name, type );
 	}else{
 		/* scoped type or user defined template class */
@@ -1637,6 +1635,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valt
 				type = DaoParser_ParseType( self, i+1, end, & i, types );
 				if( type == NULL ) goto InvalidTypeForm;
 			}
+			if( type == NULL ) type = self->vmSpace->typeAny;
 			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
 			if( invar && type ) type = DaoType_GetInvarType( type );
 		}else{
@@ -1728,7 +1727,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	int k, set=0, sign = 1;
 	char c;
 
-	type = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->vmSpace, "enum<", DAO_ENUM, NULL, NULL );
 	DString_Reserve( type->name, 128 );
 	for(k=start; k<=end; k++){
 		tok = tokens[k];
@@ -1863,7 +1862,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			DString_Append( name, vartype->name );
 			DString_AppendChar( name, '>' );
 			type2 = DaoParser_FindTypeHolder( self, name );
-			if( type2 == NULL ) type2 = DaoType_New( name->chars, DAO_THT, (DaoValue*) vartype, NULL );
+			if( type2 == NULL ) type2 = DaoType_New( self->vmSpace, name->chars, DAO_THT, (DaoValue*) vartype, NULL );
 			DMap_Insert( scope->initTypes, type2->name, type2 );
 			DMap_Insert( scope->initTypes, type->name, type2 );
 			type = type2;
@@ -2110,7 +2109,7 @@ int DaoParser_ParseScript( DaoParser *self )
 		GC_Assign( & self->byteBlock->value, routMain );
 	}
 	if( routMain->routType == NULL ){
-		GC_Assign( & routMain->routType, dao_type_routine );
+		GC_Assign( & routMain->routType, vmSpace->typeRoutine );
 	}
 	routMain->attribs |= DAO_ROUT_MAIN;
 	ns->mainRoutine = routMain;
@@ -2527,7 +2526,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	}
 
 	/* Add a new temporary type in a new scope: */
-	tht = DaoType_New( str->chars, DAO_THT, NULL, NULL );
+	tht = DaoType_New( self->vmSpace, str->chars, DAO_THT, NULL, NULL );
 	if( self->byteBlock ){
 		DaoByteBlock_EncodeType( self->byteBlock, tht );
 	}
@@ -2951,7 +2950,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			ename = interName;
 			ec = DAO_SYMBOL_NEED_INTERFACE;
 		}
-		inter = DaoInterface_New( interName->chars );
+		inter = DaoInterface_New( NS, interName->chars );
 		if( routine != NS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) inter;
 		DaoParser_AddToScope( self, interName, value, inter->abtype, storeType );
@@ -3370,7 +3369,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		goto ErrorEnumDefinition;
 	}
 
-	type = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->vmSpace, "enum<", DAO_ENUM, NULL, NULL );
 	comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 	semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, -1, 0 );
 	if( comma >=0 && semco >=0 ){
@@ -4411,7 +4410,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 		// The following should just declare variable of any type:
 		// [var|invar] name = none
 		*/
-		if( type == NULL && value && value->type == DAO_NONE ) type = dao_type_any;
+		if( type == NULL && value && value->type == DAO_NONE ) type = vms->typeAny;
 	}
 	if( type == NULL && value ){
 		if( store != 0 && (store & DAO_DECL_INVAR) == 0 ){
@@ -5927,7 +5926,7 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 				int compatible;
 				type = DaoParser_ParseType( self, offset + 1, rb-1, & pos, NULL );
 				if( type == NULL ) goto ErrorParsing;
-				compatible = DaoType_MatchTo( type, dao_type_error, NULL );
+				compatible = DaoType_MatchTo( type, self->vmSpace->typeError, NULL );
 				compatible |= type->tid == DAO_NONE || type->tid == DAO_ANY;
 				if( compatible == 0 ) goto ErrorParsing;
 				/* defer block that may consume exception objects may return value: */
@@ -5959,8 +5958,8 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	}else if( tokens[start+1]->name == DTOK_LB ){
 		rb = DaoParser_ParseSignature( self, parser, start );
 	}else if( tokens[start+1]->name == DTOK_LCB ){
-		DaoType *type = DaoType_New( "@X", DAO_THT, NULL, NULL );
-		type = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)type, NULL);
+		DaoType *type = DaoType_New( self->vmSpace, "@X", DAO_THT, NULL, NULL );
+		type = DaoType_New( self->vmSpace, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)type, NULL);
 		GC_Assign( & rout->routType, type );
 		rb = DaoParser_ExtractRoutineBody( self, parser, start+1 );
 		if( rb < 0 ) goto ErrorParsing;
@@ -6195,7 +6194,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		if( lb >= rb ){
 			if( self->needConst ){
 				DaoMap *hm = DaoMap_New(colon>=0);
-				hm->ctype = tp ? tp : dao_type_map_any;
+				hm->ctype = tp ? tp : self->vmSpace->typeMapAny;
 				GC_IncRC( hm->ctype );
 				regC = DaoRoutine_AddConstant( self->routine, (DaoValue*) hm );
 				enode.konst = LOOKUP_BIND_LC( regC );
@@ -6769,15 +6768,15 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						/*
 						// DaoProcess_DoCall() will check for the returned type,
 						// if it is NULL, a none value will be returned instead.
-						// Set dao_type_udf as the returned type to avoid this.
+						// Set type "?" as the returned type to avoid this.
 						//
-						// Don't use dao_type_any, because the evaluation may call
+						// Don't use type "any", because the evaluation may call
 						// DaoProcess_GetReturnType(), which need to find the
 						// specialized return type.
 						//
 						// static s = state<int>()
 						 */
-						DList_PushFront( self->enumTypes, dao_type_udf );
+						DList_PushFront( self->enumTypes, self->vmSpace->typeUdf );
 						regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
 						DList_PopFront( self->enumTypes );
 						if( regLast >=0 ){
@@ -7738,7 +7737,7 @@ void DaoParser_InitConstEvaluator( DaoParser *self )
 	self->evaluator.process = DaoVmSpace_AcquireProcess( self->vmSpace );
 	self->evaluator.routine = DaoVmSpace_AcquireRoutine( self->vmSpace );
 	self->evaluator.process->activeNamespace = self->nameSpace;
-	GC_Assign( & self->evaluator.routine->routType, dao_type_routine );
+	GC_Assign( & self->evaluator.routine->routType, self->vmSpace->typeRoutine );
 	GC_Assign( & self->evaluator.routine->nameSpace, self->nameSpace );
 	DaoProcess_InitTopFrame( self->evaluator.process, self->evaluator.routine, NULL );
 	DaoProcess_SetActiveFrame( self->evaluator.process, self->evaluator.process->topFrame );
@@ -7823,7 +7822,7 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	*/
 	if( vmc->code >= DVM_GETI && vmc->code <= DVM_GETF ) return value;
 
-	stream = DaoStream_New();
+	stream = DaoStream_New( self->vmSpace );
 	DaoStream_SetStringMode( stream );
 	DaoProcess_PrintException( proc, stream, 1 );
 	DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->buffer );

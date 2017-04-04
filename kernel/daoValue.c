@@ -255,17 +255,8 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 	}
 	if( tp == NULL ){
 		switch( self->type ){
-		case DAO_LIST  :
-			if( self->xList.ctype == dao_type_list_empty ) tp = dao_type_list_empty;
-			break;
-		case DAO_MAP   :
-			if( self->xMap.ctype == dao_type_map_empty ) tp = dao_type_map_empty;
-			break;
-#ifdef DAO_WITH_NUMARRAY
-		case DAO_ARRAY :
-			if( self->xMap.ctype == dao_type_array_empty ) tp = dao_type_array_empty;
-			break;
-#endif
+		case DAO_LIST  : if( self->xList.ctype->empty ) tp = self->xList.ctype; break;
+		case DAO_MAP   : if( self->xMap.ctype->empty  ) tp = self->xMap.ctype; break;
 		default : break;
 		}
 	}
@@ -342,6 +333,7 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 }
 void DaoValue_SetType( DaoValue *to, DaoType *tp )
 {
+	DaoVmSpace *vms;
 	DaoType *tp2;
 	DNode *it;
 	if( to->type != tp->tid && tp->tid != DAO_ANY ) return;
@@ -357,13 +349,19 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 		break;
 #endif
 	case DAO_LIST :
-		/* v : any = {}, v->ctype should be list<any> */
-		if( tp->tid == DAO_ANY ) tp = dao_type_list_any;
+		/* var x: any = {}, x->ctype should be list<any> */
+		if( tp->tid == DAO_ANY ){
+			vms = DaoType_GetVmSpace( tp );
+			tp = vms->typeListAny;
+		}
 		if( to->xList.ctype && !(to->xList.ctype->attrib & DAO_TYPE_UNDEF) ) break;
 		GC_Assign( & to->xList.ctype, tp );
 		break;
 	case DAO_MAP :
-		if( tp->tid == DAO_ANY ) tp = dao_type_map_any;
+		if( tp->tid == DAO_ANY ){
+			vms = DaoType_GetVmSpace( tp );
+			tp = vms->typeMapAny;
+		}
 		if( to->xMap.ctype && !(to->xMap.ctype->attrib & DAO_TYPE_UNDEF) ) break;
 		GC_Assign( & to->xMap.ctype, tp );
 		break;
@@ -516,10 +514,13 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case DAO_CDATA  : if( S->xCdata.data == NULL && ! DaoType_IsNullable(T) ) return 0; break;
 	}
 	if( !(S->xBase.trait & DAO_VALUE_CONST) ){
+		DaoVmSpace *vms;
 		DaoType *ST = NULL;
 		switch( (S->type << 8) | T->tid ){
+		case (DAO_ARRAY<<8)|DAO_ARRAY :
+			vms = DaoType_GetVmSpace( T );
+			ST = vms->typeArrays[ S->xArray.etype ]; break;
 		case (DAO_TUPLE<<8)|DAO_TUPLE : ST = S->xTuple.ctype; break;
-		case (DAO_ARRAY<<8)|DAO_ARRAY : ST = dao_array_types[ S->xArray.etype ]; break;
 		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.ctype; break;
 		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.ctype; break;
 		case (DAO_CDATA<<8)|DAO_CDATA : ST = S->xCdata.ctype; break;
@@ -602,7 +603,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		}
 	}else if( T->tid == DAO_INTERFACE && T->aux->xInterface.concretes ){
 		DaoInterface *inter = (DaoInterface*) T->aux;
-		DaoType *st = DaoValue_GetType( S );
+		DaoType *st = DaoValue_GetType( S, inter->nameSpace->vmSpace );
 		DNode *it; 
 		cintype = DaoInterface_GetConcrete( inter, st );
 		if( cintype == NULL ){
@@ -772,7 +773,7 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 
 	if( type->tid & DAO_ANY ){
 		if( copy == 0 ) return value;
-		at = DaoValue_GetType( value );
+		at = DaoValue_GetType( value, proc->vmSpace );
 		at = DaoType_GetBaseType( at );
 		if( at == NULL ) return NULL;
 		if( DaoType_IsImmutable( at ) ) return value;
@@ -852,7 +853,7 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 	if( value == self /*|| DaoValue_ChildOf( value, self ) || DaoValue_ChildOf( self, value )*/ ){
 		// No way to determine inheritance relationship between wrapped C++ objects;
 		if( value->type >= DAO_ARRAY && value->type <= DAO_TUPLE ){
-			DaoType *type = DaoValue_GetType( value );
+			DaoType *type = DaoValue_GetType( value, proc->vmSpace );
 			if( type == NULL ) return NULL;
 			type = DaoNamespace_MakeInvarSliceType( proc->activeNamespace, type );
 			return DaoValue_CopyContainer( value, type );
@@ -1041,21 +1042,19 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 }
 
 
-DaoType* DaoValue_GetType( DaoValue *self )
+DaoType* DaoValue_GetType( DaoValue *self, DaoVmSpace *vms )
 {
 	if( self == NULL ) return NULL;
 
 	switch( self->type ){
-	case DAO_NONE    : return self->xBase.subtype == DAO_ANY ? dao_type_any : dao_type_none;
-	case DAO_BOOLEAN : return dao_type_bool;
-	case DAO_INTEGER : return dao_type_int;
-	case DAO_FLOAT   : return dao_type_float;
-	case DAO_COMPLEX : return dao_type_complex;
-	case DAO_STRING  : return dao_type_string;
-	case DAO_ENUM    : return self->xEnum.etype ? self->xEnum.etype : dao_type_enum;
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY : return dao_array_types[ self->xArray.etype ];
-#endif
+	case DAO_NONE    : return self->xBase.subtype == DAO_ANY ? vms->typeAny : vms->typeNone;
+	case DAO_BOOLEAN : return vms->typeBool;
+	case DAO_INTEGER : return vms->typeInt;
+	case DAO_FLOAT   : return vms->typeFloat;
+	case DAO_COMPLEX : return vms->typeComplex;
+	case DAO_STRING  : return vms->typeString;
+	case DAO_ENUM    : return self->xEnum.etype ? self->xEnum.etype : vms->typeEnum;
+	case DAO_ARRAY   : return vms->typeArrays[ self->xArray.etype ];
 	case DAO_LIST   : return self->xList.ctype;
 	case DAO_MAP    : return self->xMap.ctype;
 	case DAO_TUPLE  : return self->xTuple.ctype;
@@ -1170,8 +1169,10 @@ DaoTuple* DaoValue_CastTuple( DaoValue *self )
 }
 DaoStream* DaoValue_CastStream( DaoValue *self )
 {
+	DaoVmSpace *vms;
 	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
-	return (DaoStream*) DaoValue_CastCstruct( self, dao_type_stream );
+	vms = DaoType_GetVmSpace( self->xCstruct.ctype );
+	return (DaoStream*) DaoValue_CastCstruct( self, vms->typeStream );
 }
 DaoObject* DaoValue_CastObject( DaoValue *self )
 {

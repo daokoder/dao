@@ -2229,7 +2229,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 		GC_Assign( & block->value, type );
 		return;
 	}
-	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->vmspace, name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = B;
 	DaoByteCoder_CheckDataBlocks( self, block );
 	for(pb=block->first; pb; pb=pb->next){
@@ -2306,7 +2306,7 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 			cintype = DaoCinType_New( inter, (DaoType*) target->value );
 		}
 	}else{
-		inter = DaoInterface_New( name->value->xString.value->chars );
+		inter = DaoInterface_New( self->nspace, name->value->xString.value->chars );
 		DaoByteCoder_AddToScope( self, block, inter->abtype->name, (DaoValue*) inter );
 	}
 
@@ -2545,7 +2545,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		routine->parCount = routine->routType->args->size;
 		if( routine->routType->variadic ) routine->parCount = DAO_MAX_PARAM;
 	}else{
-		GC_Assign( & routine->routType, dao_type_routine );
+		GC_Assign( & routine->routType, self->vmspace->typeRoutine );
 	}
 	if( C ){
 		host = DaoByteCoder_LookupTypeBlock( self, block, C );

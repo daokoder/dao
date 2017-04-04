@@ -87,16 +87,14 @@ struct DaoFuture
 	DaoFuture   *precond; /* the future value on which this one waits; */
 };
 
-DAO_DLL DaoType *dao_type_future;
-DAO_DLL DaoFuture*  DaoFuture_New( DaoType *type, int vatype );
+DAO_DLL DaoFuture*  DaoFuture_New( DaoVmSpace *vms, DaoType *type, int vatype );
 
 
 DAO_DLL void DaoVmSpace_AddTaskletCall( DaoVmSpace *self, DaoProcess *call );
 
 #ifdef DAO_WITH_CONCURRENT
 
-DAO_DLL DaoType *dao_type_channel;
-DAO_DLL DaoChannel* DaoChannel_New( DaoType *type, int dtype );
+DAO_DLL DaoChannel* DaoChannel_New( DaoVmSpace *vms, DaoType *type, int dtype );
 
 DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self, DaoVmSpace *vmspace );
 

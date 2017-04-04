@@ -676,6 +676,8 @@ DaoTypeCore daoSeekableDeviceCore =
 DAO_DLL_EXPORT int DaoStream_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace *ions = DaoVmSpace_GetNamespace( vmSpace, "io" );
+	DaoType *dao_type_stream = DaoNamespace_FindTypeChars( ions, "Stream" );
+	DaoType *dao_type_io_device = DaoNamespace_FindTypeChars( ions, "Device" );
 	daoFileStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
 	daoPipeStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
 	daoStringStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );

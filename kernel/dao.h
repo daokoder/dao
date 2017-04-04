@@ -985,7 +985,7 @@ DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
 DAO_DLL DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self );
 
 
-DAO_DLL DaoStream* DaoStream_New();
+DAO_DLL DaoStream* DaoStream_New( DaoVmSpace *vms );
 DAO_DLL void DaoStream_Delete( DaoStream *self );
 DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );

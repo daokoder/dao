@@ -133,5 +133,7 @@ DAO_DLL int DString_ToLocal( DString *self );
 DAO_DLL int DString_ToUTF8( DString *self );
 DAO_DLL int DString_CompareUTF8( DString *left, DString *right );
 
+DAO_DLL void DString_AppendUInt16( DString *bytecodes, int value );
+DAO_DLL void DString_AppendUInt32( DString *bytecodes, uint_t value );
 
 #endif

@@ -565,9 +565,13 @@ Done:
 }
 
 
+static void DaoVmSpace_InitCoreTypes( DaoVmSpace *self );
+static void DaoVmSpace_InitStdTypes( DaoVmSpace *self );
+
 
 DaoVmSpace* DaoVmSpace_New()
 {
+	DaoNamespace *NS;
 	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
 	DaoValue_Init( (DaoValue*) self, DAO_VMSPACE );
 	self->daoBinFile = DString_New();
@@ -602,15 +606,9 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
 	self->typeCores = DList_New(0);
-
-	self->stdioStream = DaoStdStream_New();
-	self->errorStream = DaoStdStream_New();
-	self->errorStream->Read = NULL;
-	self->errorStream->Write = DaoStdStream_WriteStderr;
-	GC_IncRC( self->stdioStream );
-	GC_IncRC( self->errorStream );
-
 	self->taskletServer = NULL;
+
+	GC_IncRC( self );
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->moduleMutex );
@@ -618,17 +616,37 @@ DaoVmSpace* DaoVmSpace_New()
 	DMutex_Init( & self->miscMutex );
 #endif
 
-	self->daoNamespace = NULL; /* need to be set for DaoNamespace_New() */
+	DaoVmSpace_InitCoreTypes( self );
 
-	if( masterVmSpace == NULL ){
-		self->coreNamespace = DaoNamespace_New( self, "core" );
-		GC_IncRC( self->coreNamespace );
-	}else{
+	self->daoNamespace = DaoNamespace_New( self, "dao" );
+	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
+
+	GC_IncRC( self->daoNamespace );
+	GC_IncRC( self->mainNamespace );
+
+	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
+
+//	DaoNamespace_AddParent( self->mainNamespace, self->daoNamespace );
+
+	self->mainProcess = DaoProcess_New( self );
+	GC_IncRC( self->mainProcess );
+
+	DaoVmSpace_InitStdTypes( self );
+
+	self->stdioStream = DaoStdStream_New( self );
+	self->errorStream = DaoStdStream_New( self );
+	self->errorStream->Read = NULL;
+	self->errorStream->Write = DaoStdStream_WriteStderr;
+	GC_IncRC( self->stdioStream );
+	GC_IncRC( self->errorStream );
+
+	NS = DaoVmSpace_GetNamespace( self, "io" );
+	DaoNamespace_AddConstValue( NS, "stdio",  (DaoValue*) self->stdioStream );
+	DaoNamespace_AddConstValue( NS, "stderr", (DaoValue*) self->errorStream );
+
+	if( masterVmSpace != NULL ){
 		DNode *it;
 		DaoVmSpace *master = masterVmSpace;
-
-		self->coreNamespace = master->coreNamespace;
-		GC_IncRC( self->coreNamespace );
 
 		//self->stdioStream->redirect = master->stdioStream->redirect; // TODO: GC;
 		//self->errorStream->redirect = master->errorStream->redirect; // TODO: GC;
@@ -648,49 +666,12 @@ DaoVmSpace* DaoVmSpace_New()
 		DMap_Assign( self->vfiles, master->vfiles );
 		DMap_Assign( self->vmodules, master->vmodules );
 
-		self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 		for(it=DMap_First(master->nsPlugins); it!=NULL; it=DMap_Next(master->nsPlugins,it)){
+			// TODO: reload;
 			DaoVmSpace_AddPlugin( self, it->key.pString, (DaoNamespace*) it->value.pValue );
 		}
-		/*
-		// Some modules may register types and functions to standard namespaces
-		// such as std and io, creating DaoVmSpace specific standard namespaces
-		// to avoid those of the master DaoVmSpace being modified. 
-		*/
-		for(it=DMap_First(master->nsModules); it!=NULL; it=DMap_Next(master->nsModules,it)){
-			DaoNamespace *ns = DaoVmSpace_GetNamespace( self, it->key.pString->chars );
-			DaoNamespace_AddParent( ns, (DaoNamespace*) it->value.pValue );
-		}
-
-		for(it=DMap_First(master->typeKernels); it!=NULL; it=DMap_Next(master->typeKernels,it)){
-			DaoTypeCore *core = (DaoTypeCore*) it->key.pVoid;
-			DaoTypeKernel *kernel = (DaoTypeKernel*) it->value.pVoid;
-			DaoVmSpace_AddKernel( self, core, kernel );
-		}
 	}
 
-	self->daoNamespace = DaoNamespace_New( self, "dao" );
-	GC_IncRC( self->daoNamespace );
-	DaoNamespace_AddParent( self->daoNamespace, self->coreNamespace );
-	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
-
-	if( masterVmSpace != NULL ){
-		DaoNamespace *ions = DaoVmSpace_GetNamespace( self, "io" );
-		DaoNamespace *mtns = DaoVmSpace_GetNamespace( self, "mt" );
-		DaoNamespace *stdns = DaoVmSpace_GetNamespace( self, "std" );
-		DaoNamespace_AddConstValue( self->daoNamespace, "io", (DaoValue*) ions );
-		DaoNamespace_AddConstValue( self->daoNamespace, "mt", (DaoValue*) mtns );
-		DaoNamespace_AddConstValue( self->daoNamespace, "std", (DaoValue*) stdns );
-	}
-
-	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
-	GC_IncRC( self->mainNamespace );
-	DaoNamespace_AddParent( self->mainNamespace, self->daoNamespace );
-
-	self->mainProcess = DaoProcess_New( self );
-	GC_IncRC( self->mainProcess );
-
-	GC_IncRC( self );
 	return self;
 }
 
@@ -714,7 +695,6 @@ static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 		DaoVirtualFile_Delete( (DaoVirtualFile*) it->value.pVoid );
 	}
 	DaoAux_Delete( self->spaceData );
-	GC_DecRC( self->coreNamespace );
 	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -1123,7 +1103,7 @@ static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, D
 	DaoType *type, *types[2];
 	em = DaoNamespace_MakeSymbol( NS, name->chars );
 	types[0] = em->etype;
-	types[1] = dao_type_string;
+	types[1] = NS->vmSpace->typeString;
 	type = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types, 2 );
 	tuple = DaoTuple_Create( type, 2, 0 );
 	DaoTuple_SetItem( tuple, (DaoValue*) em, 0 );
@@ -1530,23 +1510,6 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespa
 	DaoStream_WriteString( self->stdioStream, fname );
 	DaoStream_WriteChars( self->stdioStream, "\n\n" );
 	DString_Delete( fname );
-}
-
-void DString_AppendUInt16( DString *bytecodes, int value )
-{
-	uchar_t bytes[2];
-	bytes[0] = (value >> 8) & 0xFF;
-	bytes[1] = value & 0xFF;
-	DString_AppendBytes( bytecodes, (char*) bytes, 2 );
-}
-void DString_AppendUInt32( DString *bytecodes, uint_t value )
-{
-	uchar_t bytes[4];
-	bytes[0] = (value >> 24) & 0xFF;
-	bytes[1] = (value >> 16) & 0xFF;
-	bytes[2] = (value >>  8) & 0xFF;
-	bytes[3] = value & 0xFF;
-	DString_AppendBytes( bytecodes, (char*) bytes, 4 );
 }
 
 /*
@@ -2610,11 +2573,7 @@ static void DaoConfigure()
 extern void DaoType_Init();
 
 
-DaoType *dao_type_future  = NULL;
-
 #ifdef DAO_WITH_THREAD
-DaoType *dao_type_channel = NULL;
-
 extern DMutex mutex_string_sharing;
 extern DMutex mutex_type_map;
 extern DMutex mutex_values_setup;
@@ -2625,8 +2584,6 @@ extern DMutex mutex_routine_specialize2;
 extern DaoFunctionEntry dao_mt_methods[];
 #endif
 
-DaoType *dao_type_io_device = NULL;
-DaoType *dao_type_stream = NULL;
 extern DaoFunctionEntry dao_std_methods[];
 extern DaoFunctionEntry dao_io_methods[];
 
@@ -2698,14 +2655,105 @@ DaoVmSpace* DaoVmSpace_MasterVmSpace()
 }
 
 
+void DaoVmSpace_InitCoreTypes( DaoVmSpace *self )
+{
+	DaoType *tht = DaoType_New( self, "@X", DAO_THT, NULL, NULL );
+	self->typeUdf = DaoType_New( self, "?", DAO_UDT, NULL, NULL );
+	self->typeAny = DaoType_New( self, "any", DAO_ANY, NULL, NULL );
+	self->typeBool = DaoType_New( self, "bool", DAO_BOOLEAN, NULL, NULL );
+	self->typeInt = DaoType_New( self, "int", DAO_INTEGER, NULL, NULL );
+	self->typeFloat = DaoType_New( self, "float", DAO_FLOAT, NULL, NULL );
+	self->typeComplex = DaoType_New( self, "complex", DAO_COMPLEX, NULL, NULL );
+	self->typeString = DaoType_New( self, "string", DAO_STRING, NULL, NULL );
+	self->typeEnum = DaoType_New( self, "enum", DAO_ENUM, NULL, NULL );
+	self->typeRoutine = DaoType_New( self, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
+}
+
+void DaoVmSpace_InitStdTypes( DaoVmSpace *self )
+{
+	DaoNamespace *NS;
+	DaoNamespace *daoNS = self->daoNamespace;
+
+	DaoProcess_CacheValue( self->mainProcess, (DaoValue*) self->typeUdf );
+	DaoProcess_CacheValue( self->mainProcess, (DaoValue*) self->typeRoutine );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeAny->name, self->typeAny );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeBool->name, self->typeBool );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeInt->name, self->typeInt );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeFloat->name, self->typeFloat );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeComplex->name, self->typeComplex );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeString->name, self->typeString );
+	DaoNamespace_AddTypeConstant( daoNS, self->typeEnum->name, self->typeEnum );
+
+	self->typeNone = DaoNamespace_MakeValueType( daoNS, dao_none_value );
+
+	self->typeTuple = DaoNamespace_DefineType( daoNS, "tuple<...>", NULL );
+
+	self->typeIteratorInt = DaoNamespace_MakeIteratorType( daoNS, self->typeInt );
+	self->typeIteratorAny = DaoNamespace_MakeIteratorType( daoNS, self->typeAny );
+
+	DaoNamespace_SetupType( daoNS, & daoStringCore,  self->typeString );
+	DaoNamespace_SetupType( daoNS, & daoComplexCore, self->typeComplex );
+
+#ifdef DAO_WITH_NUMARRAY
+	self->typeArray = DaoNamespace_WrapGenericType( daoNS, & daoArrayCore, DAO_ARRAY );
+	self->typeArrayEmpty = DaoType_Specialize( self->typeArray, & self->typeFloat, 1 );
+	self->typeArrayEmpty = DaoType_GetConstType( self->typeArrayEmpty );
+	self->typeArrayEmpty->empty = 1;
+	self->typeArrays[DAO_NONE] = self->typeArrayEmpty;
+	self->typeArrays[DAO_BOOLEAN] = DaoType_Specialize( self->typeArray, & self->typeBool, 1 );
+	self->typeArrays[DAO_INTEGER] = DaoType_Specialize( self->typeArray, & self->typeInt, 1 );
+	self->typeArrays[DAO_FLOAT] = DaoType_Specialize( self->typeArray, & self->typeFloat, 1 );
+	self->typeArrays[DAO_COMPLEX] = DaoType_Specialize( self->typeArray, & self->typeComplex, 1 );
+#endif
+
+	self->typeList = DaoNamespace_WrapGenericType( daoNS, & daoListCore, DAO_LIST );
+	self->typeMap = DaoNamespace_WrapGenericType( daoNS, & daoMapCore, DAO_MAP );
+
+	self->typeListAny = DaoType_Specialize( self->typeList, NULL, 0 );
+	self->typeMapAny  = DaoType_Specialize( self->typeMap, NULL, 0 );
+
+	/*
+	// These types should not be accessible by developers using type annotation.
+	*/
+	self->typeListEmpty = DaoType_Copy( self->typeListAny );
+	self->typeListEmpty = DaoType_GetConstType( self->typeListEmpty );
+	self->typeListEmpty->empty = 1;
+	self->typeMapEmpty = DaoType_Copy( self->typeMapAny );
+	self->typeMapEmpty = DaoType_GetConstType( self->typeMapEmpty );
+	self->typeMapEmpty->empty = 1;
+
+	DaoProcess_CacheValue( self->mainProcess, (DaoValue*) self->typeListEmpty );
+	DaoProcess_CacheValue( self->mainProcess, (DaoValue*) self->typeMapEmpty );
+
+	self->typeCdata = DaoNamespace_WrapType( daoNS, & daoCdataCore, DAO_CDATA, 1 );
+
+	DaoException_Setup( daoNS );
+
+	NS = DaoVmSpace_GetNamespace( self, "io" );
+	DaoNamespace_AddConstValue( daoNS, "io", (DaoValue*) NS );
+	self->typeIODevice = DaoNamespace_WrapInterface( NS, & daoDeviceCore );
+	self->typeStream = DaoNamespace_WrapType( NS, & daoStreamCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapFunctions( NS, dao_io_methods );
+
+	NS = DaoVmSpace_GetNamespace( self, "mt" );
+	DaoNamespace_AddConstValue( daoNS, "mt", (DaoValue*) NS );
+	self->typeFuture  = DaoNamespace_WrapType( NS, & daoFutureCore, DAO_CSTRUCT, 0 );
+#ifdef DAO_WITH_CONCURRENT
+	self->typeChannel = DaoNamespace_WrapType( NS, & daoChannelCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapFunctions( NS, dao_mt_methods );
+#endif
+
+	NS = DaoVmSpace_GetNamespace( self, "std" );
+	DaoNamespace_AddConstValue( daoNS, "std", (DaoValue*) NS );
+	DaoNamespace_WrapFunctions( NS, dao_std_methods );
+
+	DaoNamespace_UpdateLookupTable( self->mainNamespace );
+}
+
+
 DaoVmSpace* DaoInit( const char *command )
 {
-	DString *mbs;
-	DaoVmSpace *vms;
-	DaoNamespace *coreNS, *NS;
-	DaoType *type, *tht;
 	char *cwd;
-	int i;
 
 	if( masterVmSpace ) return masterVmSpace;
 
@@ -2722,7 +2770,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DMutex_Init( & mutex_routine_specialize2 );
 #endif
 
-	mbs = DString_New();
 	setlocale( LC_CTYPE, "" );
 
 	DaoConfigure();
@@ -2752,18 +2799,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoCGC_Start();
 #endif
 
-	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
-	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
-	dao_type_bool = DaoType_New( "bool", DAO_BOOLEAN, NULL, NULL );
-	dao_type_int = DaoType_New( "int", DAO_INTEGER, NULL, NULL );
-	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
-	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
-	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
-	dao_type_enum = DaoType_New( "enum", DAO_ENUM, NULL, NULL );
-	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
-	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
-
-	masterVmSpace = vms = DaoVmSpace_New();
+	masterVmSpace = DaoVmSpace_New();
 
 	DString_Reserve( masterVmSpace->startPath, 512 );
 	cwd = getcwd( masterVmSpace->startPath->chars, 511 );
@@ -2799,100 +2835,17 @@ DaoVmSpace* DaoInit( const char *command )
 		DString_Change( masterVmSpace->daoBinPath, "[^/\\]* $", "", 0 );
 	}
 
-	coreNS = vms->coreNamespace;
 
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_tht );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_any->name, dao_type_any );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_bool->name, dao_type_bool );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_int->name, dao_type_int );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_float->name, dao_type_float );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_complex->name, dao_type_complex );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_string->name, dao_type_string );
-	DaoNamespace_AddTypeConstant( coreNS, dao_type_enum->name, dao_type_enum );
-
-	dao_type_none = DaoNamespace_MakeValueType( coreNS, dao_none_value );
-
-	dao_type_tuple = DaoNamespace_DefineType( coreNS, "tuple<...>", NULL );
-
-	dao_type_iterator_int = DaoNamespace_MakeIteratorType( coreNS, dao_type_int );
-	dao_type_iterator_any = DaoNamespace_MakeIteratorType( coreNS, dao_type_any );
-
-	DaoNamespace_SetupType( coreNS, & daoStringCore,  dao_type_string );
-	DaoNamespace_SetupType( coreNS, & daoComplexCore, dao_type_complex );
-
-#ifdef DAO_WITH_NUMARRAY
-	dao_type_array = DaoNamespace_WrapGenericType( coreNS, & daoArrayCore, DAO_ARRAY );
-	dao_type_array_empty = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
-	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
-	dao_array_types[DAO_NONE] = dao_type_array_empty;
-	dao_array_types[DAO_BOOLEAN] = DaoType_Specialize( dao_type_array, & dao_type_bool, 1 );
-	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array, & dao_type_int, 1 );
-	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
-	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array, & dao_type_complex, 1 );
-#endif
-
-	dao_type_list = DaoNamespace_WrapGenericType( coreNS, & daoListCore, DAO_LIST );
-	dao_type_map = DaoNamespace_WrapGenericType( coreNS, & daoMapCore, DAO_MAP );
-
-	dao_type_list_any = DaoType_Specialize( dao_type_list, NULL, 0 );
-	dao_type_map_any  = DaoType_Specialize( dao_type_map, NULL, 0 );
-
-	/*
-	// These types should not be accessible by developers using type annotation.
-	*/
-	dao_type_list_empty = DaoType_Copy( dao_type_list_any );
-	dao_type_map_empty = DaoType_Copy( dao_type_map_any );
-	dao_type_list_empty = DaoType_GetConstType( dao_type_list_empty );
-	dao_type_map_empty = DaoType_GetConstType( dao_type_map_empty );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_list_empty );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
-
-	dao_type_cdata = DaoNamespace_WrapType( coreNS, & daoCdataCore, DAO_CDATA, 1 );
-
-	DaoException_Setup( coreNS );
-
-	DaoNamespace_UpdateLookupTable( vms->daoNamespace );
-
-	NS = DaoVmSpace_GetNamespace( vms, "io" );
-	DaoNamespace_AddConstValue( vms->daoNamespace, "io", (DaoValue*) NS );
-	dao_type_io_device = DaoNamespace_WrapInterface( NS, & daoDeviceCore );
-	dao_type_stream = DaoNamespace_WrapType( NS, & daoStreamCore, DAO_CSTRUCT, 0 );
-	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
-	GC_Assign( & vms->errorStream->ctype, dao_type_stream );
-	DaoNamespace_WrapFunctions( NS, dao_io_methods );
-	DaoNamespace_AddConstValue( NS, "stdio",  (DaoValue*) vms->stdioStream );
-	DaoNamespace_AddConstValue( NS, "stderr", (DaoValue*) vms->errorStream );
-
-	NS = DaoVmSpace_GetNamespace( vms, "mt" );
-	DaoNamespace_AddConstValue( vms->daoNamespace, "mt", (DaoValue*) NS );
-	dao_type_future  = DaoNamespace_WrapType( NS, & daoFutureCore, DAO_CSTRUCT, 0 );
-#ifdef DAO_WITH_CONCURRENT
-	dao_type_channel = DaoNamespace_WrapType( NS, & daoChannelCore, DAO_CSTRUCT, 0 );
-	DaoNamespace_WrapFunctions( NS, dao_mt_methods );
-#endif
-
-	NS = DaoVmSpace_GetNamespace( vms, "std" );
-	DaoNamespace_AddConstValue( vms->daoNamespace, "std", (DaoValue*) NS );
-	DaoNamespace_WrapFunctions( NS, dao_std_methods );
-
-	DaoNamespace_UpdateLookupTable( vms->mainNamespace );
-
-	DaoVmSpace_InitPath( vms );
+	DaoVmSpace_InitPath( masterVmSpace );
 
 	/*
 	   printf( "initialized...\n" );
 	 */
-	DString_Delete( mbs );
-	return vms;
+	return masterVmSpace;
 }
 
 void DaoQuit()
 {
-	int i;
-	DNode *it = NULL;
-
 	DaoVmSpace_TryDelete( masterVmSpace );
 
 	DaoGC_Finish();
@@ -2900,7 +2853,7 @@ void DaoQuit()
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_Quit();
 #endif
-	dao_type_stream = NULL;
+	//dao_type_stream = NULL; // XXX: 2017-04-02;
 	masterVmSpace = NULL;
 	if( dao_jit.Quit ){
 		dao_jit.Quit();
@@ -2975,6 +2928,36 @@ DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
 	return NULL;
 }
 
+DaoType* DaoVmSpace_GetCommonType( DaoVmSpace *self, int type, int subtype )
+{
+	switch( type ){
+	case DAO_ARRAY :
+		if( subtype <= DAO_COMPLEX ) return self->typeArrays[ subtype ];
+		break;
+	case DAO_LIST :
+		switch( subtype ){
+		case DAO_NONE : return self->typeListEmpty;
+		case DAO_ANY : return self->typeListAny;
+		}
+		break;
+	case DAO_MAP  :
+		switch( subtype ){
+		case DAO_NONE : return self->typeMapEmpty;
+		case DAO_ANY : return self->typeMapAny;
+		}
+		break;
+	case DAO_NONE    : return self->typeNone;
+	case DAO_ANY     : return self->typeAny;
+	case DAO_BOOLEAN : return self->typeBool;
+	case DAO_INTEGER : return self->typeInt;
+	case DAO_FLOAT   : return self->typeFloat;
+	case DAO_COMPLEX : return self->typeComplex;
+	case DAO_STRING  : return self->typeString;
+	default : break;
+	}
+	return NULL;
+}
+
 
 static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *name )
 {
@@ -2984,9 +2967,9 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 	DString *basename, sub;
 	daoint i, offset = 0;
 
-	if( strcmp( name, "Exception" ) == 0 ) return  dao_type_exception;
-	if( strcmp( name, "Warning" ) == 0 ) return  dao_type_warning;
-	if( strcmp( name, "Error" ) == 0 ) return  dao_type_error;
+	if( strcmp( name, "Exception" ) == 0 ) return  self->typeException;
+	if( strcmp( name, "Warning" ) == 0 ) return  self->typeWarning;
+	if( strcmp( name, "Error" ) == 0 ) return  self->typeError;
 
 	basename = DString_NewChars( name );
 	offset = DString_RFindChars( basename, "::", -1 );

@@ -140,35 +140,27 @@ static int DaoStream_WriteBuffer( DaoStream *self, const void *data, int count )
 
 
 
-DaoStream* DaoStream_New()
+DaoStream* DaoStream_New( DaoVmSpace *vms )
 {
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
-	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
-	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
+	DaoCstruct_Init( (DaoCstruct*) self, vms->typeStream );
 	self->Read = DaoStream_ReadStdin;
 	self->Write = DaoStream_WriteStdout;
 	self->AtEnd = DaoStream_AtEnd;
 	self->Flush = DaoStream_FlushStdout;
 	self->SetColor = DaoStream_SetScreenColor;
-#ifdef DAO_USE_GC_LOGGER
-	/* It may have not been logged if dao_type_stream was NULL: */
-	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
 	return self;
 }
-DaoStream* DaoStdStream_New()
+DaoStream* DaoStdStream_New( DaoVmSpace *vms )
 {
 	DaoStdStream *self = (DaoStdStream*) dao_calloc( 1, sizeof(DaoStdStream) );
-	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
+	DaoCstruct_Init( (DaoCstruct*) self, vms->typeStream );
 	self->base.type = DAO_CSTRUCT;
 	self->base.Read = DaoStdStream_ReadStdin;
 	self->base.Write = DaoStdStream_WriteStdout;
 	self->base.AtEnd = DaoStdStream_AtEnd;
 	self->base.Flush = DaoStdStream_FlushStdout;
 	self->base.SetColor = DaoStdStream_SetColor;
-#ifdef DAO_USE_GC_LOGGER
-	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
 	return (DaoStream*) self;
 }
 void DaoStream_Delete( DaoStream *self )

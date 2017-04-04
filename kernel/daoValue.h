@@ -89,7 +89,7 @@ union DaoValue
 	} xGC;
 };
 
-DAO_DLL DaoType* DaoValue_GetType( DaoValue *self );
+DAO_DLL DaoType* DaoValue_GetType( DaoValue *self, DaoVmSpace *vmspace );
 
 /*
 // Copy when self is a simple data type (with type <= DAO_ENUM),

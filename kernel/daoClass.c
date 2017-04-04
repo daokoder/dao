@@ -117,13 +117,14 @@ DaoNamespace* DaoClass_GetNamespace( DaoClass *self )
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 {
+	DaoVmSpace *vms = ns->vmSpace;
 	DaoRoutine *rout;
 	DString *str;
 
 	if( self->initRoutine ) return;
 
-	self->objType = DaoType_New( name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
-	self->clsType = DaoType_New( name->chars, DAO_CLASS, (DaoValue*) self, NULL );
+	self->objType = DaoType_New( vms, name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
+	self->clsType = DaoType_New( vms, name->chars, DAO_CLASS, (DaoValue*) self, NULL );
 	GC_IncRC( self->clsType );
 	DString_InsertChars( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
@@ -140,7 +141,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->initRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
-	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
+	rout->routType = DaoType_New( vms, "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
 	DString_Append( rout->routType->name, name );
 	DString_AppendChars( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );

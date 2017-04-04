@@ -657,6 +657,7 @@ DString DString_WrapBytes( const char *bytes, int n )
 	str.size = str.bufSize = n;
 	return str;
 }
+
 DString DString_WrapChars( const char *bytes )
 {
 	return DString_WrapBytes( bytes, bytes ? strlen( bytes ) : 0 );
@@ -667,6 +668,7 @@ void DString_AppendPathSep( DString *self )
 	char last = self->size ? self->chars[self->size-1] : 0;
 	if( last != '/' && last != '\\' ) DString_AppendChar( self, '/' );
 }
+
 void DString_MakePath( DString *base, DString *path )
 {
 	if( base->size == 0 ) return;
@@ -1158,4 +1160,23 @@ static void DWCString_AppendMBS( DArray *self, const char *chs, daoint len )
 		if( chs == NULL ) chs = next;
 	}
 	memset( self->data.wchars + self->size, 0, sizeof(wchar_t) );
+}
+
+
+void DString_AppendUInt16( DString *bytecodes, int value )
+{
+	uchar_t bytes[2];
+	bytes[0] = (value >> 8) & 0xFF;
+	bytes[1] = value & 0xFF;
+	DString_AppendBytes( bytecodes, (char*) bytes, 2 );
+}
+
+void DString_AppendUInt32( DString *bytecodes, uint_t value )
+{
+	uchar_t bytes[4];
+	bytes[0] = (value >> 24) & 0xFF;
+	bytes[1] = (value >> 16) & 0xFF;
+	bytes[2] = (value >>  8) & 0xFF;
+	bytes[3] = value & 0xFF;
+	DString_AppendBytes( bytecodes, (char*) bytes, 4 );
 }

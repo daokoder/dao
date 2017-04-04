@@ -305,6 +305,7 @@ static DaoType* DaoObject_CheckGetField( DaoType *self, DaoString *name, DaoRout
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
+	DaoVmSpace *vms = ctx->nameSpace->vmSpace;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( klass, name->value, host );
 	DaoRoutine *rout;
@@ -331,7 +332,7 @@ static DaoType* DaoObject_CheckGetField( DaoType *self, DaoString *name, DaoRout
 		}else{
 			rout = DaoClass_FindMethod( klass, ".", host );
 			if( rout == NULL ) return NULL;
-			rout = DaoRoutine_MatchByType( rout, self, & dao_type_string, 1, DVM_CALL );
+			rout = DaoRoutine_MatchByType( rout, self, & vms->typeString, 1, DVM_CALL );
 		}
 		if( rout == NULL ) return NULL;
 		return (DaoType*) rout->routType->aux;
@@ -374,6 +375,7 @@ static int DaoObject_CheckSetField( DaoType *self, DaoString *name, DaoType *val
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( klass, name->value, host );
+	DaoVmSpace *vms = ctx->nameSpace->vmSpace;
 	DaoRoutine *rout;
 	int error = DAO_OK;
 
@@ -400,7 +402,7 @@ static int DaoObject_CheckSetField( DaoType *self, DaoString *name, DaoType *val
 			rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 		}else{
 			DaoType *args[2];
-			args[0] = dao_type_string;
+			args[0] = vms->typeString;
 			args[1] = value;
 			rout = DaoClass_FindMethod( klass, ".=", host );
 			if( rout == NULL ) return error;
@@ -544,6 +546,7 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 {
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoVmSpace *vms = ctx->nameSpace->vmSpace;
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
 
@@ -573,7 +576,7 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 
 	rout = DaoClass_FindMethod( (DaoClass*) self->aux, DaoVmCode_GetOperator( op->code ), host );
 	if( rout == NULL ){
-		if( op->code == DVM_EQ || op->code == DVM_NE ) return dao_type_bool;
+		if( op->code == DVM_EQ || op->code == DVM_NE ) return vms->typeBool;
 		return NULL;
 	}
 
@@ -714,6 +717,7 @@ void DaoObject_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProces
 	char buf[50];
 	DMap *inmap = cycmap;
 	DaoObject *object = (DaoObject*) self;
+	DaoVmSpace *vms = proc->vmSpace;
 	DaoValue *params[2];
 	DaoRoutine *meth;
 
@@ -733,7 +737,7 @@ void DaoObject_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProces
 
 	DaoValue_Clear( & proc->stackValues[0] );
 
-	params[0] = (DaoValue*) dao_type_string;
+	params[0] = (DaoValue*) vms->typeString;
 	params[1] = (DaoValue*) stream;
 	meth = DaoClass_FindMethod( object->defClass, "(string)", NULL );
 	if( meth ){

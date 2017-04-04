@@ -76,9 +76,10 @@ static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns = DaoNamespace_New( vms, "std.eval()" );
 	DaoStream *prevStream = proc->stdioStream;
-	DaoStream *redirect = (DaoStream*) p[1];
+	DaoStream *redirect = prevStream;
 	DString *source = p[0]->xString.value;
 
+	if( p[1]->type != DAO_NONE ) redirect = (DaoStream*) p[1];
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, redirect );
 
 	GC_IncRC( ns );
@@ -241,7 +242,7 @@ void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	DString *input;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New();
-	if( N > 0 && DaoValue_CastCstruct( p[0], dao_type_stream ) ){
+	if( N > 0 && DaoValue_CastCstruct( p[0], proc->vmSpace->typeStream ) ){
 		stream = (DaoStream*)p[0];
 		p ++;
 		N --;
@@ -378,7 +379,7 @@ DaoFunctionEntry dao_std_methods[] =
 		"path( which: enum<program,script,working,loading> = $script, full = false ) => string"
 	},
 
-	{ DaoSTD_Eval,      "eval( source: string, iostream = io::stdio ) => any" },
+	{ DaoSTD_Eval,      "eval( source: string, stream: io::Stream|none = none ) => any" },
 	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) =>namespace"},
 	{ DaoSTD_Load,      "load( file: string, import = true, run = false ) => namespace" },
 

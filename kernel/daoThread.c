@@ -819,7 +819,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	DaoProcess *clone;
 	DaoVmCode *vmc, *end, *sect;
 	DaoType *type = DaoProcess_GetReturnType( proc );
-	DaoFuture *future = DaoFuture_New( type, 0 );
+	DaoFuture *future = DaoFuture_New( proc->vmSpace, type, 0 );
 	int entry, nop = proc->activeCode[1].code == DVM_NOP;
 
 	DaoProcess_PutValue( proc, (DaoValue*) future );

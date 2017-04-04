@@ -88,20 +88,12 @@ struct DaoVmSpace
 	DAO_VALUE_COMMON;
 
 	/*
-	// The common namespace for built-in types and values;
-	// It is immutable and shared among all DaoVmSpace;
-	*/
-	DaoNamespace  *coreNamespace;
-
-	/*
 	// The common namespace for standard types and values;
-	// It is mutable and private for the DaoVmSpace;
 	*/
 	DaoNamespace  *daoNamespace;
 
 	/*
-	// To store globals in the main script,
-	// or scripts from an interactive console.
+	// Namespace for the main script or scripts from an interactive console.
 	*/
 	DaoNamespace  *mainNamespace;
 
@@ -163,6 +155,37 @@ struct DaoVmSpace
 	DaoProfiler  *profiler;
 	DaoHandler   *handler;
 
+	DaoType  *typeNone;
+	DaoType  *typeUdf;
+	DaoType  *typeAny;
+	DaoType  *typeBool;
+	DaoType  *typeInt;
+	DaoType  *typeFloat;
+	DaoType  *typeComplex;
+	DaoType  *typeString;
+	DaoType  *typeEnum;
+	DaoType  *typeTuple;
+	DaoType  *typeArray;
+	DaoType  *typeArrayEmpty;
+	DaoType  *typeList;
+	DaoType  *typeListEmpty;
+	DaoType  *typeListAny;
+	DaoType  *typeMap;
+	DaoType  *typeMapEmpty;
+	DaoType  *typeMapAny;
+	DaoType  *typeRoutine;
+	DaoType  *typeCdata;
+	DaoType  *typeIteratorInt;
+	DaoType  *typeIteratorAny;
+	DaoType  *typeException;
+	DaoType  *typeWarning;
+	DaoType  *typeError;
+	DaoType  *typeFuture;
+	DaoType  *typeChannel;
+	DaoType  *typeStream;
+	DaoType  *typeIODevice;
+	DaoType  *typeArrays[DAO_COMPLEX+1];
+
 #ifdef DAO_WITH_THREAD
 	DMutex    moduleMutex;
 	DMutex    cacheMutex;
@@ -220,6 +243,7 @@ DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
 DAO_DLL void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel );
 DAO_DLL DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core );
 
+DAO_DLL DaoType* DaoVmSpace_GetCommonType( DaoVmSpace *self, int type, int subtype );
 DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 
 DAO_DLL DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self );
@@ -238,6 +262,5 @@ void DaoAux_Delete( DMap *aux );
 DAO_DLL DaoCdata* DaoVmSpace_MakeCdata( DaoVmSpace *self, DaoType *type, void *data, int own );
 DAO_DLL void DaoVmSpace_ReleaseCdata( DaoVmSpace *self, DaoType *type, void *data );
 DAO_DLL void DaoVmSpace_UpdateCdata( DaoVmSpace *self, DaoCdata *cdata, void *data );
-DAO_DLL void DaoVmSpace_ClearGarbage( DaoVmSpace *self );
 
 #endif
