@@ -66,19 +66,19 @@ struct DaoStringStream
 #endif
 
 
-DAO_API( STREAM, DaoType*, DaoFileStream_Type, () );
-DAO_API( STREAM, DaoType*, DaoStringStream_Type, () );
-DAO_API( STREAM, DaoType*, DaoPipeStream_Type, () ) ;
+DAO_API( STREAM, DaoType*, DaoFileStream_Type, (DaoVmSpace *vmspace) );
+DAO_API( STREAM, DaoType*, DaoStringStream_Type, (DaoVmSpace *vmspace) );
+DAO_API( STREAM, DaoType*, DaoPipeStream_Type, (DaoVmSpace *vmspace) ) ;
 
-DAO_API( STREAM, DaoFileStream*, DaoFileStream_New, () );
+DAO_API( STREAM, DaoFileStream*, DaoFileStream_New, (DaoVmSpace *vmspace) );
 DAO_API( STREAM, void, DaoFileStream_Delete, (DaoFileStream *self) );
 DAO_API( STREAM, void, DaoFileStream_Close, (DaoFileStream *self) );
 DAO_API( STREAM, void, DaoFileStream_InitCallbacks, (DaoFileStream *self) );
 
-DAO_API( STREAM, DaoStringStream*, DaoStringStream_New, () );
+DAO_API( STREAM, DaoStringStream*, DaoStringStream_New, (DaoVmSpace *vmspace) );
 DAO_API( STREAM, void, DaoStringStream_Delete, (DaoStringStream *self) );
 
-DAO_API( STREAM, FILE*, DaoStream_GetFile, (DaoStream *self) );
+DAO_API( STREAM, FILE*, DaoStream_GetFile, (DaoStream *self ) );
 DAO_API( STREAM, DaoStream*, DaoProcess_PutFile, (DaoProcess *self, FILE *file) );
 DAO_API( STREAM, DaoStream*, DaoProcess_NewStream, (DaoProcess *self, FILE *file) );
 

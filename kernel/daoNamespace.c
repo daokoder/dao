@@ -196,11 +196,7 @@ void DaoNamespace_AddValue( DaoNamespace *self, const char *s, DaoValue *v, cons
 	DaoType *type = NULL;
 	DString name = DString_WrapChars( s );
 	if( t && strlen( t ) >0 ){
-		DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
-		parser->nameSpace = self;
-		parser->vmSpace = self->vmSpace;
 		type = DaoParser_ParseTypeName( t, self, NULL ); /* XXX warn */
-		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	}
 	DaoNamespace_AddVariable( self, & name, v, type, DAO_PERM_PUBLIC );
 }

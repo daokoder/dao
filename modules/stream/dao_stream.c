@@ -51,21 +51,22 @@
 #endif
 
 
-DaoType *dao_type_file_stream = NULL;
-DaoType *dao_type_pipe_stream = NULL;
-DaoType *dao_type_string_stream = NULL;
+extern DaoTypeCore daoFileStreamCore;
+extern DaoTypeCore daoPipeStreamCore;
+extern DaoTypeCore daoStringStreamCore;
 
-DaoType* DaoFileStream_Type()
+
+DaoType* DaoFileStream_Type( DaoVmSpace *vmspace )
 {
-	return dao_type_file_stream;
+	return DaoVmSpace_GetType( vmspace, & daoFileStreamCore );
 }
-DaoType* DaoStringStream_Type()
+DaoType* DaoStringStream_Type( DaoVmSpace *vmspace )
 {
-	return dao_type_pipe_stream;
+	return DaoVmSpace_GetType( vmspace, & daoPipeStreamCore );
 }
-DaoType* DaoPipeStream_Type()
+DaoType* DaoPipeStream_Type( DaoVmSpace *vmspace )
 {
-	return dao_type_string_stream;
+	return DaoVmSpace_GetType( vmspace, & daoStringStreamCore );
 }
 
 
@@ -181,9 +182,9 @@ DaoFileStream* DaoFileStream_NewByType( DaoType *type )
 	return self;
 }
 
-DaoFileStream* DaoFileStream_New()
+DaoFileStream* DaoFileStream_New( DaoVmSpace *vmspace )
 {
-	return DaoFileStream_NewByType( dao_type_file_stream );
+	return DaoFileStream_NewByType( DaoFileStream_Type( vmspace ) );
 }
 void DaoFileStream_Delete( DaoFileStream *self )
 {
@@ -215,9 +216,9 @@ void DaoFileStream_InitCallbacks( DaoFileStream *self )
 	}
 }
 
-DaoPipeStream* DaoPipeStream_New()
+DaoPipeStream* DaoPipeStream_New( DaoVmSpace *vmspace )
 {
-	return DaoFileStream_NewByType( dao_type_pipe_stream );
+	return DaoFileStream_NewByType( DaoPipeStream_Type( vmspace ) );
 }
 int DaoPipeStream_Close( DaoPipeStream *self );
 void DaoPipeStream_Delete( DaoPipeStream *self )
@@ -249,10 +250,10 @@ int DaoPipeStream_Close( DaoPipeStream *self )
 
 
 
-DaoStringStream* DaoStringStream_New()
+DaoStringStream* DaoStringStream_New( DaoVmSpace *vmspace )
 {
 	DaoStringStream *self = (DaoStringStream*) dao_calloc( 1, sizeof(DaoStringStream) );
-	DaoCstruct_Init( (DaoCstruct*) self, dao_type_string_stream );
+	DaoCstruct_Init( (DaoCstruct*) self, DaoStringStream_Type( vmspace ) );
 	self->base.buffer = DString_New();
 	self->base.Read = DaoStringStream_Read;
 	self->base.Write = DaoStringStream_Write;
@@ -271,7 +272,8 @@ void DaoStringStream_Delete( DaoStringStream *self )
 
 FILE* DaoStream_GetFile( DaoStream *self )
 {
-	if( DaoType_ChildOf( self->ctype, dao_type_file_stream ) ){
+	DaoVmSpace *vmspace = DaoType_GetVmSpace( self->ctype );
+	if( DaoType_ChildOf( self->ctype, DaoFileStream_Type( vmspace ) ) ){
 		DaoFileStream *stream = (DaoFileStream*) self;
 		return stream->file;
 	}else if( self->Write == DaoStdStream_WriteStdout || self->Write == DaoStdStream_WriteStderr ){
@@ -292,7 +294,7 @@ FILE* DaoStream_GetFile( DaoStream *self )
 }
 DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 {
-	DaoFileStream *stream = DaoFileStream_New();
+	DaoFileStream *stream = DaoFileStream_New( self->vmSpace );
 	stream->file = file;
 	stream->base.mode |= DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
 	DaoFileStream_InitCallbacks( stream );
@@ -301,7 +303,7 @@ DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 }
 DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *file )
 {
-	DaoFileStream *stream = DaoFileStream_New();
+	DaoFileStream *stream = DaoFileStream_New( self->vmSpace );
 	stream->file = file;
 	stream->base.mode |= DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
 	DaoFileStream_InitCallbacks( stream );
@@ -347,7 +349,7 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoFileStream *self = NULL;
 	char *mode;
-	self = DaoFileStream_New();
+	self = DaoFileStream_New( proc->vmSpace );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 	if( N == 0 ){
 		do
@@ -447,7 +449,7 @@ static void PIPE_New( DaoProcess *proc, DaoValue *p[], int N )
 	DString *fname = p[0]->xString.value;
 	char *mode;
 
-	stream = DaoPipeStream_New();
+	stream = DaoPipeStream_New( proc->vmSpace );
 	DaoProcess_PutValue( proc, (DaoValue*)stream );
 	if( DString_Size( fname ) == 0 ){
 		DaoProcess_RaiseError( proc, "Param", "Empty command" );
@@ -485,7 +487,7 @@ static void PIPE_FileNO( DaoProcess *proc, DaoValue *p[], int N )
 
 static void DaoIOS_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoStringStream *self = DaoStringStream_New();
+	DaoStringStream *self = DaoStringStream_New( proc->vmSpace );
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 }
 static void DaoIOS_Seek( DaoProcess *proc, DaoValue *p[], int N )
@@ -676,15 +678,15 @@ DaoTypeCore daoSeekableDeviceCore =
 DAO_DLL_EXPORT int DaoStream_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace *ions = DaoVmSpace_GetNamespace( vmSpace, "io" );
-	DaoType *dao_type_stream = DaoNamespace_FindTypeChars( ions, "Stream" );
-	DaoType *dao_type_io_device = DaoNamespace_FindTypeChars( ions, "Device" );
-	daoFileStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
-	daoPipeStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
-	daoStringStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
-	daoSeekableDeviceCore.bases[0] = DaoType_GetTypeCore( dao_type_io_device );
-	dao_type_file_stream = DaoNamespace_WrapType( ions, & daoFileStreamCore, DAO_CSTRUCT, 0 );
-	dao_type_pipe_stream = DaoNamespace_WrapType( ions, & daoPipeStreamCore, DAO_CSTRUCT, 0 );
-	dao_type_string_stream = DaoNamespace_WrapType( ions, & daoStringStreamCore, DAO_CSTRUCT, 0 );
+	DaoType *streamType = DaoNamespace_FindTypeChars( ions, "Stream" );
+	DaoType *deviceType = DaoNamespace_FindTypeChars( ions, "Device" );
+	daoFileStreamCore.bases[0] = DaoType_GetTypeCore( streamType );
+	daoPipeStreamCore.bases[0] = DaoType_GetTypeCore( streamType );
+	daoStringStreamCore.bases[0] = DaoType_GetTypeCore( streamType );
+	daoSeekableDeviceCore.bases[0] = DaoType_GetTypeCore( deviceType );
+	DaoNamespace_WrapType( ions, & daoFileStreamCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapType( ions, & daoPipeStreamCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapType( ions, & daoStringStreamCore, DAO_CSTRUCT, 0 );
 	DaoNamespace_WrapInterface( ions, & daoSeekableDeviceCore );
 	DaoNamespace_WrapFunctions( ions, dao_io_methods );
 

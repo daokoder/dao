@@ -2928,6 +2928,13 @@ DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
 	return NULL;
 }
 
+DaoType* DaoVmSpace_GetType( DaoVmSpace *self, DaoTypeCore *core )
+{
+	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self, core );
+	if( kernel ) return kernel->abtype;
+	return NULL;
+}
+
 DaoType* DaoVmSpace_GetCommonType( DaoVmSpace *self, int type, int subtype )
 {
 	switch( type ){

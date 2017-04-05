@@ -243,6 +243,7 @@ DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
 DAO_DLL void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel );
 DAO_DLL DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core );
 
+DAO_DLL DaoType* DaoVmSpace_GetType( DaoVmSpace *self, DaoTypeCore *core );
 DAO_DLL DaoType* DaoVmSpace_GetCommonType( DaoVmSpace *self, int type, int subtype );
 DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 
