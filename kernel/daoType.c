@@ -2115,7 +2115,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	// Specialized cdata type will be initialized with the same kernel as the template type.
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
-	ctype = DaoCtype_New( self->vmspace, self->core, self->tid );
+	ctype = DaoCtype_New( self->kernel->nspace, self->core, self->tid );
 	sptype = ctype->valueType;
 	sptype2 = ctype->classType;
 	GC_Assign( & sptype->kernel, self->kernel );

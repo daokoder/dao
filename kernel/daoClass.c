@@ -42,12 +42,15 @@
 #include"daoVmspace.h"
 
 
-DaoClass* DaoClass_New()
+DaoClass* DaoClass_New( DaoNamespace *nspace )
 {
 	DaoClass *self = (DaoClass*) dao_calloc( 1, sizeof(DaoClass) );
 	DaoValue_Init( self, DAO_CLASS );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->className = DString_New();
+
+	self->nameSpace = nspace;
+	GC_IncRC( self->nameSpace );
 
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
 	self->methSignatures = DHash_New( DAO_DATA_STRING, 0 );
@@ -81,6 +84,7 @@ void DaoClass_Delete( DaoClass *self )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
+	GC_DecRC( self->nameSpace );
 	GC_DecRC( self->clsType );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->methSignatures );
@@ -111,8 +115,7 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
 
 DaoNamespace* DaoClass_GetNamespace( DaoClass *self )
 {
-	if( self->initRoutine == NULL ) return NULL;
-	return self->initRoutine->nameSpace;
+	return self->nameSpace;
 }
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )

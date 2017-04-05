@@ -390,6 +390,7 @@ void DaoObjectLogger_Quit()
 		case DAO_CTYPE :
 			{
 				DaoCtype *ctype = (DaoCtype*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) ctype->nameSpace );
 				DaoObjectLogger_ScanValue( (DaoValue*) ctype->classType );
 				DaoObjectLogger_ScanValue( (DaoValue*) ctype->valueType );
 				break;
@@ -426,6 +427,7 @@ void DaoObjectLogger_Quit()
 		case DAO_CLASS :
 			{
 				DaoClass *klass = (DaoClass*)value;
+				DaoObjectLogger_ScanValue( (DaoValue*) klass->nameSpace );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->clsType );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->initRoutine );
 				DaoObjectLogger_ScanArray( klass->constants );
@@ -1851,6 +1853,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_CTYPE :
 		{
 			DaoCtype *ctype = (DaoCtype*) value;
+			cycRefCountDecrement( (DaoValue*) ctype->nameSpace );
 			cycRefCountDecrement( (DaoValue*) ctype->classType );
 			cycRefCountDecrement( (DaoValue*) ctype->valueType );
 			break;
@@ -1889,6 +1892,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = (DaoClass*)value;
+			cycRefCountDecrement( (DaoValue*) klass->nameSpace );
 			cycRefCountDecrement( (DaoValue*) klass->clsType );
 			cycRefCountDecrement( (DaoValue*) klass->initRoutine );
 			cycRefCountDecrements( klass->constants );
@@ -2069,6 +2073,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_CTYPE :
 		{
 			DaoCtype *ctype = (DaoCtype*) value;
+			cycRefCountIncrement( (DaoValue*) ctype->nameSpace );
 			cycRefCountIncrement( (DaoValue*) ctype->classType );
 			cycRefCountIncrement( (DaoValue*) ctype->valueType );
 			break;
@@ -2107,6 +2112,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = (DaoClass*) value;
+			cycRefCountIncrement( (DaoValue*) klass->nameSpace );
 			cycRefCountIncrement( (DaoValue*) klass->clsType );
 			cycRefCountIncrement( (DaoValue*) klass->initRoutine );
 			cycRefCountIncrements( klass->constants );
@@ -2285,6 +2291,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_CTYPE :
 		{
 			DaoCtype *ctype = (DaoCtype*) value;
+			directRefCountDecrement( (DaoValue**) & ctype->nameSpace );
 			directRefCountDecrement( (DaoValue**) & ctype->classType );
 			directRefCountDecrement( (DaoValue**) & ctype->valueType );
 			break;
@@ -2333,6 +2340,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoClass *klass = (DaoClass*)value;
 			count += klass->constants->size + klass->variables->size + klass->instvars->size;
 			count += klass->allBases->size + klass->references->size;
+			directRefCountDecrement( (DaoValue**) & klass->nameSpace );
 			directRefCountDecrement( (DaoValue**) & klass->clsType );
 			directRefCountDecrement( (DaoValue**) & klass->initRoutine );
 			directRefCountDecrements( klass->constants );

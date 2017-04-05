@@ -591,8 +591,10 @@ DAO_DLL DaoMap*       DaoValue_CastMap( DaoValue *self );
 DAO_DLL DaoTuple*     DaoValue_CastTuple( DaoValue *self );
 DAO_DLL DaoStream*    DaoValue_CastStream( DaoValue *self );
 DAO_DLL DaoObject*    DaoValue_CastObject( DaoValue *self );
-DAO_DLL DaoCstruct*   DaoValue_CastCstruct( DaoValue *self, DaoType *totype );
-DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self, DaoType *totype );
+DAO_DLL DaoCstruct*   DaoValue_CastCstruct( DaoValue *self, DaoType *type );
+DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self, DaoType *type );
+DAO_DLL DaoCstruct*   DaoValue_CastCstructTC( DaoValue *self, DaoTypeCore *core );
+DAO_DLL DaoCdata*     DaoValue_CastCdataTC( DaoValue *self, DaoTypeCore *core );
 DAO_DLL DaoCinValue*  DaoValue_CastCinValue( DaoValue *self );
 DAO_DLL DaoClass*     DaoValue_CastClass( DaoValue *self );
 DAO_DLL DaoInterface* DaoValue_CastInterface( DaoValue *self );
@@ -621,14 +623,15 @@ DAO_DLL void*     DaoValue_TryGetCdata( DaoValue *self );
 
 /*
 // DaoValue_TryCastCdata() will cast the data of the cdata to the type
-// as specified by "totype". This will essentially call a chain of cast
+// as specified by "type". This will essentially call a chain of cast
 // functions as specified in the "casts" fields of DaoTypeCore structures
 // along the inheritance chain between the type of the cdata value and
-// the type "totype".
+// the type "type".
 //
-// Return NULL if "totype" is not a parent type of the value.
+// Return NULL if "type" is not a parent type of the value.
 */
-DAO_DLL void* DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
+DAO_DLL void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type );
+DAO_DLL void* DaoValue_TryCastCdataTC( DaoValue *self, DaoTypeCore *core );
 
 /*
 // DaoValue_Copy() copies value from "source" to "dest".
@@ -931,6 +934,8 @@ DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
+DAO_DLL DaoCstruct* DaoObject_CastCstructTC( DaoObject *self, DaoTypeCore *core );
+DAO_DLL DaoCdata*   DaoObject_CastCdataTC( DaoObject *self, DaoTypeCore *core );
 
 
 DAO_DLL DaoCstruct* DaoCstruct_New( DaoType *type, int size );
@@ -975,11 +980,14 @@ DAO_DLL DaoValue* DaoCstruct_CopyPOD( DaoValue *self, DaoValue *target );
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoVmSpace *vmspace, DaoType *type, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_NewTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data );
+DAO_DLL DaoCdata* DaoCdata_WrapTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data );
 DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
 DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
 DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
 DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
-DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
+DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *type );
+DAO_DLL void*  DaoCdata_CastDataTC( DaoCdata *self, DaoTypeCore *core );
 DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
 DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
 DAO_DLL DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self );
@@ -1018,7 +1026,6 @@ DAO_DLL DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt );
-DAO_DLL DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int owned );
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
 DAO_DLL void DaoProcess_RaiseException2( DaoProcess *self, const char *type, const char *info, char *args );
@@ -1094,18 +1101,21 @@ DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self, int size );
 // be created using the Copy function in the type core.
 */
 DAO_DLL DaoCstruct*  DaoProcess_PutCstruct( DaoProcess *self, DaoType *type );
+DAO_DLL DaoCstruct*  DaoProcess_PutCstructTC( DaoProcess *self, DaoTypeCore *core );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
 // This cdata will be responsible to deallocate "data".
 */
 DAO_DLL DaoCdata*  DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type );
+DAO_DLL DaoCdata*  DaoProcess_PutCdataTC( DaoProcess *self, void *data, DaoTypeCore *core );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
 // This cdata will not be responsible to deallocate "data".
 */
 DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type );
+DAO_DLL DaoCdata*  DaoProcess_WrapCdataTC( DaoProcess *self, void *data, DaoTypeCore *core );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
@@ -1117,6 +1127,7 @@ DAO_DLL DaoCdata*  DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *
 // For other types, it will return NULL.
 */
 DAO_DLL DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type );
+DAO_DLL DaoCdata* DaoProcess_CopyCdataTC( DaoProcess *self, void *data, DaoTypeCore *core );
 
 
 
@@ -1254,6 +1265,7 @@ DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
 // Only for copiable types with Copy function in the type cores.
 */
 DAO_DLL DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type );
+DAO_DLL DaoCstruct* DaoProcess_NewCstructTC( DaoProcess *self, DaoTypeCore *core );
 
 /*
 // DaoProcess_NewCdata() creates a new cdata object with specified type and data.
@@ -1261,6 +1273,7 @@ DAO_DLL DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type );
 // deallocated "data".
 */
 DAO_DLL DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned );
+DAO_DLL DaoCdata* DaoProcess_NewCdataTC( DaoProcess *self, DaoTypeCore *core, void *data, int owned );
 
 DAO_DLL DaoType* DaoType_GetItemType( DaoType *self, int i );
 

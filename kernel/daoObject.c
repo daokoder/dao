@@ -210,6 +210,23 @@ DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 	return NULL;
 }
 
+DaoCstruct* DaoObject_CastCstructTC( DaoObject *self, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->defClass->nameSpace->vmSpace, core );
+	DaoValue *p = NULL;
+	if( type ) p = DaoObject_CastToBase( self, type );
+	if( p && (p->type == DAO_CSTRUCT || p->type == DAO_CDATA) ) return (DaoCstruct*) p;
+	return NULL;
+}
+
+DaoCdata* DaoObject_CastCdataTC( DaoObject *self, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->defClass->nameSpace->vmSpace, core );
+	DaoCstruct *p = DaoObject_CastCstruct( self, type );
+	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
+	return NULL;
+}
+
 void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data )
 {
 }

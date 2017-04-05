@@ -2843,6 +2843,12 @@ DaoCstruct* DaoProcess_PutCstruct( DaoProcess *self, DaoType *type )
 	return (DaoCstruct*) O;
 }
 
+DaoCstruct* DaoProcess_PutCstructTC( DaoProcess *self, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_PutCstruct( self, type );
+}
+
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	if( type->core->Copy != NULL ){
@@ -2853,6 +2859,12 @@ DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 		DaoGC_TryDelete( (DaoValue*) cdata );
 	}
 	return NULL;
+}
+
+DaoCdata* DaoProcess_PutCdataTC( DaoProcess *self, void *data, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_PutCdata( self, data, type );
 }
 
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
@@ -2872,6 +2884,12 @@ DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 	return NULL;
 }
 
+DaoCdata* DaoProcess_WrapCdataTC( DaoProcess *self, void *data, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_WrapCdata( self, data, type );
+}
+
 DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata cdata = {0};
@@ -2883,6 +2901,12 @@ DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type )
 	cdata.data = data;
 	cdata.refCount = 1; /* Force copying; */
 	return (DaoCdata*) DaoProcess_PutValue( self, (DaoValue*) & cdata );
+}
+
+DaoCdata* DaoProcess_CopyCdataTC( DaoProcess *self, void *data, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_CopyCdata( self, data, type );
 }
 
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
@@ -5524,11 +5548,23 @@ DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type )
 	return res;
 }
 
+DaoCstruct* DaoProcess_NewCstructTC( DaoProcess *self, DaoTypeCore *core )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_NewCstruct( self, type );
+}
+
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {
 	DaoCdata *res = DaoVmSpace_MakeCdata( self->vmSpace, type, data, owned );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
+}
+
+DaoCdata* DaoProcess_NewCdataTC( DaoProcess *self, DaoTypeCore *core, void *data, int owned )
+{
+	DaoType *type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoProcess_NewCdata( self, type, data, owned );
 }
 
 

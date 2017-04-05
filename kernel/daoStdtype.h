@@ -233,16 +233,17 @@ struct DaoCtype
 {
 	DAO_VALUE_COMMON;
 
-	int       attribs;
-
+	unsigned  attribs;
 	DString  *name;
 	DString  *info;
 
 	DaoType  *classType;
 	DaoType  *valueType;
+
+	DaoNamespace  *nameSpace;  /* Definition namespace; */
 };
 
-DAO_DLL DaoCtype* DaoCtype_New( DaoVmSpace *vmspace, DaoTypeCore *core, int tid );
+DAO_DLL DaoCtype* DaoCtype_New( DaoNamespace *nspace, DaoTypeCore *core, int tid );
 DAO_DLL void DaoCtype_Delete( DaoCtype *self );
 
 

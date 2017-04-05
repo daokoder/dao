@@ -3138,7 +3138,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString *name = & tokens[start]->string;
 		int t = tokens[start]->name;
 		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_CEIL ) goto ErrorClassDefinition;
-		klass = DaoClass_New();
+		klass = DaoClass_New( NS );
 		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 
 		className = klass->className;

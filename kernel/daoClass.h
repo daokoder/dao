@@ -105,6 +105,8 @@ struct DaoClass
 
 	DString  *className;
 
+	DaoNamespace  *nameSpace;  /* Definition namespace; */
+
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
 
@@ -151,7 +153,7 @@ struct DaoClass
 	ushort_t  derived;
 };
 
-DAO_DLL DaoClass* DaoClass_New();
+DAO_DLL DaoClass* DaoClass_New( DaoNamespace *nspace );
 DAO_DLL void DaoClass_Delete( DaoClass *self );
 
 DAO_DLL void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );

@@ -547,7 +547,7 @@ DoneSourceType:
 static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *core, int tid )
 {
 	DaoTypeKernel *kernel = DaoTypeKernel_New( core );
-	DaoCtype *ctype = DaoCtype_New( self->vmSpace, core, tid );
+	DaoCtype *ctype = DaoCtype_New( self, core, tid );
 	DaoType *cdata_type = ctype->valueType;
 	DaoType *ctype_type = ctype->classType;
 	int i;

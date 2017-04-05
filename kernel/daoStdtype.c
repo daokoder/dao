@@ -5725,17 +5725,20 @@ DaoTypeCore daoNameValueCore =
 
 extern DaoTypeCore daoCtypeCore;
 
-DaoCtype* DaoCtype_New( DaoVmSpace *vmspace, DaoTypeCore *core, int tid )
+DaoCtype* DaoCtype_New( DaoNamespace *nspace, DaoTypeCore *core, int tid )
 {
+	DaoVmSpace *vms = nspace->vmSpace;
 	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
 	DaoValue_Init( (DaoValue*)self, DAO_CTYPE );
 	self->trait |= DAO_VALUE_NOCOPY;
 	self->info = DString_New();
 	self->name = DString_NewChars( core->name );
-	self->classType = DaoType_New( vmspace, core->name, DAO_CTYPE, (DaoValue*) self, NULL );
-	self->valueType = DaoType_New( vmspace, core->name, tid, (DaoValue*) self, NULL );
+	self->classType = DaoType_New( vms, core->name, DAO_CTYPE, (DaoValue*) self, NULL );
+	self->valueType = DaoType_New( vms, core->name, tid, (DaoValue*) self, NULL );
 	self->classType->core = & daoCtypeCore;
 	self->valueType->core = core;
+	self->nameSpace = nspace;
+	GC_IncRC( self->nameSpace );
 	GC_IncRC( self->classType );
 	GC_IncRC( self->valueType );
 #ifdef DAO_USE_GC_LOGGER
@@ -5751,6 +5754,7 @@ void DaoCtype_Delete( DaoCtype *self )
 #endif
 	DString_Delete( self->name );
 	DString_Delete( self->info );
+	GC_DecRC( self->nameSpace );
 	GC_DecRC( self->classType );
 	GC_DecRC( self->valueType );
 	dao_free( self );
@@ -6356,6 +6360,22 @@ DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data )
 	return DaoVmSpace_MakeCdata( vmspace, type, data, 0 );
 }
 
+DaoCdata* DaoCdata_NewTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data )
+{
+	DaoType *type;
+	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 1 );
+	type = DaoVmSpace_GetType( vmspace, core );
+	return DaoVmSpace_MakeCdata( vmspace, type, data, 1 );
+}
+
+DaoCdata* DaoCdata_WrapTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data )
+{
+	DaoType *type;
+	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 0 );
+	type = DaoVmSpace_GetType( vmspace, core );
+	return DaoVmSpace_MakeCdata( vmspace, type, data, 0 );
+}
+
 void DaoCdata_Delete( DaoCdata *self )
 {
 	DaoTypeCore *core = self->ctype->core;
@@ -6414,26 +6434,34 @@ DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self )
 }
 
 
-static void* DaoType_NativeCast( DaoType *self, DaoType *totype, void *data )
+static void* DaoType_NativeCast( DaoType *self, DaoType *type, void *data )
 {
 	daoint i, n;
-	if( self == totype || totype == NULL || data == NULL ) return data;
+	if( self == type || type == NULL || data == NULL ) return data;
 	if( self->bases == NULL ) return NULL;
 	for(i=0,n=self->bases->size; i<n; i++){
 		void *p = self->core->casts[i] ? (*self->core->casts[i])( data, 0 ) : data;
-		p = DaoType_NativeCast( self->bases->items.pType[i], totype, p );
+		p = DaoType_NativeCast( self->bases->items.pType[i], type, p );
 		if( p ) return p;
 	}
 	return NULL;
 }
 
 /*
-// The "totype" should be a base or derived type of this cdata type:
+// The "type" should be a base or derived type of this cdata type:
 */
-void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
+void* DaoCdata_CastData( DaoCdata *self, DaoType *type )
 {
 	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
-	return DaoType_NativeCast( self->ctype, totype, self->data );
+	return DaoType_NativeCast( self->ctype, type, self->data );
+}
+
+void* DaoCdata_CastDataTC( DaoCdata *self, DaoTypeCore *core )
+{
+	DaoType *type;
+	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
+	type = DaoVmSpace_GetType( self->vmSpace, core );
+	return DaoType_NativeCast( self->ctype, type, self->data );
 }
 
 

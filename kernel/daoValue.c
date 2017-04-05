@@ -1179,6 +1179,7 @@ DaoObject* DaoValue_CastObject( DaoValue *self )
 	if( self == NULL || self->type != DAO_OBJECT ) return NULL;
 	return (DaoObject*) self;
 }
+
 DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 {
 	if( self == NULL || type == NULL ) return (DaoCstruct*) self;
@@ -1190,17 +1191,42 @@ DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
 	return NULL;
 }
+
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
 	DaoCstruct *cstruct = DaoValue_CastCstruct( self, type );
 	if( cstruct == NULL || cstruct->type != DAO_CDATA ) return NULL;
 	return (DaoCdata*) cstruct;
 }
+
+DaoCstruct* DaoValue_CastCstructTC( DaoValue *self, DaoTypeCore *core )
+{
+	DaoType *type = NULL;
+	if( self == NULL || core == NULL ) return (DaoCstruct*) self;
+	if( self->type == DAO_OBJECT ){
+		type = DaoVmSpace_GetType( self->xObject.defClass->nameSpace->vmSpace, core );
+		self = (DaoValue*) DaoObject_CastCstruct( (DaoObject*) self, type );
+		if( self == NULL ) return NULL;
+	}
+	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return NULL;
+	type = DaoVmSpace_GetType( self->xCstruct.ctype->aux->xCtype.nameSpace->vmSpace, core );
+	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
+	return NULL;
+}
+
+DaoCdata* DaoValue_CastCdataTC( DaoValue *self, DaoTypeCore *core )
+{
+	DaoCstruct *cstruct = DaoValue_CastCstructTC( self, core );
+	if( cstruct == NULL || cstruct->type != DAO_CDATA ) return NULL;
+	return (DaoCdata*) cstruct;
+}
+
 DaoCinValue* DaoValue_CastCinValue( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_CINVALUE ) return NULL;
 	return (DaoCinValue*) self;
 }
+
 DaoClass* DaoValue_CastClass( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_CLASS ) return NULL;
@@ -1283,6 +1309,7 @@ void* DaoValue_TryGetArray( DaoValue *self )
 	if( self->type != DAO_ARRAY ) return NULL;
 	return self->xArray.data.p;
 }
+
 void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
 	if( self->type == DAO_OBJECT ){
@@ -1292,11 +1319,26 @@ void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 	if( self->type != DAO_CDATA ) return NULL;
 	return DaoCdata_CastData( & self->xCdata, type );
 }
+
+void* DaoValue_TryCastCdataTC( DaoValue *self, DaoTypeCore *core )
+{
+	DaoType *type = NULL;
+	if( self->type == DAO_OBJECT ){
+		type = DaoVmSpace_GetType( self->xObject.defClass->nameSpace->vmSpace, core );
+		self = (DaoValue*) DaoObject_CastCdata( (DaoObject*) self, type );
+	}
+	if( self == NULL || self->type != DAO_CDATA ) return NULL;
+	if( self->type != DAO_CDATA ) return NULL;
+	type = DaoVmSpace_GetType( self->xCstruct.ctype->aux->xCtype.nameSpace->vmSpace, core );
+	return DaoCdata_CastData( & self->xCdata, type );
+}
+
 void* DaoValue_TryGetCdata( DaoValue *self )
 {
 	if( self->type != DAO_CDATA ) return NULL;
 	return self->xCdata.data;
 }
+
 void DaoValue_ClearAll( DaoValue *v[], int n )
 {
 	int i;

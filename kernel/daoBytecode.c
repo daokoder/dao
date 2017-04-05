@@ -2333,7 +2333,7 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	if( name->value->type == DAO_CLASS ){
 		klass = (DaoClass*) name->value;
 	}else{
-		klass = DaoClass_New();
+		klass = DaoClass_New( self->nspace );
 		DaoClass_SetName( klass, name->value->xString.value, self->nspace );
 		DaoByteCoder_AddToScope( self, block, klass->className, (DaoValue*) klass );
 	}
