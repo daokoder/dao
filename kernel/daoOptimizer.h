@@ -87,11 +87,12 @@ struct DaoOptimizer
 	DList  *uses;   /* nodes that use a variable; */
 	DList  *refers; /* variables: 0, non-reference; 1, reference; */
 
-	DMap    *exprs;   /* all expressions; */
-	DMap    *inits;   /* init nodes; */
-	DMap    *finals;  /* final nodes; */
+	DMap   *exprs;   /* all expressions; */
+	DMap   *inits;   /* init nodes; */
+	DMap   *finals;  /* final nodes; */
+	DMap   *closes;  /* closing nodes (for closing GOTO of code sections); */
 
-	DMap    *tmp;
+	DMap   *tmp;
 	DList  *array;
 	DList  *array2;
 	DList  *array3;

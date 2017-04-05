@@ -230,6 +230,7 @@ DaoOptimizer* DaoOptimizer_New()
 	self->exprs = DHash_New( DAO_DATA_VMCODE, 0 ); /* DMap<DaoVmCode*,int> */
 	self->inits = DHash_New(0,0);   /* DMap<DaoCnode*,int> */
 	self->finals = DHash_New(0,0);  /* DMap<DaoCnode*,int> */
+	self->closes = DHash_New(0,0);  /* DMap<DaoCnode*,DaoCnode*> */
 	self->tmp = DHash_New(0,0);
 	self->reverseFlow = 0;
 	self->update = NULL;
@@ -242,6 +243,7 @@ void DaoOptimizer_Clear( DaoOptimizer *self )
 	self->uses->size = 0;
 	DMap_Reset( self->inits );
 	DMap_Reset( self->finals );
+	DMap_Reset( self->closes );
 	DMap_Reset( self->exprs );
 }
 void DaoOptimizer_Delete( DaoOptimizer *self )
@@ -259,6 +261,7 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 	DList_Delete( self->refers );
 	DMap_Delete( self->inits );
 	DMap_Delete( self->finals );
+	DMap_Delete( self->closes );
 	DMap_Delete( self->exprs );
 	DMap_Delete( self->tmp );
 	dao_free( self );
@@ -674,8 +677,19 @@ static void DaoCnode_GetOperands( DaoCnode *self, DList *operands )
 }
 static void DaoOptimizer_InitNodeLVA( DaoOptimizer *self, DaoCnode *node )
 {
+	DNode *it = DMap_Find( self->closes, node );
+	DaoCnode *call;
+
 	node->list->size = 0;
 	if( DMap_Find( self->finals, node ) ) DaoCnode_GetOperands( node, node->list );
+	if( it == NULL ) return;
+
+	/*
+	// The result of a code section call must be treated as alive at the end of
+	// the code section, so that it will not reused inside the code section.
+	*/
+	call = (DaoCnode*) it->value.pVoid;
+	if( call->lvalue != 0xffff ) DList_Append( node->list, IntToPointer(call->lvalue) );
 }
 /* Transfer function for Live Variable Analysis: */
 static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCnode *node, DList *out )
@@ -872,6 +886,16 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			// parallel quicksort.
 			*/
 			DMap_Insert( self->inits, node, NULL );
+			if( i >= 2 ){  /* TODO: Add code structure verification in the inferencer; */
+				DaoVmCode *vmc1 = codes[i-2];
+				DaoVmCode *vmc2 = codes[i-1];
+				if( vmc1->code == DVM_CALL && vmc2->code == DVM_GOTO && vmc2->c == DVM_SECT ){
+					DaoVmCode *vmc3 = codes[vmc2->b - 1];
+					if( vmc3->code == DVM_GOTO && vmc3->c == DVM_SECT ){
+						DMap_Insert( self->closes, node, nodes[i-2] );
+					}
+				}
+			}
 			break;
 		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
 		default : break;
