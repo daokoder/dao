@@ -667,8 +667,8 @@ DaoVmSpace* DaoVmSpace_New()
 		DMap_Assign( self->vmodules, master->vmodules );
 
 		for(it=DMap_First(master->nsPlugins); it!=NULL; it=DMap_Next(master->nsPlugins,it)){
-			// TODO: reload;
-			DaoVmSpace_AddPlugin( self, it->key.pString, (DaoNamespace*) it->value.pValue );
+			DaoNamespace *nspace = DaoVmSpace_Load( self, it->key.pString->chars );
+			if( nspace != NULL ) DaoVmSpace_AddPlugin( self, nspace->name, nspace );
 		}
 	}
 

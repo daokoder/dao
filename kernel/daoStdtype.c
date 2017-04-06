@@ -4400,6 +4400,7 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 {
 	DaoMap *res, *self = (DaoMap*) selfv;
 
+	printf( "DaoMap_DoGetItem: %i\n", N );
 	if( N == 0 ){
 		res = DaoMap_Copy( self, NULL );
 		DaoProcess_PutValue( proc, (DaoValue*) res );
@@ -4430,10 +4431,9 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		if( self->value->hashing ) return NULL; /* Key range not well defined for hash map; */
 
 		res = DaoProcess_PutMap( proc, self->value->hashing ); /* Place an empty result map; */
-		if( DaoValue_Compare( first, second ) >= 0 ) return NULL; /* Done; */
 
 		if( first->type  ) node1 = DaoMap_FindGE( self, first );
-		if( second->type ) node2 = DaoMap_FindLE( self, second );
+		if( second->type ) node2 = DaoMap_FindGE( self, second );
 		for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) ){
 			DaoMap_Insert( res, node1->key.pValue, node1->value.pValue );
 		}
@@ -6430,6 +6430,7 @@ DaoObject* DaoCdata_GetObject( DaoCdata *self )
 
 DaoVmSpace* DaoCdata_GetVmSpace( DaoCdata *self )
 {
+	if( self->ctype ) return self->ctype->aux->xCtype.nameSpace->vmSpace;
 	return self->vmSpace;
 }
 

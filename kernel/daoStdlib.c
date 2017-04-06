@@ -65,7 +65,7 @@ static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 	dao_boolean full = p[1]->xBoolean.value;
 	switch( p[0]->xEnum.value ){
 	case 0: DaoProcess_PutString( proc, full ? vms->daoBinFile : vms->daoBinPath ); break;
-	case 1: DaoProcess_PutString( proc, full ? ns->file : ns->name ); break;
+	case 1: DaoProcess_PutString( proc, full ? ns->name : ns->path ); break;
 	case 2: DaoProcess_PutString( proc, vms->startPath ); break;
 	case 3: DaoProcess_PutString( proc, ns->path ); break;
 	}
@@ -366,6 +366,7 @@ DaoFunctionEntry dao_std_methods[] =
 {
 	{ DaoSTD_Version,   "version( verbose = false ) => string" },
 	{ DaoSTD_Path,
+		"path( which: enum<program,script,working,loading> = $script, full = false ) => string"
 		/*
 		// Path types:
 		// -- program: the interpreter path;
@@ -376,7 +377,6 @@ DaoFunctionEntry dao_std_methods[] =
 		// -- full = true : include the file name;
 		// -- full = false: exclude the file name;
 		*/
-		"path( which: enum<program,script,working,loading> = $script, full = false ) => string"
 	},
 
 	{ DaoSTD_Eval,      "eval( source: string, stream: io::Stream|none = none ) => any" },
