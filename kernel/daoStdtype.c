@@ -4400,7 +4400,6 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 {
 	DaoMap *res, *self = (DaoMap*) selfv;
 
-	printf( "DaoMap_DoGetItem: %i\n", N );
 	if( N == 0 ){
 		res = DaoMap_Copy( self, NULL );
 		DaoProcess_PutValue( proc, (DaoValue*) res );
