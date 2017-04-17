@@ -2894,12 +2894,18 @@ DaoCdata* DaoProcess_CopyCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata cdata = {0};
 
-	if( type->core->Copy == NULL ) return NULL;
+	if( type->core->Copy == NULL ){
+		//printf( "DaoProcess_CopyCdata: %s\n", type->name->chars );
+		//fflush( stdout );
+		//return DaoProcess_WrapCdata( self, data, type );
+		return NULL;
+	}
 
 	cdata.type = DAO_CDATA;
 	cdata.ctype = type;
 	cdata.data = data;
 	cdata.refCount = 1; /* Force copying; */
+	cdata.cycRefCount = 1;
 	return (DaoCdata*) DaoProcess_PutValue( self, (DaoValue*) & cdata );
 }
 

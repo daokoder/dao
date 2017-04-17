@@ -60,13 +60,14 @@ DAO_DLL void DaoGC_SetMode( int fullgc, int finalizing );
 
 DAO_DLL void DaoCGC_Start();
 
-DAO_DLL void DaoGC_IncRC( DaoValue *dbase );
-DAO_DLL void DaoGC_DecRC( DaoValue *dbase );
+DAO_DLL void DaoGC_IncCycRC( DaoValue *value );
+DAO_DLL void DaoGC_IncRC( DaoValue *value );
+DAO_DLL void DaoGC_DecRC( DaoValue *value );
 DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
 DAO_DLL void DaoGC_Assign2( DaoValue **dest, DaoValue *src );
 
-DAO_DLL void DaoGC_IncRCs( DList *dbases );
-DAO_DLL void DaoGC_DecRCs( DList *dbases );
+DAO_DLL void DaoGC_IncRCs( DList *values );
+DAO_DLL void DaoGC_DecRCs( DList *values );
 
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )

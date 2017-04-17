@@ -140,6 +140,7 @@ void DThread_Init( DThread *self )
 
 void DThread_Destroy( DThread *self )
 {
+	if( self->thdSpecData ) dao_free( self->thdSpecData );
 	DMutex_Destroy( & self->mutex );
 	DCondVar_Destroy( & self->condv );
 	pthread_setspecific( thdSpecKey, NULL );

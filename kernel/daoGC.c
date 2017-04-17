@@ -863,6 +863,18 @@ void DaoGC_Finish()
 #ifdef DAO_WITH_THREAD
 
 
+void DaoGC_IncCycRC( DaoValue *value )
+{
+	if( value == NULL ) return;
+	if( gcWorker.concurrent ){
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		return;
+	}
+	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
+}
+
 void DaoGC_IncRC( DaoValue *value )
 {
 	if( value == NULL ) return;
@@ -949,6 +961,11 @@ void DaoGC_TryInvoke()
 
 #else
 
+
+void DaoGC_IncCycRC( DaoValue *value )
+{
+	if( value && value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
+}
 
 void DaoGC_IncRC( DaoValue *value )
 {
@@ -1382,6 +1399,11 @@ static void DaoCGC_FreeGarbage()
 			value->xGC.delay = 1;
 			DList_PushBack2( gcWorker.delayList, value );
 			continue;
+		}else if( value->xGC.cycRefCount ){
+			/* To allow postponing GC by increasing the cyclic RefCount: */
+			value->xGC.delay = 1;
+			DList_PushBack2( gcWorker.delayList, value );
+			continue;
 		}
 		value->xGC.dead = 1;
 		DList_PushBack2( gcWorker.freeList, value );
@@ -1641,6 +1663,11 @@ void DaoIGC_FreeGarbage()
 					value->xGC.refCount, value->xGC.cycRefCount );
 			DaoGC_PrintValueInfo( value );
 #endif
+			value->xGC.delay = 1;
+			DList_PushBack2( gcWorker.delayList, value );
+			continue;
+		}else if( value->xGC.cycRefCount ){
+			/* To allow postponing GC by increasing the cyclic RefCount: */
 			value->xGC.delay = 1;
 			DList_PushBack2( gcWorker.delayList, value );
 			continue;
@@ -2215,6 +2242,9 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	}
 	return count;
 }
+
+extern void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data );
+
 static int DaoGC_RefCountDecScan( DaoValue *value )
 {
 	int count = 1;
@@ -2301,10 +2331,22 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoCstruct *cstruct = (DaoCstruct*) value;
 			DaoType *ctype = cstruct->ctype;
+
+			if( value->type == DAO_CDATA && value->xCdata.vmSpace != NULL ){
+				DaoCdata *cdata = (DaoCdata*) value;
+				DaoVmSpace *vmspace = cdata->vmSpace;
+				if( DaoGC_IsConcurrent() ) DaoVmSpace_LockCache( vmspace );
+				if( cdata->cycRefCount == 0 && cdata->data != NULL ){
+					DaoVmSpace_ReleaseCdata2( vmspace, cdata->ctype, cdata->data );
+				}
+				if( DaoGC_IsConcurrent() ) DaoVmSpace_UnlockCache( vmspace );
+				if( cdata->cycRefCount ) break;  /* Postponed; */
+			}
+
 			directRefCountDecrement( (DaoValue**) & cstruct->object );
 			directRefCountDecrement( (DaoValue**) & cstruct->ctype );
-			cstruct->ctype = ctype;
 			cstruct->trait |= DAO_VALUE_BROKEN;
+			cstruct->ctype = ctype;
 			DaoGC_ScanCstruct( cstruct, DAO_GC_BREAK );
 			if( value->type == DAO_CDATA ) DaoCdata_SetData( (DaoCdata*) value, NULL );
 			break;

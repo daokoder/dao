@@ -6361,7 +6361,7 @@ DaoCdata* DaoCdata_Wrap( DaoVmSpace *vmspace, DaoType *type, void *data )
 
 DaoCdata* DaoCdata_NewTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data )
 {
-	DaoType *type;
+	DaoType *type = NULL;
 	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 1 );
 	type = DaoVmSpace_GetType( vmspace, core );
 	return DaoVmSpace_MakeCdata( vmspace, type, data, 1 );
@@ -6369,7 +6369,7 @@ DaoCdata* DaoCdata_NewTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data )
 
 DaoCdata* DaoCdata_WrapTC( DaoVmSpace *vmspace, DaoTypeCore *core, void *data )
 {
-	DaoType *type;
+	DaoType *type = NULL;
 	if( vmspace == NULL ) return DaoCdata_Allocate( type, data, 0 );
 	type = DaoVmSpace_GetType( vmspace, core );
 	return DaoVmSpace_MakeCdata( vmspace, type, data, 0 );

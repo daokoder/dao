@@ -54,6 +54,7 @@ typedef union
 	DMap        *pMap;
 	DaoValue    *pValue;
 	DaoInteger  *pInteger;
+	DaoCstruct  *pCstruct;
 	DaoClass    *pClass;
 	DaoRoutine  *pRoutine;
 	DaoType     *pType;

@@ -3096,26 +3096,61 @@ static DaoCdata* DaoVmSpace_MakeCdata2( DaoVmSpace *self, DaoType *type, void *d
 
 	if( node ) cdata = (DaoCdata*) node->value.pValue;
 
-	if( cdata && cdata->ctype == type ) return cdata;
+	if( cdata && cdata->ctype == type ){
+		int subtype = own ? DAO_CDATA_CXX : DAO_CDATA_PTR;
+		/*
+		// Wrapping a C/C++ object as owned and then as not owned is allowed,
+		// because it may happen that an owned object is passed to C/C++ modules
+		// and then returned. But wrapping as owned first and then as not owned
+		// is not allowed, and should never happen if the wrapping code is written
+		// properly.
+		*/
+		if( cdata->subtype == DAO_CDATA_CXX && subtype == DAO_CDATA_PTR ){
+			subtype = DAO_CDATA_CXX;
+		}
+		if( cdata->data != data || cdata->subtype != subtype ){
+			DaoVmSpace_PrintWarning( self, "Cdata cache inconsistency is detected!" );
+			goto MakeNewWrapper;
+		}
+		DaoGC_IncCycRC( (DaoValue*) cdata ); /* Tell GC to postpone its collection; */
+		return cdata;
+	}
 
+	if( cdata && cdata->data == data ){
+		if( DaoType_ChildOf( cdata->ctype, type ) ){
+			DaoGC_IncCycRC( (DaoValue*) cdata );
+			return cdata;
+		}else if( DaoType_ChildOf( type, cdata->ctype ) ){
+			DaoVmSpace_PrintWarning( self, "Inconsistent cdata wrapping is requested!" );
+			data = DaoCdata_CastData( cdata, type );
+			return DaoVmSpace_MakeCdata2( self, type, data, 0 );
+		}
+	}
+
+MakeNewWrapper:
 	if( cdata ) cdata->vmSpace = NULL;  /* Set to NULL when removed from the cache; */
 
 	cdata = DaoCdata_Allocate( type, data, own );
-	cdata->vmSpace = self;
-	if( data ) DMap_Insert( self->cdataWrappers, data, cdata );
+	if( data ){
+		cdata->vmSpace = self;
+		DMap_Insert( self->cdataWrappers, data, cdata );
+	}
 	return cdata;
 }
 
-static void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
+void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
 {
 	DNode *node = DMap_Find( self->cdataWrappers, data );
-	DaoCdata *cdata = NULL;
+	DaoCdata *cdata;
 
-	if( node ) cdata = (DaoCdata*) node->value.pValue;
+	if( node == NULL ) return;
 
-	if( cdata && cdata->ctype == type ){
+	cdata = (DaoCdata*) node->value.pValue;
+	if( cdata->ctype == type ){
 		cdata->vmSpace = NULL;
 		DMap_EraseNode( self->cdataWrappers, node );
+	}else{
+		DaoVmSpace_PrintWarning( self, "Cdata cache inconsistency is detected!" );
 	}
 }
 
