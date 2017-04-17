@@ -6447,13 +6447,13 @@ static void* DaoType_NativeCast( DaoType *self, DaoType *type, void *data )
 	return NULL;
 }
 
-/*
-// The "type" should be a base or derived type of this cdata type:
-*/
 void* DaoCdata_CastData( DaoCdata *self, DaoType *type )
 {
+	void *data;
 	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
-	return DaoType_NativeCast( self->ctype, type, self->data );
+	data = DaoType_NativeCast( self->ctype, type, self->data );
+	if( data == NULL ) data = DaoType_NativeDownCast( self->ctype, type, self->data );
+	return data;
 }
 
 void* DaoCdata_CastDataTC( DaoCdata *self, DaoTypeCore *core )

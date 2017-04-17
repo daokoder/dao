@@ -3121,9 +3121,17 @@ static DaoCdata* DaoVmSpace_MakeCdata2( DaoVmSpace *self, DaoType *type, void *d
 			DaoGC_IncCycRC( (DaoValue*) cdata );
 			return cdata;
 		}else if( DaoType_ChildOf( type, cdata->ctype ) ){
-			DaoVmSpace_PrintWarning( self, "Inconsistent cdata wrapping is requested!" );
-			data = DaoCdata_CastData( cdata, type );
-			return DaoVmSpace_MakeCdata2( self, type, data, 0 );
+			void *casted = DaoCdata_CastData( cdata, type );
+			if( casted == cdata->data ){
+				/* It is safe to keep the ownership setting: */
+				DaoGC_Assign( (DaoValue**) & cdata->ctype, (DaoValue*) type );
+				return cdata;
+			}
+			/*
+			// Try to wrap the casted data as a borrowed pointer.
+			// It might have been wrapped before.
+			*/
+			return DaoVmSpace_MakeCdata2( self, type, casted, 0 );
 		}
 	}
 
