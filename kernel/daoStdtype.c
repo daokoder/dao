@@ -6151,14 +6151,15 @@ DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *c
 	return NULL;
 }
 
-static void* DaoType_NativeDownCast( DaoType *self, DaoType *totype, void *data )
+static void* DaoType_NativeDownCast( DaoType *self, DaoType *type, void *data )
 {
 	daoint i, n;
-	if( self == totype || totype == NULL || data == NULL ) return data;
-	for(i=0,n=totype->bases->size; i<n; i++){
-		void *p = DaoType_NativeDownCast( self, totype->bases->items.pType[i], data );
+	if( self == type || type == NULL || data == NULL ) return data;
+	if( type->bases == NULL ) return NULL;
+	for(i=0,n=type->bases->size; i<n; i++){
+		void *p = DaoType_NativeDownCast( self, type->bases->items.pType[i], data );
 		if( p ){
-			if( totype->core->casts[i] ) return (*totype->core->casts[i])( p, 1 );;
+			if( type->core->casts[i] ) return (*type->core->casts[i])( p, 1 );;
 			return p;
 		}
 	}
