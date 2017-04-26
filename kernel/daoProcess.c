@@ -1870,7 +1870,7 @@ CallEntry:
 		}OPNEXT() OPCASE( LE_BBB ){
 			LocalBool(vmc->c) = LocalBool(vmc->a) <= LocalBool(vmc->b);
 		}OPNEXT() OPCASE( EQ_BBB ){
-			LocalBool(vmc->c) = LocalBool(vmc->a) <= LocalBool(vmc->b);
+			LocalBool(vmc->c) = LocalBool(vmc->a) == LocalBool(vmc->b);
 		}OPNEXT() OPCASE( NE_BBB ){
 			LocalBool(vmc->c) = LocalBool(vmc->a) != LocalBool(vmc->b);
 		}OPNEXT() OPCASE( AND_BII ){
