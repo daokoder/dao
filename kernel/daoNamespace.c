@@ -299,11 +299,12 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 
 	if( parser->tokens->size == 0 ) goto Error;
 	DList_Clear( parser->errors );
+	parser->evaluator.process->nodebug = 1;
 	k = DaoParser_ParseMaybeScopeConst( parser, &scope, &value, 0, 0, DAO_EXPRLIST_SCOPE );
+	parser->evaluator.process->nodebug = 0;
 	if( k < 0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
 	if( scope && (tid=scope->type) != DAO_CTYPE && tid != DAO_CLASS && tid != DAO_NAMESPACE ){
-		DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 );
 		goto Error;
 	}
 	if( k == n ){
@@ -2125,6 +2126,7 @@ static int DaoNamespace_CheckSetField( DaoType *self, DaoString *name, DaoType *
 	st = LOOKUP_ST( node->value.pInt );
 	pm = LOOKUP_PM( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
+	if( pm == DAO_PERM_PRIVATE && NS != ctx->nameSpace ) return DAO_ERROR_FIELD_HIDDEN;
 	if( pm == DAO_PERM_PRIVATE && NS != ctx->nameSpace ) return DAO_ERROR_FIELD_HIDDEN;
 	if( st == DAO_GLOBAL_CONSTANT ) return DAO_ERROR_FIELD_HIDDEN;
 	dest = NS->variables->items.pVar[id];

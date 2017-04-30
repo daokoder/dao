@@ -208,7 +208,7 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 		DaoRoutine *routine = frame->routine;
 		if( depth && ++i > depth ) break;
 
-		DaoStream_SetColor( stream, "white", "green" );
+		DaoStream_SetColor( stream, "black", "green" );
 		DaoStream_WriteString( stream, routine->routName );
 		DaoStream_WriteChars( stream, "()" );
 		DaoStream_SetColor( stream, NULL, NULL );
@@ -258,6 +258,7 @@ void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	if( debugger && debugger->Debug ) debugger->Debug( debugger, proc, stream );
 }
 
+void DaoProcess_TryDebugging( DaoProcess *self );
 
 static void DaoSTD_Warn( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -275,11 +276,13 @@ static void DaoSTD_Error( DaoProcess *proc, DaoValue *p[], int n )
 
 	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
 	DList_Append( proc->exceptions, exception );
+	DaoProcess_TryDebugging( proc );
 }
 static void DaoSTD_Error2( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException *error = (DaoException*) p[0];
 	DList_Append( proc->exceptions, error->object ? (void*)error->object : (void*)error );
+	DaoProcess_TryDebugging( proc );
 }
 static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -287,6 +290,7 @@ static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException *exception = DaoException_New( etype );
 	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
 	DList_Append( proc->exceptions, exception );
+	DaoProcess_TryDebugging( proc );
 }
 const char *dao_assertion_format = "Assertion failed at line %i in file \"%s\" with message:\n";
 static void DaoSTD_Assert( DaoProcess *proc, DaoValue *p[], int n )
@@ -312,6 +316,7 @@ static void DaoSTD_Assert( DaoProcess *proc, DaoValue *p[], int n )
 	id = sprintf( exception->info->chars, dao_assertion_format, line, file->chars );
 	if( id ) exception->info->size = id;
 	DString_Append( exception->info, p[1]->xString.value );
+	DaoProcess_TryDebugging( proc );
 }
 static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 {

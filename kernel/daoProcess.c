@@ -5046,9 +5046,19 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 }
 
 
-
-
-void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N );
+void DaoProcess_TryDebugging( DaoProcess *self )
+{
+	if( self->nodebug ) return;
+	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
+		DaoStream *stream = self->vmSpace->errorStream;
+		DaoDebugger *debugger = self->vmSpace->debugger;
+		if( self->vmSpace->stopit == 0 && debugger && debugger->Debug ){
+			DaoProcess_Trace( self, 10 );
+			DaoProcess_PrintException( self, NULL, 0 );
+			debugger->Debug( debugger, self, stream );
+		}
+	}
+}
 
 static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *etype, const char *info )
 {
@@ -5072,14 +5082,7 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	except = DaoException_New( etype );
 	DaoException_Init( except, self, info, NULL );
 	DList_Append( self->exceptions, (DaoValue*) except );
-	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
-		DaoDebugger *debugger = self->vmSpace->debugger;
-		if( self->vmSpace->stopit == 0 && debugger && debugger->Debug ){
-			DaoProcess_Trace( self, 10 );
-			DaoProcess_PrintException( self, NULL, 0 );
-			DaoSTD_Debug( self, NULL, 0 );
-		}
-	}
+	DaoProcess_TryDebugging( self );
 	return except;
 }
 void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data )
