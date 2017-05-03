@@ -54,6 +54,8 @@ struct DaoParser
 	DaoNamespace *nameSpace;
 
 	DString *fileName;
+	uint_t   codeStart;
+	uint_t   codeCount;
 
 	int  lineCount;    /* Line count in the source file; */
 	int  curLine;      /* Current line number; */

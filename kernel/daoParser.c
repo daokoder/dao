@@ -285,6 +285,8 @@ void DaoParser_Reset( DaoParser *self )
 {
 	int i;
 	for(i=0; i<=self->lexLevel; ++i) DMap_Reset( self->lookupTables->items.pMap[i] );
+	self->codeStart = 0;
+	self->codeCount = 0;
 	self->evalMode = 0;
 	self->autoReturn = 0;
 	self->isClassBody = 0;
@@ -1046,8 +1048,8 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;
 
-	routine->body->codeStart = self->routine->body->codeStart + left + 1;
-	routine->body->codeCount = right - left - 1;
+	parser->codeStart = self->codeStart + left + 1;
+	parser->codeCount = right - left - 1;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	return right;
 }
@@ -2114,11 +2116,11 @@ int DaoParser_ParseScript( DaoParser *self )
 	DaoNamespace_SetConst( ns, DAO_STD_CONST_MAIN, (DaoValue*) routMain );
 	DString_SetChars( routMain->routName, "__main__" );
 
-	routMain->body->codeStart = 1;
-	routMain->body->codeCount = self->tokens->size;
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
+	self->codeStart = 1;
+	self->codeCount = self->tokens->size;
 
 	if( DaoParser_ParseRoutine( self ) == 0 ){
 		DaoParser_PrintError( self, 0, 0, NULL );
@@ -4959,6 +4961,8 @@ int DaoParser_PostParsing( DaoParser *self )
 	int i, j, k;
 
 	routine->body->source = (DList*) DList_Back( self->nameSpace->sources );
+	routine->body->codeStart = self->codeStart;
+	routine->body->codeCount = self->codeCount;
 
 	if( DaoParser_SetupBranching( self ) == 0 ) return 0;
 
