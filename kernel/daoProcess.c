@@ -5064,9 +5064,9 @@ void DaoProcess_TryDebugging( DaoProcess *self )
 		if( self->vmSpace->stopit == 0 && debugger && debugger->Debug ){
 			DaoProcess_PrintException( self, NULL, 0 );
 			DaoStream_WriteChars( stream, "\n" );
-			DaoStream_SetColor( stream, "white", "blue" );
+			DaoStream_SetColor( stream, "green", "blue" );
 			DaoStream_WriteChars( stream, "[[Dao]]" );
-			DaoStream_SetColor( stream, "blue", NULL );
+			DaoStream_SetColor( stream, "white", "blue" );
 			DaoStream_WriteChars( stream, " Entering debugging mode ..." );
 			DaoStream_SetColor( stream, NULL, NULL );
 			DaoStream_WriteChars( stream, "\n" );

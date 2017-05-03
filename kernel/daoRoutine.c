@@ -373,7 +373,7 @@ void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, 
 		k = i + vmc.first + offset;
 		if( k >= source->size ) break;
 		t2 = tokens[k];
-		if( k != (daoint)vmc.first ){
+		if( k != (daoint)(vmc.first + offset) ){
 			t1 = tokens[k-1];
 			pos = t1->cpos + t1->string.size;
 			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
@@ -401,7 +401,7 @@ void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, 
 		k = i + vmc.first + offset;
 		if( k >= source->size ) break;
 		t2 = tokens[k];
-		if( k != (daoint)vmc.first ){
+		if( k != (daoint)(vmc.first + offset) ){
 			t1 = tokens[k-1];
 			pos = t1->cpos + t1->string.size;
 			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
@@ -428,7 +428,7 @@ void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, 
 	DString_Change( annot, "{{\n}}", "\\n", 0 );
 }
 
-DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
 {
 	char buffer1[10];
 	char buffer2[200];
@@ -494,7 +494,6 @@ void DaoRoutine_PrintCodeSnippet( DaoRoutine *self, DaoStream *stream, int k )
 	int j1 = k >= prev ? k-prev : 0;
 	int j2 = (k+next) < m ? k+next : m-1;
 
-	DaoStream_WriteChars( stream, "In code snippet:\n" );
 	for(j=j1; j<=j2; ++j){
 		DaoRoutine_FormatCode( self, j, *codes[j], mbs );
 		DaoStream_WriteChars( stream, j==k ? ">>" : "  " );

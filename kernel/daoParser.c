@@ -2042,7 +2042,6 @@ InvalidType:
 }
 
 int DaoParser_ParseRoutine( DaoParser *self );
-DAO_DLL int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end );
 
 static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int start, int end )
 {
@@ -2087,7 +2086,6 @@ FailedInstantiation:
 }
 
 
-static int DaoParser_Preprocess( DaoParser *self );
 int DaoParser_ParseScript( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -2122,7 +2120,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
 
-	if( DaoParser_Preprocess( self ) == 0 || DaoParser_ParseRoutine( self ) == 0 ){
+	if( DaoParser_ParseRoutine( self ) == 0 ){
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
@@ -2377,74 +2375,6 @@ void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output )
 	}
 }
 
-
-static int DaoParser_Preprocess( DaoParser *self )
-{
-	DaoNamespace *ns = self->nameSpace;
-	DaoVmSpace *vmSpace = self->vmSpace;
-	DaoToken **tokens = self->tokens->items.pToken;
-	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-	int i, end, tag = 0;
-	int k, right, start = 0;
-	unsigned char tki, tki2;
-
-#if 0
-	printf("routine = %p\n", self->routine );
-	for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string->chars); printf("\n\n");
-#endif
-
-	while( start >=0 && start < self->tokens->size ){
-		self->curLine = tokens[start]->line;
-#if 0
-		printf( "start = %i\n", start );
-		printf("At tokPos : %i, %s\n", tokens[start]->index, tokens[ start ]->string->chars );
-#endif
-
-		tki = tokens[start]->name;
-		tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
-		if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
-			if( start+2 < self->tokens->size && tokens[start+2]->name == DTOK_LB ){
-				if( tki2 == DTOK_IDENTIFIER && tokens[start+1]->line == tokens[start+2]->line ){
-					start += 1;
-					continue;
-				}
-			}
-			/* only for top level "load", for macros in the module  */
-			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size-1 );
-			if( end < 0 ) return 0;
-			if( cons ) DaoParser_MakeCodes( self, start, end-1, ns->inputs );
-			DList_Erase( self->tokens, start, end-start );
-			tokens = self->tokens->items.pToken;
-		}else if( tki == DTOK_VERBATIM ){
-			if( start < 0 ) return 0;
-			start ++;
-		}else{
-			if( tki == DKEY_NAMESPACE ) self->nsDefined = 1;
-			start ++;
-		}
-	}
-
-#if 0
-	for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string.chars); printf("\n\n");
-#endif
-
-	/* Join string literals after handling macro: */
-	for(i=0; i<self->tokens->size; i++ ){
-		DaoToken *t = self->tokens->items.pToken[i];
-		if( (t->name == DTOK_MBS || t->name == DTOK_WCS) && i+1<self->tokens->size ){
-			DaoToken *t2 = self->tokens->items.pToken[i+1];
-			if( t->name == t2->name ){
-				int len = t->string.size;
-				DString_Erase( & t->string, len-1, DAO_NULLPOS );
-				DString_AppendChars( & t->string, t2->string.chars + 1 );
-				DList_Erase( self->tokens, i+1, 1 );
-				i --;
-			}
-		}
-	}
-	DaoParser_PrintWarnings( self );
-	return 1;
-}
 static int DaoParser_AddToScope( DaoParser *self, DString *name, DaoValue *value, DaoType *abtype, int store )
 {
 	DMap *symtable = DaoParser_CurrentSymbolTable( self );
@@ -3713,6 +3643,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;
 		}else if( tki == DKEY_NAMESPACE ){
+			self->nsDefined = 1;
 			start = DaoParser_ParseNamespaceStatement( self, start, to );
 			if( start <0 ) goto ReturnFalse;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );

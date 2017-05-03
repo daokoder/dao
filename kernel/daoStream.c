@@ -127,8 +127,11 @@ static void DaoStdStream_FlushStdout( DaoStream *stream )
 static int DaoStdStream_SetColor( DaoStream *stream, const char *fgcolor, const char *bgcolor )
 {
 	DaoStdStream *self = (DaoStdStream*) stream;
-	if( self->redirect && self->redirect->SetColor ){
-		return self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
+	if( self->redirect ){
+		if( self->redirect->SetColor ){
+			return self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
+		}
+		return 1;
 	}
 	return DaoStream_SetScreenColor( stream, fgcolor, bgcolor );
 }

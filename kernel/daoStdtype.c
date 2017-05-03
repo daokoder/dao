@@ -6642,6 +6642,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	for(i=0; i<n; i++){
 		DaoRoutine *rout = self->callers->items.pRoutine[i];
 		if( codeShown == 0 && rout->subtype == DAO_ROUTINE ){
+			DaoStream_WriteChars( stream, "In code snippet:\n" );
 			DaoRoutine_PrintCodeSnippet( rout, stream, self->lines->items.pInt[i] & 0xffff );
 			codeShown = 1;
 		}
@@ -6910,9 +6911,9 @@ void DaoException_Setup( DaoNamespace *ns )
 	DaoNamespace_AddType( ns, vms->typeError->name, vms->typeError );
 	DaoNamespace_AddTypeConstant( ns, vms->typeWarning->name, vms->typeWarning );
 	DaoNamespace_AddTypeConstant( ns, vms->typeError->name, vms->typeError );
-	DString_SetChars( vms->typeException->aux->xCtype.info, daoExceptionTitles[0] );
-	DString_SetChars( vms->typeWarning->aux->xCtype.info, daoExceptionTitles[1] );
-	DString_SetChars( vms->typeError->aux->xCtype.info, daoExceptionTitles[2] );
+	DString_SetChars( vms->typeException->aux->xCtype.info, daoExceptionTitles[DAO_OK] );
+	DString_SetChars( vms->typeWarning->aux->xCtype.info, "General Warning" );
+	DString_SetChars( vms->typeError->aux->xCtype.info, daoExceptionTitles[DAO_ERROR] );
 }
 
 
