@@ -157,6 +157,7 @@ struct DaoProcess
 /* Create a new virtual machine process */
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL void DaoProcess_Delete( DaoProcess *self );
+DAO_DLL void DaoProcess_Reset( DaoProcess *self );
 
 DAO_DLL DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
 DAO_DLL DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self );

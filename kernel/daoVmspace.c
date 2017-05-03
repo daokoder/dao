@@ -260,10 +260,6 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 	DaoVmSpace_LockCache( self );
 	if( self->processes->size ){
 		proc = (DaoProcess*) DList_Back( self->processes );
-		proc->nodebug = 0;
-		proc->debugging = 0;
-		proc->active = 0;
-		proc->depth = 0;
 		DList_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );
@@ -279,13 +275,7 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 
 	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allProcesses, proc ) ){
-		if( proc->factory ) DList_Clear( proc->factory );
-		if( proc->aux ) DaoAux_Delete( proc->aux );
-		GC_DecRC( proc->future );
-		proc->future = NULL;
-		proc->aux = NULL;
-		DaoProcess_PopFrames( proc, proc->firstFrame );
-		DList_Clear( proc->exceptions );
+		DaoProcess_Reset( proc );
 		DList_PushBack( self->processes, proc );
 	}
 	DaoVmSpace_UnlockCache( self );

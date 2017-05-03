@@ -111,7 +111,6 @@ static DaoVmCode dummyCallCode = {DVM_CALL,0,0,0};
 
 DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 {
-	int i;
 	DaoProcess *self = (DaoProcess*)dao_calloc( 1, sizeof(DaoProcess) );
 	DaoValue_Init( self, DAO_PROCESS );
 	GC_IncRC( vms );
@@ -176,6 +175,35 @@ void DaoProcess_Delete( DaoProcess *self )
 	dao_free( self );
 }
 
+void DaoProcess_Reset( DaoProcess *self )
+{
+	DaoStackFrame *next = self->firstFrame->next;
+
+	if( self->factory ) DList_Clear( self->factory );
+	if( self->aux ) DaoAux_Delete( self->aux );
+	GC_DecRC( self->future );
+	self->future = NULL;
+	self->aux = NULL;
+
+	DaoProcess_PopFrames( self, self->firstFrame );
+	DList_Clear( self->exceptions );
+
+	GC_DecRC( self->firstFrame->routine );
+	GC_DecRC( self->firstFrame->retype );
+	GC_DecRC( self->firstFrame->object );
+
+	memset( self->firstFrame, 0, sizeof(DaoStackFrame) );
+
+	self->firstFrame->next = next;
+	self->firstFrame->active = self->firstFrame;
+	self->firstFrame->types = & dummyType;
+	self->firstFrame->codes = & dummyCode;
+	self->firstFrame->entry = 1;
+	self->nodebug = 0;
+	self->debugging = 0;
+	self->active = 0;
+	self->depth = 0;
+}
 
 DaoVmSpace* DaoProcess_GetVmSpace( DaoProcess *self )
 {
