@@ -131,6 +131,7 @@ struct DaoProcess
 	uchar_t         pauseType;
 	uchar_t         status;
 	uchar_t         active;
+	uchar_t         debugging;
 	uchar_t         nodebug;
 	ushort_t        depth;  /* number of nested calls by DaoProcess_Start(); */
 

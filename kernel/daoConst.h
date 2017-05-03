@@ -203,7 +203,8 @@ enum DaoProcessPauseType
 	DAO_PAUSE_CHANNEL_SEND ,    /* channel::send(); */
 	DAO_PAUSE_CHANNEL_RECEIVE , /* channel::send(); */
 	DAO_PAUSE_CHANFUT_SELECT ,  /* mt::select(); */
-	DAO_PAUSE_COROUTINE_YIELD   /* coroutine; */
+	DAO_PAUSE_COROUTINE_YIELD , /* coroutine; */
+	DAO_PAUSE_DEBUGGING
 };
 
 enum DaoFieldPermission

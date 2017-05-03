@@ -260,6 +260,8 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 	DaoVmSpace_LockCache( self );
 	if( self->processes->size ){
 		proc = (DaoProcess*) DList_Back( self->processes );
+		proc->nodebug = 0;
+		proc->debugging = 0;
 		proc->active = 0;
 		proc->depth = 0;
 		DList_PopBack( self->processes );

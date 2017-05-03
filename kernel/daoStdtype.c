@@ -6606,6 +6606,7 @@ static void DaoException_MakeName( DaoValue *exception, DString *name )
 
 void DaoException_Print( DaoException *self, DaoStream *stream )
 {
+	char buffer[64];
 	int codeShown = 0;
 	int i, h, w = 100, n = self->callers->size;
 	DString *sstring = DString_New();
@@ -6613,12 +6614,22 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	DString_AppendChars( sstring, "[[" );
 	DString_AppendChars( sstring, self->ctype->core->name );
 	DaoException_MakeName( (DaoValue*) self->object, sstring );
-	DString_AppendChars( sstring, "]] --- " );
+	DString_AppendChars( sstring, "]]" );
+
+	DaoStream_SetColor( stream, "white", "red" );
+	DaoStream_WriteString( stream, sstring );
+	DaoStream_SetColor( stream, NULL, NULL );
+
+	DString_SetChars( sstring, " --- " );
+
 	h = sstring->size;
 	if( h > 40 ) h = 40;
 	DString_Append( sstring, self->ctype->aux->xCtype.info );
 	DString_AppendChars( sstring, ":\n" );
+
+	DaoStream_SetColor( stream, "red", NULL );
 	DaoStream_WriteString( stream, sstring );
+	DaoStream_SetColor( stream, NULL, NULL );
 
 	DString_Clear( sstring );
 	DString_Append( sstring, self->info );
@@ -6635,6 +6646,10 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 			codeShown = 1;
 		}
 		DString_AppendChars( sstring, i == 0 ? "Raised by:  " : "Called by:  " );
+
+		DaoStream_SetColor( stream, NULL, NULL );
+		DaoStream_WriteString( stream, sstring );
+		DString_Clear( sstring );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->args->items.pType[0];
 			type = DaoType_GetBaseType( (DaoType*) type->aux );
@@ -6645,19 +6660,24 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 			DString_AppendChars( sstring, "." );
 		}
 		DString_Append( sstring, rout->routName );
-		DString_AppendChars( sstring, "()," );
+		DString_AppendChars( sstring, "()" );
+
+		DaoStream_SetColor( stream, "green", NULL );
+		DaoStream_WriteString( stream, sstring );
+
+		DString_SetChars( sstring, "," );
 		if( rout->subtype == DAO_ROUTINE ){
-			DString_AppendChars( sstring, " at instruction " );
-			DString_AppendUInt16( sstring, self->lines->items.pInt[i] & 0xffff );
-			DString_AppendChars( sstring, " in line " );
-			DString_AppendUInt16( sstring, self->lines->items.pInt[i] >> 16 );
-			DString_AppendChars( sstring, " in file \"" );
+			const char *fmt = " at instruction %i in line %i in file \"";
+			int num = self->lines->items.pInt[i];
+			snprintf( buffer, sizeof(buffer), fmt, num & 0xffff, num >> 16 );
+			DString_AppendChars( sstring, buffer );
 		}else{
 			DString_AppendChars( sstring, " from namespace \"" );
 		}
 		DString_Append( sstring, rout->nameSpace->name );
 		DString_AppendChars( sstring, "\";\n" );
 		DString_Format( sstring, w, 12 );
+		DaoStream_SetColor( stream, NULL, NULL );
 		DaoStream_WriteString( stream, sstring );
 		DString_Clear( sstring );
 	}
