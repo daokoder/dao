@@ -1322,6 +1322,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self )
 	char *chs;
 	int ch;
 
+	self->stdioStream->mode |= DAO_STREAM_HIGHLIGHT;
+	self->errorStream->mode |= DAO_STREAM_HIGHLIGHT;
+
 	DString_SetChars( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
 	ns = DaoVmSpace_LinkModule( self, self->mainNamespace, "help" );

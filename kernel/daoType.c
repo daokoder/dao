@@ -1843,9 +1843,10 @@ DaoTypeCore* DaoType_GetTypeCore( DaoType *self )
 
 static void DaoType_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoStream_WriteChars( stream, "type<" );
-	DaoStream_WriteString( stream, self->xType.name );
-	DaoStream_WriteChars( stream, ">" );
+	DaoStream_PrintHL( stream, 'A', "type" );
+	DaoStream_PrintHL( stream, '{', "<" );
+	DaoStream_PrintHL( stream, 'A', self->xType.name->chars );
+	DaoStream_PrintHL( stream, '}', ">" );
 }
 
 DaoTypeCore daoTypeCore =

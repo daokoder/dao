@@ -38,9 +38,11 @@ typedef struct DaoStdStream  DaoStdStream;
 
 enum DaoStreamModes
 {
-	DAO_STREAM_READABLE = 1<<0 ,
-	DAO_STREAM_WRITABLE = 1<<1 ,
-	DAO_STREAM_AUTOCONV = 1<<2 
+	DAO_STREAM_READABLE  = 1<<0 ,
+	DAO_STREAM_WRITABLE  = 1<<1 ,
+	DAO_STREAM_AUTOCONV  = 1<<2 ,
+	DAO_STREAM_HIGHLIGHT = 1<<3 ,
+	DAO_STREAM_DEBUGGING = 1<<4
 };
 
 
@@ -122,8 +124,10 @@ DAO_DLL int DaoStream_IsReadable( DaoStream *self );
 DAO_DLL int DaoStream_IsWritable( DaoStream *self );
 
 DAO_DLL int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
-DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
+DAO_DLL void DaoStream_TryHighlight( DaoStream *self, int tag );
+DAO_DLL void DaoStream_PrintHL( DaoStream *self, int tag, const char *text );
 
+DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
 DAO_DLL int DaoStream_ReadStdin( DaoStream *self, DString *data, int count );
 DAO_DLL int DaoStream_WriteStdout( DaoStream *self, const void *output, int count );
 DAO_DLL int DaoStream_WriteStderr( DaoStream *self, const void *output, int count );
@@ -137,6 +141,5 @@ DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *output, int close );
 DAO_DLL int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count );
 DAO_DLL int DaoFile_WriteString( FILE *fout, DString *str );
-
 
 #endif

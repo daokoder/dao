@@ -53,6 +53,8 @@ static const char *const help =
 DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *stream )
 {
 	DaoRoutine *routine = proc->activeRoutine;
+	DaoStdStream *oldStream;
+	DaoStdStream *stdStream;
 	DString *input;
 	DList *tokens;
 	DString *line;
@@ -65,6 +67,18 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 	cycmap = DMap_New(0,0);
 	line = DString_New();
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
+	oldStream = (DaoStdStream*) stream;
+	stdStream = (DaoStdStream*) DaoStdStream_New( proc->vmSpace );
+	stdStream->redirect = oldStream->redirect;
+	stdStream->base.Read = stream->Read;
+	stdStream->base.Write = stream->Write;
+	stdStream->base.AtEnd = stream->AtEnd;
+	stdStream->base.Flush = stream->Flush;
+	stdStream->base.SetColor = stream->SetColor;
+	stdStream->base.mode |= DAO_STREAM_HIGHLIGHT;
+	stdStream->base.mode |= DAO_STREAM_DEBUGGING;
+	DaoGC_IncRC( (DaoValue*) stdStream );
+	stream = (DaoStream*) stdStream;
 	while( proc->vmSpace->stopit == 0 ){
 		if( proc->vmSpace->ReadLine ){
 			chs = proc->vmSpace->ReadLine( "(debug) ", line );
@@ -110,7 +124,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 				if( n >= routine->body->vmCodes->size ) n = routine->body->vmCodes->size -1;
 				proc->topFrame->entry = n;
 				proc->status = DAO_PROCESS_STACKED;
-				return;
+				goto DoneDebugging;
 			}
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
 			DaoStream_WriteChars( stream, help );
@@ -155,6 +169,8 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 			DaoStream_WriteChars( stream, "Unknown debugging command.\n" );
 		}
 	}
+DoneDebugging:
+	DaoGC_DecRC( (DaoValue*) stream );
 	DString_Delete( input );
 	DString_Delete( line );
 	DList_Delete( tokens );

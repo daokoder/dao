@@ -1996,23 +1996,30 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 {
 	DaoArray *self = & value->xArray;
 	daoint i, *tmp, *dims = self->dims;
-	int j;
+	int j, k;
 
 	if( self->ndim < 2 ) return;
 	if( self->ndim == 2 && ( dims[0] == 1 || dims[1] == 1 ) ){
 		/* For vectors: */
 		const char *sep = (dims[0] > 1 && dims[1] == 1) ? "; " : ", ";
-		DaoStream_WriteChars( stream, "[ " );
+		DaoStream_PrintHL( stream, '[', "[ " );
 		for(i=0; i<self->size; ++i){
+			DaoStream_TryHighlight( stream, '0' );
 			DaoArray_PrintElement( self, stream, i );
-			if( i+1 < self->size ) DaoStream_WriteChars( stream, sep );
+			DaoStream_TryHighlight( stream, 0 );
+			if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 99 ) break;
+			if( i+1 < self->size ) DaoStream_PrintHL( stream, ',', sep );
 		}
-		DaoStream_WriteChars( stream, " ]" );
+		if( i < self->size ){
+			DaoStream_PrintHL( stream, ',', sep );
+			DaoStream_PrintHL( stream, '0', "..." );
+		}
+		DaoStream_PrintHL( stream, ']', " ]" );
 	}else{
 		DArray *tmpArray = DArray_New(sizeof(daoint));
 		DArray_Resize( tmpArray, self->ndim );
 		tmp = tmpArray->data.daoints;
-		for(i=0; i<self->size; i++){
+		for(i=0, k=0; i<self->size; i++){
 			daoint mod = i;
 			for(j=self->ndim-1; j>=0; --j){
 				daoint res = ( mod % dims[j] );
@@ -2020,17 +2027,33 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 				tmp[j] = res;
 			}
 			if( tmp[self->ndim-1] ==0 ){
-				DaoStream_WriteChars( stream, "row[" );
+				DaoStream_PrintHL( stream, 'A', "row" );
+				DaoStream_PrintHL( stream, '[', "[" );
 				for(j=0; j+1<self->ndim; j++){
 					DaoStream_WriteInt( stream, tmp[j] );
-					DaoStream_WriteChars( stream, "," );
+					DaoStream_PrintHL( stream, ',', "," );
 				}
-				DaoStream_WriteChars( stream, ":]:\t" );
+				DaoStream_PrintHL( stream, ':', ":" );
+				DaoStream_PrintHL( stream, ']', "]" );
+				DaoStream_PrintHL( stream, ':', ":\t" );
 			}
+			DaoStream_TryHighlight( stream, '0' );
 			DaoArray_PrintElement( self, stream, i );
+			DaoStream_TryHighlight( stream, 0 );
 			if( i+1 < self->size ) DaoStream_WriteChars( stream, "\t" );
-			if( tmp[self->ndim-1] +1 == dims[self->ndim-1] )
+			if( tmp[self->ndim-1] +1 == dims[self->ndim-1] ){
 				DaoStream_WriteChars( stream, "\n" );
+				k += 1;
+			}
+			if( (stream->mode & DAO_STREAM_DEBUGGING) && k >= 50 ) break;
+		}
+		if( i < self->size ){
+			DaoStream_PrintHL( stream, 'A', "row" );
+			DaoStream_PrintHL( stream, '[', "[" );
+			DaoStream_PrintHL( stream, '0', "..." );
+			DaoStream_PrintHL( stream, ']', "]" );
+			DaoStream_PrintHL( stream, ':', ":\t" );
+			DaoStream_PrintHL( stream, '0', "..." );
 		}
 		DArray_Delete( tmpArray );
 	}

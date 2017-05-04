@@ -166,9 +166,16 @@ static int DaoEnum_SetTypeValue( DaoEnum *self, DaoType *type, int value )
 static void DaoValue_QuotedPrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
-	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
+	if( self->type == DAO_STRING ){
+		DaoStream_TryHighlight( stream, '"' );
+		DaoStream_WriteChar( stream, '"' );
+	}
 	DaoValue_Print( self, stream, cycmap, proc );
-	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
+	if( self->type == DAO_STRING ){
+		DaoStream_TryHighlight( stream, '"' );
+		DaoStream_WriteChar( stream, '"' );
+		DaoStream_TryHighlight( stream, 0 );
+	}
 }
 
 static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoType *type, int size )
@@ -236,7 +243,7 @@ static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, int copy, 
 
 static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoStream_WriteChars( stream, "none" );
+	DaoStream_PrintHL( stream, '0', "none" );
 }
 
 DaoTypeCore daoNoneCore =
@@ -407,7 +414,9 @@ static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, int cop
 
 static void DaoBoolean_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
+	DaoStream_TryHighlight( stream, '0' );
 	DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" );
+	DaoStream_TryHighlight( stream, 0 );
 }
 
 DaoTypeCore daoBooleanCore =
@@ -623,7 +632,9 @@ static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, int cop
 
 static void DaoInteger_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
+	DaoStream_TryHighlight( stream, '0' );
 	DaoStream_WriteInt( stream, self->xInteger.value );
+	DaoStream_TryHighlight( stream, 0 );
 }
 
 DaoTypeCore daoIntegerCore =
@@ -814,7 +825,9 @@ static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, int copy,
 
 static void DaoFloat_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
+	DaoStream_TryHighlight( stream, '0' );
 	DaoStream_WriteFloat( stream, self->xFloat.value );
+	DaoStream_TryHighlight( stream, 0 );
 }
 
 DaoTypeCore daoFloatCore =
@@ -1197,10 +1210,12 @@ static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, int cop
 
 static void DaoComplex_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
+	DaoStream_TryHighlight( stream, '0' );
 	DaoStream_WriteFloat( stream, self->xComplex.value.real );
 	if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
 	DaoStream_WriteFloat( stream, self->xComplex.value.imag );
 	DaoStream_WriteChars( stream, "C" );
+	DaoStream_TryHighlight( stream, 0 );
 }
 
 DaoTypeCore daoComplexCore =
@@ -1523,7 +1538,14 @@ int DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 
 static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoStream_WriteString( stream, self->xString.value );
+	DaoStream_TryHighlight( stream, '"' );
+	if( (stream->mode & DAO_STREAM_DEBUGGING) && self->xString.value->size > 200 ){
+		DString bytes = DString_WrapBytes( self->xString.value->chars, 200 );
+		DaoStream_WriteString( stream, & bytes );
+	}else{
+		DaoStream_WriteString( stream, self->xString.value );
+	}
+	DaoStream_TryHighlight( stream, 0 );
 }
 
 
@@ -2782,10 +2804,12 @@ static void DaoEnum_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 {
 	DString *name = DString_New();
 	DaoEnum_MakeName( (DaoEnum*) self, name );
+	DaoStream_TryHighlight( stream, '0' );
 	DaoStream_WriteChars( stream, name->chars );
 	DaoStream_WriteChars( stream, "(" );
 	DaoStream_WriteInt( stream, self->xEnum.value );
 	DaoStream_WriteChars( stream, ")" );
+	DaoStream_TryHighlight( stream, 0 );
 	DString_Delete( name );
 }
 
@@ -3234,18 +3258,25 @@ static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 
 	if( cycmap == NULL ) cycmap = DHash_New(0,0);
 	if( DMap_Find( cycmap, self ) ){
-		DaoStream_WriteChars( stream, "{...}" );
+		DaoStream_PrintHL( stream, '{', "{" );
+		DaoStream_PrintHL( stream, '.', "..." );
+		DaoStream_PrintHL( stream, '}', "}" );
 		if( inmap == NULL ) DMap_Delete( cycmap );
 		return;
 	}
 	DMap_Insert( cycmap, self, self );
 
-	DaoStream_WriteChars( stream, "{ " );
+	DaoStream_PrintHL( stream, '{', "{ " );
 	for(i=0; i<self->xList.value->size; ++i){
 		DaoValue_QuotedPrint( self->xList.value->items.pValue[i], stream, cycmap, proc );
-		if( (i+1) < self->xList.value->size ) DaoStream_WriteChars( stream, ", " );
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (i+1) < self->xList.value->size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
-	DaoStream_WriteChars( stream, " }" );
+	if( i < self->xList.value->size ){
+		DaoStream_PrintHL( stream, ',', ", " );
+		DaoStream_PrintHL( stream, '0', "..." );
+	}
+	DaoStream_PrintHL( stream, '}', " }" );
 	DMap_Erase( cycmap, self );
 	if( inmap == NULL ) DMap_Delete( cycmap );
 }
@@ -4657,28 +4688,37 @@ static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, Da
 	daoint i = 0, size = self->value->size;
 
 	if( size == 0 ){
-		DaoStream_WriteChars( stream, self->value->hashing ? "{->}" : "{=>}" );
+		DaoStream_PrintHL( stream, '{', "{" );
+		DaoStream_PrintHL( stream, ':', self->value->hashing ? "->" : "=>" );
+		DaoStream_PrintHL( stream, '}', "}" );
 		return;
 	}
 
 	if( cycmap == NULL ) cycmap = DHash_New(0,0);
 	if( DMap_Find( cycmap, self ) ){
-		DaoStream_WriteChars( stream, "{...}" );
+		DaoStream_PrintHL( stream, '{', "{" );
+		DaoStream_PrintHL( stream, '.', "..." );
+		DaoStream_PrintHL( stream, '}', "}" );
 		if( inmap == NULL ) DMap_Delete( cycmap );
 		return;
 	}
 	DMap_Insert( cycmap, self, self );
 
-	DaoStream_WriteChars( stream, "{ " );
+	DaoStream_PrintHL( stream, '{', "{ " );
 
 	node = DMap_First( self->value );
-	for( ; node!=NULL; node=DMap_Next(self->value,node) ){
+	for( ; node!=NULL; node=DMap_Next(self->value,node), ++i){
 		DaoValue_QuotedPrint( node->key.pValue, stream, cycmap, proc );
-		DaoStream_WriteChars( stream, self->value->hashing ? " -> " : " => " );
+		DaoStream_PrintHL( stream, ':', self->value->hashing ? " -> " : " => " );
 		DaoValue_QuotedPrint( node->value.pValue, stream, cycmap, proc );
-		if( (++i) < size ) DaoStream_WriteChars( stream, ", " );
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (i + 1) < size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
-	DaoStream_WriteChars( stream, " }" );
+	if( i < size ){
+		DaoStream_PrintHL( stream, ',', ", " );
+		DaoStream_PrintHL( stream, '0', "..." );
+	}
+	DaoStream_PrintHL( stream, '}', " }" );
 	DMap_Erase( cycmap, self );
 	if( inmap == NULL ) DMap_Delete( cycmap );
 }
@@ -5612,18 +5652,25 @@ static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Dao
 
 	if( cycmap == NULL ) cycmap = DHash_New(0,0);
 	if( DMap_Find( cycmap, self ) ){
-		DaoStream_WriteChars( stream, "(...)" );
+		DaoStream_PrintHL( stream, '(', "(" );
+		DaoStream_PrintHL( stream, '.', "..." );
+		DaoStream_PrintHL( stream, ')', ")" );
 		if( inmap == NULL ) DMap_Delete( cycmap );
 		return;
 	}
 	DMap_Insert( cycmap, self, self );
 
-	DaoStream_WriteChars( stream, "( " );
+	DaoStream_PrintHL( stream, '(', "( " );
 	for(i=0; i<self->xTuple.size; ++i){
 		DaoValue_QuotedPrint( self->xTuple.values[i], stream, cycmap, proc );
-		if( (i+1) < self->xTuple.size ) DaoStream_WriteChars( stream, ", " );
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (i+1) < self->xTuple.size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
-	DaoStream_WriteChars( stream, " )" );
+	if( i < self->xTuple.size ){
+		DaoStream_PrintHL( stream, ',', ", " );
+		DaoStream_PrintHL( stream, '0', "..." );
+	}
+	DaoStream_PrintHL( stream, ')', " )" );
 	DMap_Erase( cycmap, self );
 	if( inmap == NULL ) DMap_Delete( cycmap );
 }
@@ -5685,11 +5732,9 @@ void DaoNameValue_Delete( DaoNameValue *self )
 static void DaoNameValue_Print( DaoValue *selfv, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoNameValue *self = (DaoNameValue*) selfv;
-	DaoStream_WriteString( stream, self->name );
-	DaoStream_WriteChars( stream, "=" );
-	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
-	DaoValue_Print( self->value, stream, cycmap, proc );
-	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
+	DaoStream_PrintHL( stream, 'A', self->name->chars );
+	DaoStream_PrintHL( stream, ':', "=" );
+	DaoValue_QuotedPrint( self->value, stream, cycmap, proc );
 }
 
 DaoTypeCore daoNameValueCore =

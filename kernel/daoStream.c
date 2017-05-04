@@ -296,6 +296,7 @@ daoint DaoStream_Read( DaoStream *self, DString *output, daoint count )
 	if( count > 0 ) DString_Reset( output, count );
 	return count;
 }
+
 daoint DaoStream_ReadBytes( DaoStream *self, void *output, daoint count )
 {
 	daoint sum = 0;
@@ -314,11 +315,7 @@ daoint DaoStream_ReadBytes( DaoStream *self, void *output, daoint count )
 	}
 	return sum;
 }
-int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
-{
-	if( self->SetColor ) return self->SetColor( self, fgcolor, bgcolor );
-	return 0;
-}
+
 int DaoStream_ReadLine( DaoStream *self, DString *line )
 {
 	DString_Reset( line, 0 );
@@ -326,6 +323,52 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 	if( self->AtEnd && self->AtEnd( self ) ) return 0;
 	return self->Read( self, line, -1 ) >= 0;
 }
+
+int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
+{
+	if( self->SetColor ) return self->SetColor( self, fgcolor, bgcolor );
+	return 0;
+}
+
+void DaoStream_TryHighlight( DaoStream *self, int tag )
+{
+	const char *color = NULL;
+
+	if( ! (self->mode & DAO_STREAM_HIGHLIGHT) ) return;
+
+	if( tag == 0 ){
+		DaoStream_SetColor( self, NULL, NULL );
+		return;
+	}
+	switch( tag ){
+	case '"' : color = "red"; break;
+	case '0' : color = "red"; break;
+	case 'A' : color = "green"; break;
+	case '.' : color = "green"; break;
+	case '(' :
+	case ')' : color = "blue"; break;
+	case '[' :
+	case ']' : color = "blue"; break;
+	case '{' :
+	case '}' : color = "blue"; break;
+	case ',' : color = "magenta"; break;
+	case ';' : color = "magenta"; break;
+	case ':' : color = "cyan"; break;
+	default: break;
+	}
+	DaoStream_SetColor( self, color, NULL );
+}
+
+void DaoStream_PrintHL( DaoStream *self, int tag, const char *text )
+{
+	DaoStream_TryHighlight( self, tag );
+	DaoStream_WriteChars( self, text );
+	DaoStream_TryHighlight( self, 0 );
+}
+
+
+
+
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
 	int ch;
@@ -374,9 +417,19 @@ int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count )
 }
 int DaoFile_WriteString( FILE* file, DString *str )
 {
+	char buffer[1024];
+	int nullterm = str->chars[ str->size ] == '\0';
 	daoint pos = 0;
 	while( pos < str->size ){
-		daoint count = fprintf( file, "%s", str->chars + pos );
+		daoint count = 0;
+		if( nullterm ){
+			count = fprintf( file, "%s", str->chars + pos );
+		}else{
+			count = str->size - pos;
+			if( count > sizeof(buffer) ) count = sizeof(buffer);
+			count = snprintf( buffer, count, "%s", str->chars + pos );
+			if( count >= 0 ) count = fprintf( file, "%s", buffer );
+		}
 		if( count < 0 ) return 0;
 
 		pos += count;
