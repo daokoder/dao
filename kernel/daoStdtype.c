@@ -1542,6 +1542,7 @@ static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Da
 	if( (stream->mode & DAO_STREAM_DEBUGGING) && self->xString.value->size > 200 ){
 		DString bytes = DString_WrapBytes( self->xString.value->chars, 200 );
 		DaoStream_WriteString( stream, & bytes );
+		DaoStream_WriteChars( stream, "..." );
 	}else{
 		DaoStream_WriteString( stream, self->xString.value );
 	}

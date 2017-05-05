@@ -1996,7 +1996,7 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 {
 	DaoArray *self = & value->xArray;
 	daoint i, *tmp, *dims = self->dims;
-	int j, k;
+	int j, k, m;
 
 	if( self->ndim < 2 ) return;
 	if( self->ndim == 2 && ( dims[0] == 1 || dims[1] == 1 ) ){
@@ -2019,7 +2019,7 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 		DArray *tmpArray = DArray_New(sizeof(daoint));
 		DArray_Resize( tmpArray, self->ndim );
 		tmp = tmpArray->data.daoints;
-		for(i=0, k=0; i<self->size; i++){
+		for(i=0, k=0, m = 1; i<self->size; ++i, ++m){
 			daoint mod = i;
 			for(j=self->ndim-1; j>=0; --j){
 				daoint res = ( mod % dims[j] );
@@ -2037,13 +2037,18 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 				DaoStream_PrintHL( stream, ']', "]" );
 				DaoStream_PrintHL( stream, ':', ":\t" );
 			}
-			DaoStream_TryHighlight( stream, '0' );
-			DaoArray_PrintElement( self, stream, i );
-			DaoStream_TryHighlight( stream, 0 );
-			if( i+1 < self->size ) DaoStream_WriteChars( stream, "\t" );
+			if( m <= 20 || !(stream->mode & DAO_STREAM_DEBUGGING) ){
+				DaoStream_TryHighlight( stream, '0' );
+				DaoArray_PrintElement( self, stream, i );
+				DaoStream_TryHighlight( stream, 0 );
+				if( i+1 < self->size ) DaoStream_WriteChars( stream, "\t" );
+			}else if( m == 21 ){
+				DaoStream_PrintHL( stream, '0', "..." );
+			}
 			if( tmp[self->ndim-1] +1 == dims[self->ndim-1] ){
 				DaoStream_WriteChars( stream, "\n" );
 				k += 1;
+				m = 0;
 			}
 			if( (stream->mode & DAO_STREAM_DEBUGGING) && k >= 50 ) break;
 		}

@@ -3149,7 +3149,8 @@ void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
 	if( node == NULL ) return;
 
 	cdata = (DaoCdata*) node->value.pValue;
-	if( cdata->ctype == type ){
+	if( cdata->ctype == type || type == NULL ){
+		cdata->data = NULL;
 		cdata->vmSpace = NULL;
 		DMap_EraseNode( self->cdataWrappers, node );
 	}else{
