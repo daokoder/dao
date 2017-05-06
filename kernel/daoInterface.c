@@ -889,7 +889,7 @@ TryTarget:
 		DaoValue *args2[2];
 		args2[0] = args[0] == self ? self->xCinValue.value : args[0];
 		args2[1] = args[1] == self ? self->xCinValue.value : args[1];
-		return type->core->DoBinary( self->xCinValue.value, op, args, proc );
+		return type->core->DoBinary( self->xCinValue.value, op, args2, proc );
 	}
 	return NULL;
 }
