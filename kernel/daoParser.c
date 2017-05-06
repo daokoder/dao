@@ -2895,6 +2895,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			return start;
 		}
 	}else if( value->type == DAO_INTERFACE ){
+		DaoType *abtype;
 		inter = (DaoInterface*) value;
 		if( tokens[start+1]->name == DKEY_FOR ){
 			DString *name = DaoParser_GetString( self );
@@ -2908,6 +2909,8 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			start -= 1;
 
 			cintype = DaoCinType_New( inter, target );
+			abtype = cintype->vatype;
+			DaoParser_AddToScope( self, abtype->name, (DaoValue*)cintype, abtype, storeType );
 		}else if( value->xInterface.derived ){
 			ec = DAO_SYMBOL_WAS_DEFINED;
 			goto ErrorInterfaceDefinition;

@@ -1403,36 +1403,57 @@ static void DaoVmSpace_Interun( DaoVmSpace *self )
 
 static void DaoVmSpace_PrintCode( DaoVmSpace *self )
 {
-	DMap *printed = DHash_New(0,0);
 	DaoNamespace *ns = self->mainNamespace;
+	DMap *printed;
 	daoint i, j;
-	if( self->options & DAO_OPTION_LIST_BC ){
-		for(i=ns->cstUser; i<ns->constants->size; i++){
-			DaoValue *p = ns->constants->items.pConst[i]->value;
-			if( p->type == DAO_ROUTINE && p != (DaoValue*) ns->mainRoutine ){
-				DaoRoutine *routine = (DaoRoutine*) p;
-				if( routine->overloads == NULL ){
-					if( DMap_Find( printed, routine ) ) continue;
-					DMap_Insert( printed, routine, NULL );
-					DaoRoutine_PrintCode( routine, self->stdioStream );
-				}else{
-					for(j=0; j<routine->overloads->routines->size; ++j){
-						DaoRoutine *rout = routine->overloads->routines->items.pRoutine[j];
+
+	if( !(self->options & DAO_OPTION_LIST_BC) ) return;
+
+	printed = DHash_New(0,0);
+	for(i=ns->cstUser; i<ns->constants->size; i++){
+		DaoValue *p = ns->constants->items.pConst[i]->value;
+		if( p->type == DAO_ROUTINE && p != (DaoValue*) ns->mainRoutine ){
+			DaoRoutine *routine = (DaoRoutine*) p;
+			if( routine->overloads == NULL ){
+				if( DMap_Find( printed, routine ) ) continue;
+				DMap_Insert( printed, routine, NULL );
+				DaoRoutine_PrintCode( routine, self->stdioStream );
+			}
+		}else if( p->type == DAO_CLASS ){
+			if( DMap_Find( printed, p ) ) continue;
+			DMap_Insert( printed, p, NULL );
+			DaoClass_PrintCode( & p->xClass, self->stdioStream );
+			DaoStream_WriteChars( self->stdioStream, "\n\n" );
+		}else if( p->type == DAO_CINTYPE ){
+			DaoCinType *cintype = (DaoCinType*) p;
+			DNode *it;
+
+			if( DMap_Find( printed, p ) ) continue;
+			DMap_Insert( printed, p, NULL );
+			DaoStream_WriteChars( self->stdioStream, "Concrete Interface: " );
+			DaoStream_WriteString( self->stdioStream, cintype->vatype->name );
+			DaoStream_WriteChars( self->stdioStream, "\n" );
+			for(it=DMap_First(cintype->methods); it; it=DMap_Next(cintype->methods, it)){
+				DaoRoutine *routine = it->value.pRoutine;
+				if( it->value.pRoutine->overloads ){
+					DRoutines *routs = routine->overloads;
+					for(j=0; j<routs->routines->size; ++j){
+						DaoRoutine *rout = routs->routines->items.pRoutine[j];
 						if( DMap_Find( printed, rout ) ) continue;
 						DMap_Insert( printed, rout, NULL );
 						DaoRoutine_PrintCode( rout, self->stdioStream );
 					}
+				}else{
+					if( DMap_Find( printed, routine ) ) continue;
+					DMap_Insert( printed, routine, NULL );
+					DaoRoutine_PrintCode( routine, self->stdioStream );
 				}
-			}else if( p->type == DAO_CLASS ){
-				if( DMap_Find( printed, p ) ) continue;
-				DMap_Insert( printed, p, NULL );
-				DaoStream_WriteChars( self->stdioStream, "\n\n" );
-				DaoClass_PrintCode( & p->xClass, self->stdioStream );
 			}
+			DaoStream_WriteChars( self->stdioStream, "\n\n" );
 		}
-		DaoStream_Flush( self->stdioStream );
-		if( ns->mainRoutine ) DaoRoutine_PrintCode( ns->mainRoutine, self->stdioStream );
 	}
+	DaoStream_Flush( self->stdioStream );
+	if( ns->mainRoutine ) DaoRoutine_PrintCode( ns->mainRoutine, self->stdioStream );
 	DMap_Delete( printed );
 }
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )

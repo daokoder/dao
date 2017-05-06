@@ -10,7 +10,9 @@ interface InterA
 interface InterA for int
 {
 	routine size(){
+		var tmp = (InterA) (any) self;
 		io.writeln( "InterA<int>::size()", std.about(self) )
+		io.writeln( tmp.serialize() );
 		return self + 1;
 	}
 	routine serialize() => string { return "abc" + (string) self; }

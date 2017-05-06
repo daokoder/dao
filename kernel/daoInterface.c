@@ -509,7 +509,7 @@ void DaoCinType_DeriveMethods( DaoCinType *self )
 		self->vatype->bases = DList_New( DAO_DATA_VALUE );
 		DList_Append( self->citype->bases, base->citype );
 		DList_Append( self->vatype->bases, base->vatype );
-		for(it=DMap_First(base->methods); it; it=DMap_Next( base->methods, it )){
+		for(it=DMap_First(base->methods); it; it=DMap_Next(base->methods, it)){
 			if( it->value.pRoutine->overloads ){
 				DRoutines *routs = it->value.pRoutine->overloads;
 				for(k=0,m=routs->routines->size; k<m; k++){
