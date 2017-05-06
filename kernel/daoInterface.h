@@ -69,14 +69,12 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 // }
 //
 // -- SomeInterface:
-//    Abstract interface type whose methods must all be implemented here;
+//    Abstract interface type whose methods must be implemented here.
+//    Only methods that have no matching implementations in SomeTargetType
+//    need to be implemented in the concrete interface;
 //
 // -- SomeTargetType:
 //    Target type which can be any type;
-//
-// -- SomeMethod:
-//    Inside non-static methods, the implicit self parameter is automatically casted to
-//    the target type.
 //
 // -- Type Names:
 //    interface<SomeInterface<SomeTargetType>>: class  type for the concrete interface;

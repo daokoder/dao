@@ -1415,14 +1415,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	right += 1;
 	if( tokens[right]->name != DTOK_LCB ) return right - 1;
 
-	if( module->hostCinType && selfpar ){
-		int b = DaoRoutine_AddConstant( routine, (DaoValue*) module->hostCinType->target );
-		DString_SetChars( mbs, "self" );
-		MAP_Insert( DaoParser_CurrentSymbolTable( module ), mbs, module->regCount );
-		DaoParser_AddCode( module, DVM_CAST, 0, b, module->regCount );
-		DaoParser_PushRegister( module );
-	}
-
 	start = right;
 	e2 = start;
 	if( tokens[start]->name == DTOK_LCB ){
@@ -2832,7 +2824,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		parser->byteCoder = self->byteCoder;
 		parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, perm );
 	}
-	if( self->isClassBody && tokens[right]->name == DTOK_RCB ){
+	if( (self->isClassBody || self->isCinTypeBody) && tokens[right]->name == DTOK_RCB ){
 		DList_Append( self->routCompilable, parser );
 		return right + 1;
 	}
@@ -2852,6 +2844,24 @@ Failed:
 	return -1;
 }
 static int DaoParser_ParseCodes( DaoParser *self, int from, int to );
+static int DaoParser_CompileRoutines( DaoParser *self )
+{
+	daoint i, error = 0;
+	for(i=0; i<self->routCompilable->size; i++){
+		DaoParser *parser = (DaoParser*) self->routCompilable->items.pValue[i];
+		DaoRoutine *rout = parser->routine;
+		if( self->byteBlock ){
+			parser->byteCoder = self->byteCoder;
+			parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
+		}
+		error |= DaoParser_ParseRoutine( parser ) == 0;
+		if( error ) DaoParser_PrintError( parser, 0, 0, NULL );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+		if( error ) break;
+	}
+	self->routCompilable->size = 0;
+	return error == 0;
+}
 static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int to, int storeType )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -3004,7 +3014,6 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_INTERFACE );
 		goto ErrorInterfaceDefinition;
 	}
-	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( cintype ){
 		if( DaoType_MatchInterface( cintype->vatype, inter, NULL ) == 0 ){
 			ename = cintype->vatype->name;
@@ -3015,7 +3024,10 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			inter->concretes = DHash_New(0,DAO_DATA_VALUE);
 		}
 		DMap_Insert( inter->concretes, cintype->target, cintype );
+		cintype->vatype->kernel->methods = DMap_Copy( cintype->methods );
 	}
+	if( DaoParser_CompileRoutines( parser ) == 0 ) goto ErrorInterfaceDefinition;
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right + 1;
 ErrorInterfaceBase:
 	DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
@@ -3025,24 +3037,6 @@ ErrorInterfaceDefinition:
 	if( ec ) DaoParser_Error( self, ec, ename );
 	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );
 	return -1;
-}
-static int DaoParser_CompileRoutines( DaoParser *self )
-{
-	daoint i, error = 0;
-	for(i=0; i<self->routCompilable->size; i++){
-		DaoParser *parser = (DaoParser*) self->routCompilable->items.pValue[i];
-		DaoRoutine *rout = parser->routine;
-		if( self->byteBlock ){
-			parser->byteCoder = self->byteCoder;
-			parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
-		}
-		error |= DaoParser_ParseRoutine( parser ) == 0;
-		if( error ) DaoParser_PrintError( parser, 0, 0, NULL );
-		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-		if( error ) break;
-	}
-	self->routCompilable->size = 0;
-	return error == 0;
 }
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {

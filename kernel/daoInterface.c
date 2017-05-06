@@ -122,56 +122,55 @@ static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds
 	}
 	return (k >= 0);
 }
-int DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
+
+static int DaoInterface_CheckMethod( DaoRoutine *routine, DaoType *type, DMap *binds )
 {
+	DaoRoutine *method = NULL;
 	DNode *it;
-	DaoRoutine *rout2;
-	daoint i, n, id;
+
 	if( type->tid == DAO_OBJECT || type->tid == DAO_CLASS ){
 		DaoClass *klass = & type->aux->xClass;
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			rout2 = klass->initRoutines;
-			if( !(rout->attribs & DAO_ROUT_INITOR) ){
-				id = DaoClass_FindConst( klass, rout->routName );
-				if( id <0 ) return 0;
-				rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
-				if( rout2->type != DAO_ROUTINE ) return 0;
-			}
-			/*printf( "AAA: %s %s\n", rout->routType->name->chars,rout2->routType->name->chars);*/
-			if( DaoRoutine_IsCompatible( rout2, rout->routType, binds ) ==0 ) return 0;
+		method = klass->initRoutines;
+		if( !(routine->attribs & DAO_ROUT_INITOR) ){
+			int id = DaoClass_FindConst( klass, routine->routName );
+			if( id <0 ) return 0;
+			method = (DaoRoutine*) DaoClass_GetConst( klass, id );
+			if( method->type != DAO_ROUTINE ) return 0;
 		}
 	}else if( type->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) type->aux;
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			DString *name = rout->routName;
-			if( rout->attribs & DAO_ROUT_INITOR ) name = inter->abtype->name;
-			it = DMap_Find( inter->methods, name );
-			if( it == NULL ) return 0;
-			if( DaoRoutine_IsCompatible( it->value.pRoutine, rout->routType, binds ) ==0 ) return 0;
-		}
+		DString *name = routine->routName;
+		if( routine->attribs & DAO_ROUT_INITOR ) name = inter->abtype->name;
+		it = DMap_Find( inter->methods, name );
+		if( it != NULL ) method = it->value.pRoutine;
 	}else if( type->tid == DAO_CINVALUE ){
 		DaoCinType *cintype = (DaoCinType*) type->aux;
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			DString *name = rout->routName;
-			if( rout->attribs & DAO_ROUT_INITOR ) name = cintype->vatype->name;
-			it = DMap_Find( cintype->methods, name );
-			if( it == NULL ) return 0;
-			if( DaoRoutine_IsCompatible( it->value.pRoutine, rout->routType, binds ) ==0 ) return 0;
+		DString *name = routine->routName;
+		if( routine->attribs & DAO_ROUT_INITOR ) name = cintype->vatype->name;
+		it = DMap_Find( cintype->methods, name );
+		if( it == NULL && cintype->target != NULL ){
+			return DaoInterface_CheckMethod( routine, cintype->target, binds );
 		}
+		if( it != NULL ) method = it->value.pRoutine;
 	}else{
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			DString *name = rout->routName;
-			DaoRoutine *func;
-			if( rout->attribs & DAO_ROUT_INITOR ) name = type->name;
-			func = DaoType_FindFunction( type, name );
-			if( func == NULL ) return 0;
-			if( DaoRoutine_IsCompatible( func, rout->routType, binds ) ==0 ) return 0;
-		}
+		DString *name = routine->routName;
+		if( routine->attribs & DAO_ROUT_INITOR ) name = type->name;
+		method = DaoType_FindFunction( type, name );
 	}
+	if( method == NULL ) return 0;
+	/*printf( "AAA: %s %s\n", routine->routType->name->chars,method->routType->name->chars);*/
+	return DaoRoutine_IsCompatible( method, routine->routType, binds );
+}
+
+int DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
+{
+	daoint i;
+
+	for(i=0; i<methods->size; ++i){
+		DaoRoutine *routine = methods->items.pRoutine[i];
+		if( DaoInterface_CheckMethod( routine, type, binds ) == 0 ) return 0;
+	}
+
 	return 1;
 }
 static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *binds )
@@ -465,6 +464,11 @@ DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 	GC_IncRC( self->vatype );
 	GC_IncRC( self->abstract );
 	GC_IncRC( self->target );
+
+	self->vatype->kernel = DaoTypeKernel_New( NULL );
+	self->vatype->kernel->abtype = self->vatype;
+	GC_IncRC( self->vatype->kernel );
+	GC_IncRC( self->vatype );
 
 	self->citype->args = DList_New( DAO_DATA_VALUE );
 	self->vatype->args = DList_New( DAO_DATA_VALUE );

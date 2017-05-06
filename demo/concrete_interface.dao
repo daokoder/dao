@@ -10,12 +10,11 @@ interface InterA
 interface InterA for int
 {
 	routine size(){
-		var tmp = (InterA) (any) self;
 		io.writeln( "InterA<int>::size()", std.about(self) )
-		io.writeln( tmp.serialize() );
-		return self + 1;
+		io.writeln( "InterA<int>::size()", self.serialize() );
+		return (int)self + 1;
 	}
-	routine serialize() => string { return "abc" + (string) self; }
+	routine serialize() => string { return "abc" + (string) (int) self; }
 }
 
 var a: InterA = 123       # a: value type InterA<int>; variable type InterA;
@@ -50,7 +49,7 @@ interface InterB : InterA
 interface InterB for int : InterA<int>
 {
 	routine []( index: int ) => int {
-		return (self & (1<<index)) >> index;
+		return ((int)self & (1<<index)) >> index;
 	}
 }
 

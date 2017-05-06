@@ -11,7 +11,8 @@ interface InterA for int
 {
 	routine size(){
 		io.writeln( "InterA<int>::size()", std.about(self) )
-		return self + 1;
+		io.writeln( "InterA<int>::size()", self.serialize() );
+		return (int)self + 1;
 	}
 	routine serialize() => string { return "abc" + (string) self; }
 }
@@ -97,7 +98,7 @@ interface InterB : InterA
 interface InterB for int : InterA<int>
 {
     routine []( index: int ) => int {
-        return (self & (1<<index)) >> index;
+        return ((int)self & (1<<index)) >> index;
     }   
 }
 
