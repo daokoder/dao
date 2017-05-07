@@ -3663,6 +3663,29 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		tki = tokens[start]->name;
 		switch( tki ){
 		case DTOK_LCB :
+			rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, to );
+			if( rb > 0 && rb < to ){
+				int next = tokens[rb + 1]->name;
+				int tryexp = next == DTOK_DOT || next == DTOK_COLON2;
+				tryexp |= next >= DTOK_ADD && next <= DTOK_TILDE;
+				tryexp |= next >= DTOK_POW && next <= DTOK_DECR;
+				if( tryexp ){
+					DaoInode *back = self->vmcLast;
+					int oldcount = self->regCount;
+					int count = self->errors->size;
+
+					enode = DaoParser_ParseExpression( self, 0 );
+					if( enode.reg >= 0 ){
+						start = self->curToken + 1;
+						continue;
+					}else{
+						DList_Erase( self->errors, count, -1 );
+						DaoParser_PopCodes( self, back );
+						DaoParser_PopRegisters( self, self->regCount - oldcount );
+					}
+				}
+			}
+			self->curToken = start;
 			DaoParser_AddScope2( self, start );
 			start++;
 			continue;
