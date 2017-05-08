@@ -2761,6 +2761,8 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 			int tm = type->tid == DAO_NONE;
 			if( type->tid == DAO_VARIANT ){
 				tm = DaoType_MatchValue( type, dao_none_value, NULL );
+			}else if( type->tid == DAO_CINVALUE ){
+				tm = DaoType_MatchValue( type->aux->xCinType.target, dao_none_value, NULL );
 			}
 			if( tm == 0 ){
 				DaoProcess_RaiseTypeError( self, self->vmSpace->typeNone, type, "moving" );
@@ -2770,6 +2772,16 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 	}
 	ret = DaoProcess_SetValue( self, self->activeCode->c, value );
 	if( ret == NULL && type ) DaoProcess_RaiseError( self, "Value", "invalid return" );
+	if( ret && ret->type == DAO_CINVALUE ){
+		DaoCinValue *cinvalue = (DaoCinValue*) ret;
+		if( value == NULL ){
+			ret = cinvalue->value;
+		}else if( value->type != DAO_CINVALUE ){
+			ret = cinvalue->value;
+		}else if( value->xCinValue.cintype != cinvalue->cintype ){
+			ret = cinvalue->value;
+		}
+	}
 	return ret;
 }
 

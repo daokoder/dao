@@ -227,10 +227,6 @@ DaoCdata* DaoObject_CastCdataTC( DaoObject *self, DaoTypeCore *core )
 	return NULL;
 }
 
-void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data )
-{
-}
-
 int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject *hostObject )
 {
 	DNode *node;

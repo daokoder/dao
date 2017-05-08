@@ -2127,7 +2127,6 @@ static int DaoNamespace_CheckSetField( DaoType *self, DaoString *name, DaoType *
 	pm = LOOKUP_PM( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
 	if( pm == DAO_PERM_PRIVATE && NS != ctx->nameSpace ) return DAO_ERROR_FIELD_HIDDEN;
-	if( pm == DAO_PERM_PRIVATE && NS != ctx->nameSpace ) return DAO_ERROR_FIELD_HIDDEN;
 	if( st == DAO_GLOBAL_CONSTANT ) return DAO_ERROR_FIELD_HIDDEN;
 	dest = NS->variables->items.pVar[id];
 	if( DaoType_MatchTo( value, dest->dtype, NULL ) == 0 ) return DAO_ERROR_TYPE;

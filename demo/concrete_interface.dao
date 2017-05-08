@@ -10,6 +10,8 @@ interface InterA
 interface InterA for int
 {
 	routine size(){
+		io.writeln( "InterA<int>::size()", self )
+		self += 789;
 		io.writeln( "InterA<int>::size()", std.about(self) )
 		io.writeln( "InterA<int>::size()", self.serialize() );
 		return self + 1;
@@ -22,7 +24,7 @@ var b = (InterA) 123;     # b: value type InterA<int>; variable type InterA<int>
 var c: InterA<int> = 123  # c: value type InterA<int>; variable type InterA<int>;
 
 io.writeln( a.size() )
-io.writeln( (int) a )
+io.writeln( "value", (int) a )
 
 var d: int = c
 

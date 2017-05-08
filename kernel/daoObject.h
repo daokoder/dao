@@ -58,8 +58,6 @@ DAO_DLL int DaoObject_ChildOf( DaoObject *self, DaoValue *obj );
 DAO_DLL DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host );
 DAO_DLL void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent );
 
-DAO_DLL void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
-
 DAO_DLL int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *value, DaoObject *objThis );
 DAO_DLL int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *objThis );
 

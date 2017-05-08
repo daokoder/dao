@@ -2007,12 +2007,15 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 			DaoStream_TryHighlight( stream, '0' );
 			DaoArray_PrintElement( self, stream, i );
 			DaoStream_TryHighlight( stream, 0 );
-			if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 99 ) break;
+			if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 19 ) break;
 			if( i+1 < self->size ) DaoStream_PrintHL( stream, ',', sep );
 		}
 		if( i < self->size ){
 			DaoStream_PrintHL( stream, ',', sep );
-			DaoStream_PrintHL( stream, '0', "..." );
+			DaoStream_PrintHL( stream, ',', "...(" );
+			DaoStream_TryHighlight( stream, ',' );
+			DaoStream_WriteInt( stream, self->size - 1 - i );
+			DaoStream_WriteChars( stream, " elements truncated)" );
 		}
 		DaoStream_PrintHL( stream, ']', " ]" );
 	}else{
@@ -2042,15 +2045,20 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 				DaoArray_PrintElement( self, stream, i );
 				DaoStream_TryHighlight( stream, 0 );
 				if( i+1 < self->size ) DaoStream_WriteChars( stream, "\t" );
-			}else if( m == 21 ){
-				DaoStream_PrintHL( stream, '0', "..." );
 			}
 			if( tmp[self->ndim-1] +1 == dims[self->ndim-1] ){
+				if( m > 10 && (stream->mode & DAO_STREAM_DEBUGGING) ){
+					DaoStream_PrintHL( stream, ',', "...(" );
+					DaoStream_TryHighlight( stream, ',' );
+					DaoStream_WriteInt( stream, m - 10 );
+					DaoStream_WriteChars( stream, " elements truncated)" );
+					DaoStream_TryHighlight( stream, 0 );
+				}
 				DaoStream_WriteChars( stream, "\n" );
 				k += 1;
 				m = 0;
 			}
-			if( (stream->mode & DAO_STREAM_DEBUGGING) && k >= 50 ) break;
+			if( (stream->mode & DAO_STREAM_DEBUGGING) && k >= 20 ) break;
 		}
 		if( i < self->size ){
 			DaoStream_PrintHL( stream, 'A', "row" );
@@ -2058,7 +2066,11 @@ static void DaoArray_Print( DaoValue *value, DaoStream *stream, DMap *cycmap, Da
 			DaoStream_PrintHL( stream, '0', "..." );
 			DaoStream_PrintHL( stream, ']', "]" );
 			DaoStream_PrintHL( stream, ':', ":\t" );
-			DaoStream_PrintHL( stream, '0', "..." );
+			DaoStream_PrintHL( stream, ',', "...(" );
+			DaoStream_TryHighlight( stream, ',' );
+			DaoStream_WriteInt( stream, self->size / dims[self->ndim-1] - k );
+			DaoStream_WriteChars( stream, " rows truncated)" );
+			DaoStream_TryHighlight( stream, 0 );
 		}
 		DArray_Delete( tmpArray );
 	}

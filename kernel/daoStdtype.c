@@ -1539,10 +1539,13 @@ int DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_TryHighlight( stream, '"' );
-	if( (stream->mode & DAO_STREAM_DEBUGGING) && self->xString.value->size > 200 ){
-		DString bytes = DString_WrapBytes( self->xString.value->chars, 200 );
+	if( (stream->mode & DAO_STREAM_DEBUGGING) && self->xString.value->size > 80 ){
+		DString bytes = DString_WrapBytes( self->xString.value->chars, 60 );
 		DaoStream_WriteString( stream, & bytes );
-		DaoStream_WriteChars( stream, "..." );
+		DaoStream_TryHighlight( stream, ',' );
+		DaoStream_WriteChars( stream, "...(" );
+		DaoStream_WriteInt( stream, self->xString.value->size - 60 );
+		DaoStream_WriteChars( stream, " bytes truncated)" );
 	}else{
 		DaoStream_WriteString( stream, self->xString.value );
 	}
@@ -3270,12 +3273,15 @@ static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 	DaoStream_PrintHL( stream, '{', "{ " );
 	for(i=0; i<self->xList.value->size; ++i){
 		DaoValue_QuotedPrint( self->xList.value->items.pValue[i], stream, cycmap, proc );
-		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 19 ) break;
 		if( (i+1) < self->xList.value->size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
 	if( i < self->xList.value->size ){
 		DaoStream_PrintHL( stream, ',', ", " );
-		DaoStream_PrintHL( stream, '0', "..." );
+		DaoStream_PrintHL( stream, ',', "...(" );
+		DaoStream_TryHighlight( stream, ',' );
+		DaoStream_WriteInt( stream, self->xList.value->size - 1 - i );
+		DaoStream_WriteChars( stream, " items truncated)" );
 	}
 	DaoStream_PrintHL( stream, '}', " }" );
 	DMap_Erase( cycmap, self );
@@ -4712,12 +4718,15 @@ static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, Da
 		DaoValue_QuotedPrint( node->key.pValue, stream, cycmap, proc );
 		DaoStream_PrintHL( stream, ':', self->value->hashing ? " -> " : " => " );
 		DaoValue_QuotedPrint( node->value.pValue, stream, cycmap, proc );
-		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 19 ) break;
 		if( (i + 1) < size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
 	if( i < size ){
 		DaoStream_PrintHL( stream, ',', ", " );
-		DaoStream_PrintHL( stream, '0', "..." );
+		DaoStream_PrintHL( stream, ',', "..." );
+		DaoStream_TryHighlight( stream, ',' );
+		DaoStream_WriteInt( stream, size - 1 - i );
+		DaoStream_WriteChars( stream, " key-value pairs truncated)" );
 	}
 	DaoStream_PrintHL( stream, '}', " }" );
 	DMap_Erase( cycmap, self );
@@ -5664,12 +5673,15 @@ static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Dao
 	DaoStream_PrintHL( stream, '(', "( " );
 	for(i=0; i<self->xTuple.size; ++i){
 		DaoValue_QuotedPrint( self->xTuple.values[i], stream, cycmap, proc );
-		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 49 ) break;
+		if( (stream->mode & DAO_STREAM_DEBUGGING) && i >= 19 ) break;
 		if( (i+1) < self->xTuple.size ) DaoStream_PrintHL( stream, ',', ", " );
 	}
 	if( i < self->xTuple.size ){
 		DaoStream_PrintHL( stream, ',', ", " );
-		DaoStream_PrintHL( stream, '0', "..." );
+		DaoStream_PrintHL( stream, ',', "...(" );
+		DaoStream_TryHighlight( stream, ',' );
+		DaoStream_WriteInt( stream, self->xTuple.size - 1 - i );
+		DaoStream_WriteChars( stream, " items truncated)" );
 	}
 	DaoStream_PrintHL( stream, ')', " )" );
 	DMap_Erase( cycmap, self );
@@ -6098,6 +6110,7 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 
 DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
+	DaoVmSpace *vms = ctx->nameSpace->vmSpace;
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
 
@@ -6125,7 +6138,10 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 	}
 
 	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
-	if( rout == NULL ) return NULL;
+	if( rout == NULL ){
+		if( op->code == DVM_EQ || op->code == DVM_NE ) return vms->typeBool;
+		return NULL;
+	}
 
 	if( op->c == op->a && self == args[0] ) selftype = self;
 	if( op->c == op->b && self == args[1] ) selftype = self;
@@ -6167,7 +6183,14 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	}
 
 	rout = DaoType_FindFunctionChars( self->xCstruct.ctype, DaoVmCode_GetOperator( op->code ) );
-	if( rout == NULL ) return NULL;
+	if( rout == NULL ){
+		if( op->code == DVM_EQ ){
+			DaoProcess_PutBoolean( proc, args[0] == args[1] );
+		}else if( op->code == DVM_NE ){
+			DaoProcess_PutBoolean( proc, args[0] != args[1] );
+		}
+		return NULL;
+	}
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
 	if( op->c == op->b && self == args[1] ) selfvalue = self;
