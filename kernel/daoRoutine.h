@@ -99,7 +99,7 @@ DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 DAO_DLL void DaoRoutine_PrintCodeSnippet( DaoRoutine *self, DaoStream *stream, int k );
 
 DAO_DLL void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *origcopy, DMap *deftypes );
-DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *origcopy, DaoType *host, DMap *deftypes );
+DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *origcopy, DaoType *host,  DaoNamespace *scope, DMap *deftypes );
 DAO_DLL int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 

@@ -49,7 +49,7 @@ DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name )
 	self->derived = 0;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->abtype = DaoType_New( nspace->vmSpace, name, DAO_INTERFACE, (DaoValue*)self, NULL );
+	self->abtype = DaoType_New( nspace, name, DAO_INTERFACE, (DaoValue*)self, NULL );
 	self->abtype->kernel = DaoTypeKernel_New( NULL );
 	self->abtype->kernel->abtype = self->abtype;
 	self->nameSpace = nspace;
@@ -446,7 +446,7 @@ extern DaoTypeCore daoCinValueCore;
 DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 {
 	DaoCinType *self = (DaoCinType*) dao_calloc( 1, sizeof(DaoCinType) );
-	DaoVmSpace *vms = inter->nameSpace->vmSpace;
+	DaoNamespace *ns = inter->nameSpace;
 	DString *name = inter->abtype->name;
 
 	DaoValue_Init( self, DAO_CINTYPE );
@@ -454,8 +454,8 @@ DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 	self->derived = 0;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->citype = DaoType_New( vms, "interface<", DAO_CINTYPE, (DaoValue*)self, NULL );
-	self->vatype = DaoType_New( vms, name->chars, DAO_CINVALUE, (DaoValue*)self, NULL );
+	self->citype = DaoType_New( ns, "interface<", DAO_CINTYPE, (DaoValue*)self, NULL );
+	self->vatype = DaoType_New( ns, name->chars, DAO_CINVALUE, (DaoValue*)self, NULL );
 	self->abstract = inter;
 	self->target = target;
 	self->citype->core = & daoCinTypeCore;

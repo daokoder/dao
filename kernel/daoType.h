@@ -115,17 +115,19 @@ struct DaoType
 	DaoType   *quadtype; /* base/const/invar/var type; */
 	DaoType   *cbtype;   /* extra type for code block; */
 
+	DaoNamespace   *nameSpace;
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeCore    *core;   /* type core; */ 
-	DaoVmSpace     *vmspace;
 };
 
-DAO_DLL DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux, DList *args );
+DAO_DLL DaoType* DaoType_New( DaoNamespace *ns, const char *name, int tid, DaoValue *aux, DList *args );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );
 DAO_DLL void DaoType_Delete( DaoType *self );
 
 DAO_DLL void DaoType_InitDefault( DaoType *self );
 DAO_DLL void DaoType_CheckAttributes( DaoType *self );
+
+DAO_DLL void DaoType_SetNamespace( DaoType *self, DaoNamespace *nspace );
 
 DAO_DLL DaoType* DaoType_GetBaseType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetConstType( DaoType *self );
@@ -238,7 +240,7 @@ int DaoTypeTree_Test( DaoTypeTree *self, DaoType *types[], int count );
 void DaoTypeTree_Add( DaoTypeTree *self, DaoType *types[], int count, DaoType *sptype );
 DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count );
 
-DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count );
+DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *args[], int argc, DaoNamespace *ns );
 DAO_DLL void DaoType_SpecializeMethods( DaoType *self );
 
 

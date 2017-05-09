@@ -5790,8 +5790,8 @@ DaoCtype* DaoCtype_New( DaoNamespace *nspace, DaoTypeCore *core, int tid )
 	self->trait |= DAO_VALUE_NOCOPY;
 	self->info = DString_New();
 	self->name = DString_NewChars( core->name );
-	self->classType = DaoType_New( vms, core->name, DAO_CTYPE, (DaoValue*) self, NULL );
-	self->valueType = DaoType_New( vms, core->name, tid, (DaoValue*) self, NULL );
+	self->classType = DaoType_New( nspace, core->name, DAO_CTYPE, (DaoValue*) self, NULL );
+	self->valueType = DaoType_New( nspace, core->name, tid, (DaoValue*) self, NULL );
 	self->classType->core = & daoCtypeCore;
 	self->valueType->core = core;
 	self->nameSpace = nspace;

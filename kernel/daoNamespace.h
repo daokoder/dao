@@ -37,6 +37,20 @@
 #include"daoType.h"
 
 
+/*
+// Dao Namespace type:
+// DaoNamespace is the structure where global constants, variables and types are stored.
+// It provides a name-resolving scope for these constants, variables and types. A module
+// or a compiled script file is usually represented by a single namespace structure,
+// unless more are explicitly declared or created.
+//
+// Each routine, class, interface and type is associated with a namespace. For routines,
+// classes, interfaces and unspecialized types, the namespaces are the definition scopes.
+// For specialized types, the namespaces are the instantiation scopes. For specialized
+// routines, the associated namespaces are still the definition scopes for the original
+// routines; the instantiation scopes are associated with their routine types (namely
+// DaoRoutine::routType).
+*/
 struct DaoNamespace
 {
 	DAO_VALUE_COMMON;

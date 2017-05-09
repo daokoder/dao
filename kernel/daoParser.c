@@ -608,7 +608,9 @@ void DaoParser_PrintInfoHeader( DaoParser *self, const char *header )
 {
 	DaoStream *stream = self->vmSpace->errorStream;
 
+	DaoStream_SetColor( stream, "white", "red" );
 	DaoStream_WriteChars( stream, header );
+	DaoStream_SetColor( stream, NULL, NULL );
 	DaoStream_WriteChars( stream, " in file \"" );
 	if( self->fileName->size )
 		DaoStream_WriteString( stream, self->fileName );
@@ -1028,13 +1030,13 @@ static DaoType* DaoParser_ParseCodeBlockType( DaoParser *self, int start, int *n
 
 static DaoType* DaoParser_MakeVarTypeHolder( DaoParser *self )
 {
-	DaoType *type = DaoType_New( self->vmSpace, "@X", DAO_THT, NULL, NULL );
+	DaoType *type = DaoType_New( self->nameSpace, "@X", DAO_THT, NULL, NULL );
 	DList_Append( self->nameSpace->auxData, type );
 	return type;
 }
 static DaoType* DaoParser_MakeParTypeHolder( DaoParser *self, DString *name )
 {
-	DaoType *type = DaoType_New( self->vmSpace, "@", DAO_THT, NULL, NULL );
+	DaoType *type = DaoType_New( self->nameSpace, "@", DAO_THT, NULL, NULL );
 	DString_Append( type->name, name );
 	DMap_Insert( self->initTypes, type->name, type );
 	return type;
@@ -1368,7 +1370,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	DString_AppendChars( pname, "=>" );
 	DString_Append( pname, retype->name );
 	DString_AppendChars( pname, ">" );
-	type = DaoType_New( self->vmSpace, pname->chars, DAO_ROUTINE, (DaoValue*) retype, nested );
+	type = DaoType_New( NS, pname->chars, DAO_ROUTINE, (DaoValue*) retype, nested );
 	DList_Append( NS->auxData, type );
 	if( cbtype ){
 		GC_Assign( & type->cbtype, cbtype );
@@ -1553,7 +1555,7 @@ static DaoType* DaoParser_FindTypeHolder( DaoParser *self, DString *name )
 static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, int *newpos )
 {
 	DaoType *type = NULL;
-	DaoNamespace *ns = self->nameSpace;
+	DaoNamespace *NS = self->nameSpace;
 	DaoClass *klass = self->hostClass;
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -1582,12 +1584,12 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		if( type ) return type;
 	}
 	if( i > 0 && i < 100 ){
-		type = DaoNamespace_MakeType( ns, name->chars, i, NULL, 0,0 );
+		type = DaoNamespace_MakeType( NS, name->chars, i, NULL, 0,0 );
 	}else if( token->name == DKEY_NONE ){
-		type = DaoNamespace_MakeValueType( ns, dao_none_value );
+		type = DaoNamespace_MakeValueType( NS, dao_none_value );
 	}else if( token->name == DTOK_ID_THTYPE ){
 		DMap *initypes = self->innerParser ? self->innerParser->initTypes : self->initTypes;
-		type = DaoType_New( self->vmSpace, token->string.chars, DAO_THT, NULL, NULL );
+		type = DaoType_New( NS, token->string.chars, DAO_THT, NULL, NULL );
 		DMap_Insert( initypes, type->name, type );
 	}else{
 		/* scoped type or user defined template class */
@@ -1721,7 +1723,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	int k, set=0, sign = 1;
 	char c;
 
-	type = DaoType_New( self->vmSpace, "enum<", DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->nameSpace, "enum<", DAO_ENUM, NULL, NULL );
 	DString_Reserve( type->name, 128 );
 	for(k=start; k<=end; k++){
 		tok = tokens[k];
@@ -1824,7 +1826,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 	DaoType *type2 = NULL;
 	DaoValue *retype = NULL;
 	DaoType **nested = NULL;
-	DaoNamespace *ns = self->nameSpace;
+	DaoNamespace *NS = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *tok = tokens[start];
 	DString *tks = & tok->string;
@@ -1856,7 +1858,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			DString_Append( name, vartype->name );
 			DString_AppendChar( name, '>' );
 			type2 = DaoParser_FindTypeHolder( self, name );
-			if( type2 == NULL ) type2 = DaoType_New( self->vmSpace, name->chars, DAO_THT, (DaoValue*) vartype, NULL );
+			if( type2 == NULL ) type2 = DaoType_New( NS, name->chars, DAO_THT, (DaoValue*) vartype, NULL );
 			DMap_Insert( scope->initTypes, type2->name, type2 );
 			DMap_Insert( scope->initTypes, type->name, type2 );
 			type = type2;
@@ -1874,7 +1876,7 @@ WrongType:
 		if( strcmp( tokens[start]->string.chars, "dao" ) ==0 ){
 			daons = 1;
 			start += 2;
-			ns = self->vmSpace->daoNamespace;
+			NS = self->vmSpace->daoNamespace;
 			tok = tokens[start];
 			if( tok->name > DKEY_LOAD ) tokname = dao_keywords[ tok->name - DKEY_LOAD ].value;
 			if( tok->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
@@ -1925,7 +1927,7 @@ WrongType:
 			break;
 		case DKEY_ROUTINE :
 			tid = DAO_ROUTINE;
-			if( type == NULL ) type = DaoNamespace_MakeValueType( ns, dao_none_value );
+			if( type == NULL ) type = DaoNamespace_MakeValueType( NS, dao_none_value );
 			if( type->tid >= DAO_PAR_NAMED && type->tid <= DAO_PAR_VALIST ){
 				goto InvalidTypeForm;
 			}
@@ -1963,7 +1965,7 @@ WrongType:
 		}
 		tks = & tokens[start]->string;
 		nested = types->items.pType + count;
-		type = DaoNamespace_MakeType( ns, tks->chars, tid, retype, nested, count2 );
+		type = DaoNamespace_MakeType( NS, tks->chars, tid, retype, nested, count2 );
 		if( type == NULL ) goto InvalidTypeForm;
 		if( tid == DAO_ROUTINE ){
 			DString sname = DString_WrapChars( "self" );
@@ -1979,7 +1981,7 @@ WrongType:
 DoneGenericType:
 		DList_Erase( types, count, count2 );
 	}else if( tokens[start]->name == DKEY_ROUTINE ){
-		type = DaoNamespace_MakeType( ns, "routine", DAO_ROUTINE, NULL, NULL, 0  );
+		type = DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, NULL, NULL, 0  );
 		if( start < end && tokens[start+1]->type == DTOK_LSB ){
 			DaoType *cbtype = DaoParser_ParseCodeBlockType( self, start+1, newpos );
 			if( cbtype == NULL ) goto InvalidTypeForm;
@@ -2043,6 +2045,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DaoCtype *ctype = (DaoCtype*) tpl;
 	DaoType *sptype, *gentype;
 	DaoCinType *cintype = NULL;
+	DaoNamespace *NS = self->nameSpace;
 	int errors = self->errors->size;
 
 	if( tpl == NULL ) goto FailedInstantiation;
@@ -2059,7 +2062,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		if( cintype == NULL ) goto FailedInstantiation;
 	}else{
 		gentype = tpl->type == DAO_CTYPE ? ctype->valueType : (DaoType*) tpl;
-		sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
+		sptype = DaoType_Specialize( gentype, types->items.pType, types->size, NS );
 		if( sptype == NULL ) goto FailedInstantiation;
 		if( self->byteBlock && tpl->type == DAO_CTYPE ){
 			DaoCtype *ctype = (DaoCtype*) sptype->aux;
@@ -2450,7 +2453,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	}
 
 	/* Add a new temporary type in a new scope: */
-	tht = DaoType_New( self->vmSpace, str->chars, DAO_THT, NULL, NULL );
+	tht = DaoType_New( self->nameSpace, str->chars, DAO_THT, NULL, NULL );
 	if( self->byteBlock ){
 		DaoByteBlock_EncodeType( self->byteBlock, tht );
 	}
@@ -3298,7 +3301,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		goto ErrorEnumDefinition;
 	}
 
-	type = DaoType_New( self->vmSpace, "enum<", DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->nameSpace, "enum<", DAO_ENUM, NULL, NULL );
 	comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 	semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, -1, 0 );
 	if( comma >=0 && semco >=0 ){
@@ -5913,8 +5916,8 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	}else if( tokens[start+1]->name == DTOK_LB ){
 		rb = DaoParser_ParseSignature( self, parser, start );
 	}else if( tokens[start+1]->name == DTOK_LCB ){
-		DaoType *type = DaoType_New( self->vmSpace, "@X", DAO_THT, NULL, NULL );
-		type = DaoType_New( self->vmSpace, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)type, NULL);
+		DaoType *type = DaoType_New( NS, "@X", DAO_THT, NULL, NULL );
+		type = DaoType_New( NS, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)type, NULL);
 		GC_Assign( & rout->routType, type );
 		rb = DaoParser_ExtractRoutineBody( self, parser, start+1 );
 		if( rb < 0 ) goto ErrorParsing;

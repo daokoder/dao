@@ -52,7 +52,7 @@ void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self );
 
 
-DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux, DList *nest )
+DaoType* DaoType_New( DaoNamespace *ns, const char *name, int tid, DaoValue *aux, DList *args )
 {
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
@@ -60,12 +60,11 @@ DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux,
 	self->tid = tid;
 	self->name = DString_New();
 	self->core = DaoType_GetCoreByID( tid );
-	self->vmspace = vms;
-	//self->kernel = core->kernel;
-	//GC_IncRC( self->kernel );
+	self->nameSpace = ns;
+	GC_IncRC( ns );
 
 	//assert( tid != DAO_PAR_VALIST || aux != NULL );
-	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) vms->typeAny;
+	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) ns->vmSpace->typeAny;
 
 	if( aux ){
 		self->aux = aux;
@@ -75,9 +74,9 @@ DaoType* DaoType_New( DaoVmSpace *vms, const char *name, int tid, DaoValue *aux,
 	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
 		self->fname = DString_New();
 	}
-	if( nest ){
+	if( args ){
 		self->args = DList_New( DAO_DATA_VALUE );
-		DList_Assign( self->args, nest );
+		DList_Assign( self->args, args );
 	}else if( tid == DAO_ROUTINE || tid == DAO_TUPLE ){
 		self->args = DList_New( DAO_DATA_VALUE );
 	}
@@ -104,14 +103,13 @@ DaoType* DaoType_Copy( DaoType *other )
 	self->quadtype = NULL;
 	self->args = NULL;
 	self->bases = NULL;
-	self->vmspace = other->vmspace;
 	self->name = DString_Copy( other->name );
 	if( other->fname ) self->fname = DString_Copy( other->fname );
 	if( other->bases ) self->bases = DList_Copy( other->bases );
 	if( other->args ) self->args = DList_Copy( other->args );
 	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
 	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
-	self->aux = other->aux;
+	GC_IncRC( self->nameSpace );
 	GC_IncRC( self->aux );
 	GC_IncRC( self->kernel );
 	GC_IncRC( self->cbtype );
@@ -135,6 +133,7 @@ void DaoType_Delete( DaoType *self )
 	GC_DecRC( self->kernel );
 	GC_DecRC( self->cbtype );
 	GC_DecRC( self->quadtype );
+	GC_DecRC( self->nameSpace );
 	DString_Delete( self->name );
 	if( self->fname ) DString_Delete( self->fname );
 	if( self->args ) DList_Delete( self->args );
@@ -142,6 +141,11 @@ void DaoType_Delete( DaoType *self )
 	if( self->mapNames ) DMap_Delete( self->mapNames );
 	if( self->interfaces ) DMap_Delete( self->interfaces );
 	dao_free( self );
+}
+
+void DaoType_SetNamespace( DaoType *self, DaoNamespace *nspace )
+{
+	DaoValue_Move( (DaoValue*) nspace, (DaoValue**) & self->nameSpace, NULL );
 }
 
 void DaoType_CheckAttributes( DaoType *self )
@@ -1406,7 +1410,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		return self;
 	}
 
-	copy = DaoType_New( self->vmspace, "", self->tid, NULL, NULL );
+	copy = DaoType_New( self->nameSpace, "", self->tid, NULL, NULL );
 	GC_Assign( & copy->kernel, self->kernel );
 	copy->core = self->core;
 	copy->subtid = self->subtid;
@@ -1456,8 +1460,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
 			if( self->kernel->sptree ){
 				DaoType *sptype = self->kernel->abtype;
+				DList *args = copy->args;
 				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.classType;
-				sptype = DaoType_Specialize( sptype, copy->args->items.pType, copy->args->size );
+				sptype = DaoType_Specialize( sptype, args->items.pType, args->size, ns );
 				if( sptype ){
 					DMap_Erase2( defs, copy );
 					return sptype;
@@ -1662,12 +1667,9 @@ void DaoType_ExportArguments( DaoType *self, DList *args, int noname )
 
 DaoVmSpace* DaoType_GetVmSpace( DaoType *self )
 {
-	return self->vmspace;
-
-	if( self->kernel == NULL ) return NULL;
-	if( self->kernel->nspace == NULL ) return NULL;
-	return self->kernel->nspace->vmSpace;
+	return self->nameSpace->vmSpace;
 }
+
 
 
 extern DMutex mutex_methods_setup;
@@ -1737,7 +1739,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	if( kernel->abtype && kernel->abtype->aux ){
 		if( DString_EQ( name, kernel->abtype->name ) ) value = kernel->abtype->aux;
 	}
-	if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, self->core );
+	if( kernel->SetupValues ) kernel->SetupValues( self->kernel->nspace, self->core );
 	if( kernel->values == NULL ) return value;
 	node = DMap_Find( kernel->values, name );
 	if( node ) return node->value.pValue;
@@ -2090,7 +2092,7 @@ DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count )
 	return DaoTypeNode_Get2( self->root, types, count, 0, & score );
 }
 
-static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count )
+static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count, DaoNamespace *ns )
 {
 	DaoType *sptype, *sptype2;
 	DaoTypeKernel *kernel;
@@ -2116,7 +2118,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	// Specialized cdata type will be initialized with the same kernel as the template type.
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
-	ctype = DaoCtype_New( self->kernel->nspace, self->core, self->tid );
+	ctype = DaoCtype_New( ns, self->core, self->tid );
 	sptype = ctype->valueType;
 	sptype2 = ctype->classType;
 	GC_Assign( & sptype->kernel, self->kernel );
@@ -2154,7 +2156,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 		sptype2->bases = DList_New( DAO_DATA_VALUE );
 		for(i=0; i<self->bases->size; i++){
 			DaoType *type = self->bases->items.pType[i];
-			type = DaoType_DefineTypes( type, type->kernel->nspace, defs );
+			type = DaoType_DefineTypes( type, ns, defs );
 			DList_Append( sptype->bases, type );
 			DList_Append( sptype2->bases, type->aux->xCtype.classType );
 		}
@@ -2167,7 +2169,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	if( tid == DAO_CTYPE ) return sptype2;
 	return sptype;
 }
-DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
+static DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count, DaoNamespace *ns )
 {
 	DaoType *sptype;
 	DaoTypeKernel *kernel;
@@ -2187,7 +2189,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	// Specialized type will be initialized with the same kernel as the template type.
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
-	sptype = DaoType_New( self->vmspace, self->name->chars, self->tid, NULL, NULL );
+	sptype = DaoType_New( ns, self->name->chars, self->tid, NULL, NULL );
 	GC_Assign( & sptype->kernel, self->kernel );
 	sptype->tid = self->tid;
 	sptype->args = DList_New( DAO_DATA_VALUE );
@@ -2221,7 +2223,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	}
 	return sptype;
 }
-DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
+DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count, DaoNamespace *ns )
 {
 	int konst = self->konst;
 	int invar = self->invar;
@@ -2232,12 +2234,12 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 	case DAO_ARRAY :
 	case DAO_LIST :
 	case DAO_MAP :
-		type = DaoGenericType_Specialize( self, types, count );
+		type = DaoGenericType_Specialize( self, types, count, ns );
 		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_CTYPE :
-		type = DaoCdataType_Specialize( self, types, count );
+		type = DaoCdataType_Specialize( self, types, count, ns );
 		break;
 	}
 	if( konst ){
@@ -2295,12 +2297,12 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 }
 static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine *method, DMap *defs )
 {
-	DaoNamespace *nspace = self->kernel->nspace;
+	DaoNamespace *nspace = self->nameSpace;
 	DaoRoutine *rout = DaoRoutine_Copy( method, 1, 0, 0 );
 
 	if( method->attribs & DAO_ROUT_INITOR ) DString_Assign( rout->routName, self->name );
 	DaoType_InitTypeDefines( self, rout, defs );
-	DaoRoutine_Finalize( rout, method, self, defs );
+	DaoRoutine_Finalize( rout, method, self, nspace, defs );
 	DaoMethods_Insert( kernel->methods, rout, nspace, self );
 	if( method->attribs & DAO_ROUT_INITOR ){
 		DaoTypeKernel_InsertInitor( kernel, nspace, self, rout );

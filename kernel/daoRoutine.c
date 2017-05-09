@@ -75,7 +75,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	DaoRoutine *self = DaoRoutine_New( nspace, host, 0 );
 	self->subtype = DAO_ROUTINES;
 	self->overloads = DRoutines_New();
-	self->routType = DaoType_New( nspace->vmSpace, "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
+	self->routType = DaoType_New( nspace, "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
 	self->routType->subtid = DAO_ROUTINES;
 	GC_IncRC( self->routType );
 	if( init == NULL ) return self;
@@ -331,9 +331,9 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes
 		GC_Assign( & var->dtype, type );
 	}
 }
-int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *original, DaoType *host, DMap *deftypes )
+int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *original, DaoType *host, DaoNamespace *scope, DMap *deftypes )
 {
-	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
+	DaoType *tp = DaoType_DefineTypes( self->routType, scope, deftypes );
 	if( tp == NULL ) return 0;
 	GC_Assign( & self->routType, tp );
 	if( host ) GC_Assign( & self->routHost, host );

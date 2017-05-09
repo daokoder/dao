@@ -120,14 +120,13 @@ DaoNamespace* DaoClass_GetNamespace( DaoClass *self )
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 {
-	DaoVmSpace *vms = ns->vmSpace;
 	DaoRoutine *rout;
 	DString *str;
 
 	if( self->initRoutine ) return;
 
-	self->objType = DaoType_New( vms, name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
-	self->clsType = DaoType_New( vms, name->chars, DAO_CLASS, (DaoValue*) self, NULL );
+	self->objType = DaoType_New( ns, name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
+	self->clsType = DaoType_New( ns, name->chars, DAO_CLASS, (DaoValue*) self, NULL );
 	GC_IncRC( self->clsType );
 	DString_InsertChars( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
@@ -144,7 +143,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	self->initRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
-	rout->routType = DaoType_New( vms, "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
+	rout->routType = DaoType_New( ns, "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
 	DString_Append( rout->routType->name, name );
 	DString_AppendChars( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );
@@ -365,7 +364,7 @@ static void DaoRoutine_OriginalHost( void *p ){}
 static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMethodFields *mf )
 {
 	daoint i, j, k, id, bl = 1;
-	DaoNamespace *ns = self->initRoutine->nameSpace;
+	DaoNamespace *NS = self->nameSpace;
 	DList *routines;
 	DMap *deftypes;
 	DMap *routmap;
@@ -429,7 +428,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
 			rout->attribs |= DAO_ROUT_MIXIN;
 			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
-			bl = bl && DaoRoutine_Finalize( rout, old, self->objType, deftypes );
+			bl = bl && DaoRoutine_Finalize( rout, old, self->objType, NS, deftypes );
 #if 0
 			printf( "%2i:  %s  %s\n", i, rout->routName->chars, rout->routType->name->chars );
 #endif
@@ -448,7 +447,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		}else{
 			/* No need to added the overloaded routines now; */
 			/* Each of them has an entry in constants, and will be handled later: */
-			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
+			DaoRoutine *routs = DaoRoutines_New( NS, self->objType, NULL );
 			routs->trait |= DAO_VALUE_CONST;
 			DList_Append( self->constants, DaoConstant_New( (DaoValue*) routs, DAO_CLASS_CONSTANT ) );
 			for(j=0; j<rout->overloads->routines->size; ++j){
@@ -464,7 +463,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		DaoValue *var = mixin->variables->items.pVar[i]->value;
 		DaoType *type = mixin->variables->items.pVar[i]->dtype;
 
-		type = DaoType_DefineTypes( type, ns, deftypes );
+		type = DaoType_DefineTypes( type, NS, deftypes );
 
 		MAP_Insert( idmap, src, des );
 		DList_Append( self->glbDataName, (void*) name );
@@ -477,7 +476,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		DaoValue *var = mixin->instvars->items.pVar[i]->value;
 		DaoType *type = mixin->instvars->items.pVar[i]->dtype;
 
-		type = DaoType_DefineTypes( type, ns, deftypes );
+		type = DaoType_DefineTypes( type, NS, deftypes );
 
 		MAP_Insert( idmap, src, des );
 		DList_Append( self->objDataName, (void*) name );

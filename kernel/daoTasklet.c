@@ -162,10 +162,12 @@ void DaoTaskletEvent_Init( DaoTaskletEvent *self, int T, int S, DaoFuture *F, Da
 
 
 
-DaoChannel* DaoChannel_New( DaoVmSpace *vms, DaoType *type, int dtype )
+DaoChannel* DaoChannel_New( DaoNamespace *ns, DaoType *type, int dtype )
 {
 	DaoChannel *self = (DaoChannel*) dao_calloc( 1, sizeof(DaoChannel) );
-	if( dtype ) type = DaoType_Specialize( vms->typeChannel, & type, type != NULL );
+	if( dtype ){
+		type = DaoType_Specialize( ns->vmSpace->typeChannel, & type, type != NULL, ns );
+	}
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	self->buffer = DList_New( DAO_DATA_VALUE );
 	return self;
@@ -597,7 +599,7 @@ void DaoVmSpace_AddTaskletCall( DaoVmSpace *self, DaoProcess *caller )
 		}
 	}
 
-	future = DaoFuture_New( self, type, 1 );
+	future = DaoFuture_New( caller->activeNamespace, type, 1 );
 	future->state = DAO_TASKLET_PAUSED;
 	future->actor = caller->topFrame->object;
 	GC_IncRC( future->actor );
@@ -644,7 +646,7 @@ DaoFuture* DaoProcess_GetInitFuture( DaoProcess *self )
 	DaoFuture *future;
 	if( self->future ) return self->future;
 
-	future = DaoFuture_New( self->vmSpace, NULL, 1 );
+	future = DaoFuture_New( self->activeNamespace, NULL, 1 );
 	GC_Assign( & self->future, future );
 	GC_Assign( & future->process, self );
 	return future;
@@ -1178,7 +1180,7 @@ static void CHANNEL_SetCap( DaoChannel *self, DaoValue *value, DaoProcess *proc 
 static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoType *retype = DaoProcess_GetReturnType( proc );
-	DaoChannel *self = DaoChannel_New( proc->vmSpace, retype, 0 );
+	DaoChannel *self = DaoChannel_New( proc->activeNamespace, retype, 0 );
 	CHANNEL_SetCap( self, par[0], proc );
 	if( DaoType_CheckPrimitiveType( retype->args->items.pType[0] ) == 0 ){
 		DString *s = DString_New();
@@ -1372,10 +1374,12 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 
 
 
-DaoFuture* DaoFuture_New( DaoVmSpace *vms, DaoType *type, int vatype )
+DaoFuture* DaoFuture_New( DaoNamespace *ns, DaoType *type, int vatype )
 {
 	DaoFuture *self = (DaoFuture*) dao_calloc( 1, sizeof(DaoFuture) );
-	if( vatype ) type = DaoType_Specialize( vms->typeFuture, & type, type != NULL );
+	if( vatype ){
+		type = DaoType_Specialize( ns->vmSpace->typeFuture, & type, type != NULL, ns );
+	}
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
 	self->value = dao_none_value;

@@ -521,11 +521,15 @@ static void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, in
 
 static void DaoByteCoder_Error( DaoByteCoder *self, DaoByteBlock *block, const char *msg )
 {
-	DaoStream_WriteChars( self->vmspace->errorStream, "[[ERROR]] in file \"" );
-	DaoStream_WriteChars( self->vmspace->errorStream, self->path->chars );
-	DaoStream_WriteChars( self->vmspace->errorStream, "\":\n" );
-	DaoStream_WriteChars( self->vmspace->errorStream, msg );
-	DaoStream_WriteChars( self->vmspace->errorStream, "\n" );
+	DaoStream *stream = self->vmspace->errorStream;
+	DaoStream_SetColor( stream, "white", "red" );
+	DaoStream_WriteChars( stream, "[[ERROR]]" );
+	DaoStream_SetColor( stream, NULL, NULL );
+	DaoStream_WriteChars( stream, " in file \"" );
+	DaoStream_WriteChars( stream, self->path->chars );
+	DaoStream_WriteChars( stream, "\":\n" );
+	DaoStream_WriteChars( stream, msg );
+	DaoStream_WriteChars( stream, "\n" );
 	if( block ) DaoByteCoder_PrintBlock( self, block, 0, 1 );
 	self->error = 1;
 }
@@ -1980,7 +1984,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		if( self->error ) break;
 		itypes = self->ivalues->items.pType + C;
 		D = self->ivalues->size - C;
-		type = DaoType_Specialize( pb2->value->xCtype.valueType, itypes, D );
+		type = DaoType_Specialize( pb2->value->xCtype.valueType, itypes, D, self->nspace );
 		//printf( ">>>>>>>>> %p %s %s\n", type, type->name->chars, type->typer->name );
 		//printf( "%p %p\n", type->aux, type->aux->xCtype.ctype );
 		value = type->aux;
@@ -2229,7 +2233,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 		GC_Assign( & block->value, type );
 		return;
 	}
-	type = DaoType_New( self->vmspace, name->chars, DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self->nspace, name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = B;
 	DaoByteCoder_CheckDataBlocks( self, block );
 	for(pb=block->first; pb; pb=pb->next){

@@ -487,7 +487,7 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 	if( call == DVM_MCALL && partypes->items.pType[0]->tid == DAO_OBJECT ){
 		DaoClass *klass = (DaoClass*) partypes->items.pType[0]->aux;
 		if( klass->attribs & DAO_CLS_ASYNCHRONOUS ){
-			retype = DaoType_Specialize( VMS->typeFuture, & retype, retype != NULL );
+			retype = DaoType_Specialize( VMS->typeFuture, & retype, retype != NULL, NS );
 		}
 	}
 	k = partypes->size;
@@ -1035,7 +1035,11 @@ static void DaoInferencer_WriteErrorHeader2( DaoInferencer *self )
 		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
 	}
 
-	DaoStream_WriteChars( stream, "[[ERROR]] in file \"" );
+	DaoStream_SetColor( stream, "white", "red" );
+	DaoStream_WriteChars( stream, "[[ERROR]]" );
+	DaoStream_SetColor( stream, NULL, NULL );
+
+	DaoStream_WriteChars( stream, " in file \"" );
 	DaoStream_WriteString( stream, routine->nameSpace->name );
 	DaoStream_WriteChars( stream, "\":\n" );
 	sprintf( char50, "  At line %i : ", routine->defLine );
@@ -2279,10 +2283,10 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 		}
 	}else if( code == DVM_LIST ){
 		at = DaoType_GetBaseType( at );
-		ct = DaoType_Specialize( VMS->typeList, & at, at != NULL );
+		ct = DaoType_Specialize( VMS->typeList, & at, at != NULL, NS );
 	}else if( at && at->tid >= DAO_BOOLEAN && at->tid <= DAO_COMPLEX ){
 		at = DaoType_GetBaseType( at );
-		ct = DaoType_Specialize( VMS->typeArray, & at, 1 );
+		ct = DaoType_Specialize( VMS->typeArray, & at, 1, NS );
 	}else if( DaoType_LooseChecking( at ) ){
 		ct = VMS->typeArrayEmpty; /* specially handled for copying; */
 	}else{
@@ -2419,7 +2423,7 @@ static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *ro
 
 	/* Do not share function body. It may be thread unsafe to share: */
 	rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-	DaoRoutine_Finalize( rout, orig, NULL, defs2 );
+	DaoRoutine_Finalize( rout, orig, NULL, NS, defs2 );
 
 	if( rout->routType == orig->routType || rout->routType == rout2->routType ){
 		DaoGC_TryDelete( (DaoValue*) rout );
@@ -2732,9 +2736,9 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 
 	if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 			&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
-		ct = DaoType_Specialize( VMS->typeFuture, & ct, ct != NULL );
+		ct = DaoType_Specialize( VMS->typeFuture, & ct, ct != NULL, NS );
 	}else if( vmc->b & DAO_CALL_ASYNC ){
-		ct = DaoType_Specialize( VMS->typeFuture, & ct, ct != NULL );
+		ct = DaoType_Specialize( VMS->typeFuture, & ct, ct != NULL, NS );
 	}
 	if( types[opc] && types[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;
 	if( ct == NULL ) ct = DaoNamespace_GetType( NS, dao_none_value );
@@ -3917,7 +3921,7 @@ SkipChecking:
 					if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
 				}
 				at = DaoType_GetBaseType( at );
-				ct = DaoType_Specialize( VMS->typeArray, & at, at != NULL );
+				ct = DaoType_Specialize( VMS->typeArray, & at, at != NULL, NS );
 				if( ct == NULL ){
 					return DaoInferencer_Error( self, DTE_INVALID_ENUMERATION );
 				}

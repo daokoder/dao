@@ -567,7 +567,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		DaoRoutine *current = routine;
 		/* Do not share function body. It may be thread unsafe to share: */
 		routine = DaoRoutine_Copy( original, 0, 1, 0 );
-		DaoRoutine_Finalize( routine, original, routine->routHost, defs );
+		DaoRoutine_Finalize( routine, original, routine->routHost, self->activeNamespace, defs );
 
 		if( routine->routType->attrib & DAO_TYPE_SPEC ){
 			DaoGC_TryDelete( (DaoValue*) routine );
@@ -3265,12 +3265,12 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
 	if( ct == NULL ){
-		DaoNamespace *ns = self->activeNamespace;
-		ct = DaoType_New( self->vmSpace, "tuple<", DAO_TUPLE, NULL, NULL );
+		DaoNamespace *NS = self->activeNamespace;
+		ct = DaoType_New( NS, "tuple<", DAO_TUPLE, NULL, NULL );
 		for(i=0; i<count; i++){
 			val = self->activeValues[ vmc->a + i ];
-			tp = DaoNamespace_GetType( ns, val );
-			if( tp == NULL ) tp = DaoNamespace_GetType( ns, dao_none_value );
+			tp = DaoNamespace_GetType( NS, val );
+			if( tp == NULL ) tp = DaoNamespace_GetType( NS, dao_none_value );
 			if( i >0 ) DString_AppendChars( ct->name, "," );
 			if( tp->tid == DAO_PAR_NAMED ){
 				DaoNameValue *nameva = & val->xNameValue;
@@ -3287,14 +3287,14 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			DaoTuple_SetItem( tuple, val, i );
 		}
 		DString_AppendChars( ct->name, ">" );
-		tp = DaoNamespace_FindType( ns, ct->name );
+		tp = DaoNamespace_FindType( NS, ct->name );
 		if( tp ){
 			DaoGC_TryDelete( (DaoValue*) ct );
 			ct = tp;
 		}else{
 			DaoType_CheckAttributes( ct );
 			DaoType_InitDefault( ct );
-			DaoNamespace_AddType( ns, ct->name, ct );
+			DaoNamespace_AddType( NS, ct->name, ct );
 		}
 		tuple->ctype = ct;
 		GC_IncRC( ct );

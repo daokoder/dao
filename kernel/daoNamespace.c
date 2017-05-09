@@ -412,7 +412,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 
 		/* CASE 2: */
 		if( defts->size && defts->items.pType[0] )
-			alias = DaoType_Specialize( type, defts->items.pType, defts->size );
+			alias = DaoType_Specialize( type, defts->items.pType, defts->size, self );
 		DaoValue_AddType( scope, name, alias );
 
 	}else{
@@ -469,7 +469,7 @@ DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const ch
 
 		if( alias != NULL ){
 			DaoParser_PushLevel( parser );
-			tht = DaoType_New( self->vmSpace, alias, DAO_THT, NULL, NULL );
+			tht = DaoType_New( self, alias, DAO_THT, NULL, NULL );
 			id = LOOKUP_BIND_LC( parser->routine->routConsts->value->size );
 			MAP_Insert( parser->lookupTables->items.pMap[ parser->lexLevel ], & alias2, id );
 			DaoRoutine_AddConstant( parser->routine, (DaoValue*) tht ); 
@@ -621,7 +621,7 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeCore *core, in
 	if( kernel != NULL ) return kernel->abtype;
 
 	kernel = DaoTypeKernel_New( core );
-	type = DaoType_New( self->vmSpace, core->name, tid, NULL, NULL );
+	type = DaoType_New( self, core->name, tid, NULL, NULL );
 
 	DaoVmSpace_AddKernel( self->vmSpace, core, kernel );
 
@@ -1328,7 +1328,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 		}
 		type = DaoNamespace_FindType( self, mbs );
 		if( type == NULL ){
-			type = DaoType_New( self->vmSpace, mbs->chars, tid, NULL, nested );
+			type = DaoType_New( self, mbs->chars, tid, NULL, nested );
 			type = DaoNamespace_AddType( self, type->name, type );
 		}
 	}else if( value->type == DAO_TYPE ){
@@ -1340,7 +1340,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 		DString_AppendChars( mbs, ">" );
 		type = DaoNamespace_FindType( self, mbs );
 		if( type == NULL ){
-			type = DaoType_New( self->vmSpace, mbs->chars, value->type, NULL, nested );
+			type = DaoType_New( self, mbs->chars, value->type, NULL, nested );
 			type = DaoNamespace_AddType( self, type->name, type );
 		}
 	}else{
@@ -1348,7 +1348,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 		DString_SetChars( mbs, core->name );
 		type = DaoNamespace_FindType( self, mbs );
 		if( type == NULL ){
-			type = DaoType_New( self->vmSpace, core->name, value->type, NULL, NULL );
+			type = DaoType_New( self, core->name, value->type, NULL, NULL );
 			type = DaoNamespace_AddType( self, type->name, type );
 		}
 	}
@@ -1394,11 +1394,11 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return self->vmSpace->typeString;
 	case DAO_ARRAY :
 		if( self->vmSpace->typeArray == NULL ) return NULL; /* Numeric array not enable; */
-		return DaoType_Specialize( self->vmSpace->typeArray, itypes, N );
+		return DaoType_Specialize( self->vmSpace->typeArray, itypes, N, self );
 	case DAO_LIST :
-		return DaoType_Specialize( self->vmSpace->typeList, itypes, N );
+		return DaoType_Specialize( self->vmSpace->typeList, itypes, N, self );
 	case DAO_MAP :
-		return DaoType_Specialize( self->vmSpace->typeMap, itypes, N );
+		return DaoType_Specialize( self->vmSpace->typeMap, itypes, N, self );
 	case DAO_INTERFACE :
 		if( aux == NULL ) break; /* Maybe the general "interface" type; */
 		return aux->xInterface.abtype;
@@ -1539,7 +1539,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}
 	type = DaoNamespace_FindType( self, mbs );
 	if( type == NULL ){
-		type = DaoType_New( self->vmSpace, mbs->chars, tid, aux, tylist );
+		type = DaoType_New( self, mbs->chars, tid, aux, tylist );
 		type->attrib |= attrib;
 		if( attrib & DAO_TYPE_VARIADIC ) type->variadic = 1;
 		if( tid == DAO_PAR_NAMED && N > 0 ){
@@ -1587,7 +1587,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	DNode *node;
 	daoint i, ch = 0;
 
-	newtype = DaoType_New( self->vmSpace, "", DAO_ROUTINE, NULL, NULL );
+	newtype = DaoType_New( self, "", DAO_ROUTINE, NULL, NULL );
 	newtype->attrib = routype->attrib;
 	if( routype->mapNames ){
 		if( newtype->mapNames ) DMap_Delete( newtype->mapNames );
@@ -1613,7 +1613,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		}
 		/* XXX typing DString_AppendChars( newtype->name, type ? type->name->chars : "..." ); */
 		if( partype != type && partype != & type->aux->xType ){
-			type = DaoType_New( self->vmSpace, type->fname->chars, type->tid, (DaoValue*) partype, NULL );
+			type = DaoType_New( self, type->fname->chars, type->tid, (DaoValue*) partype, NULL );
 		}
 		DString_Append( newtype->name, type->name );
 		DList_Append( newtype->args, type );
@@ -1705,7 +1705,7 @@ DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
 		return type;
 	}
 
-	type = DaoType_New( self->vmSpace, name->chars, DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self, name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_SYM;
 	DString_Assign( type->fname, type->name );
 	DMap_Insert( type->mapNames, & sym, (void*)0 );
@@ -1730,7 +1730,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 		return type;
 	}
 	key = DString_New();
-	type = DaoType_New( self->vmSpace, name->chars, DAO_ENUM, NULL, NULL );
+	type = DaoType_New( self, name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_SYM;
 	for(i=0; i<n; i++){
 		char sym = symbols[i];
@@ -1780,7 +1780,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 	type = DaoNamespace_FindType( self, name );
 	if( type == NULL ){
 		if( value->type == DAO_NONE ){
-			type = DaoType_New( self->vmSpace, "none", DAO_NONE, NULL, NULL );
+			type = DaoType_New( self, "none", DAO_NONE, NULL, NULL );
 		}else{
 			type = DaoNamespace_GetType( self, value );
 			type = DaoType_Copy( type );

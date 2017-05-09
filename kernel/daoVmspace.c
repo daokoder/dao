@@ -557,12 +557,13 @@ Done:
 }
 
 
-static void DaoVmSpace_InitCoreTypes( DaoVmSpace *self );
+static DaoType* DaoVmSpace_InitCoreTypes( DaoVmSpace *self );
 static void DaoVmSpace_InitStdTypes( DaoVmSpace *self );
 
 
 DaoVmSpace* DaoVmSpace_New()
 {
+	DaoType *tht;
 	DaoNamespace *NS;
 	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
 	DaoValue_Init( (DaoValue*) self, DAO_VMSPACE );
@@ -608,7 +609,7 @@ DaoVmSpace* DaoVmSpace_New()
 	DMutex_Init( & self->miscMutex );
 #endif
 
-	DaoVmSpace_InitCoreTypes( self );
+	tht = DaoVmSpace_InitCoreTypes( self );
 
 	self->daoNamespace = DaoNamespace_New( self, "dao" );
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
@@ -617,6 +618,17 @@ DaoVmSpace* DaoVmSpace_New()
 	GC_IncRC( self->mainNamespace );
 
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
+
+	DaoType_SetNamespace( tht, self->daoNamespace );
+	DaoType_SetNamespace( self->typeUdf, self->daoNamespace );
+	DaoType_SetNamespace( self->typeAny, self->daoNamespace );
+	DaoType_SetNamespace( self->typeBool, self->daoNamespace );
+	DaoType_SetNamespace( self->typeInt, self->daoNamespace );
+	DaoType_SetNamespace( self->typeFloat, self->daoNamespace );
+	DaoType_SetNamespace( self->typeComplex, self->daoNamespace );
+	DaoType_SetNamespace( self->typeString, self->daoNamespace );
+	DaoType_SetNamespace( self->typeEnum, self->daoNamespace );
+	DaoType_SetNamespace( self->typeRoutine, self->daoNamespace );
 
 //	DaoNamespace_AddParent( self->mainNamespace, self->daoNamespace );
 
@@ -2671,18 +2683,20 @@ DaoVmSpace* DaoVmSpace_MasterVmSpace()
 }
 
 
-void DaoVmSpace_InitCoreTypes( DaoVmSpace *self )
+DaoType* DaoVmSpace_InitCoreTypes( DaoVmSpace *self )
 {
-	DaoType *tht = DaoType_New( self, "@X", DAO_THT, NULL, NULL );
-	self->typeUdf = DaoType_New( self, "?", DAO_UDT, NULL, NULL );
-	self->typeAny = DaoType_New( self, "any", DAO_ANY, NULL, NULL );
-	self->typeBool = DaoType_New( self, "bool", DAO_BOOLEAN, NULL, NULL );
-	self->typeInt = DaoType_New( self, "int", DAO_INTEGER, NULL, NULL );
-	self->typeFloat = DaoType_New( self, "float", DAO_FLOAT, NULL, NULL );
-	self->typeComplex = DaoType_New( self, "complex", DAO_COMPLEX, NULL, NULL );
-	self->typeString = DaoType_New( self, "string", DAO_STRING, NULL, NULL );
-	self->typeEnum = DaoType_New( self, "enum", DAO_ENUM, NULL, NULL );
-	self->typeRoutine = DaoType_New( self, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
+	DaoNamespace *daoNS = self->daoNamespace;
+	DaoType *tht = DaoType_New( daoNS, "@X", DAO_THT, NULL, NULL );
+	self->typeUdf = DaoType_New( daoNS, "?", DAO_UDT, NULL, NULL );
+	self->typeAny = DaoType_New( daoNS, "any", DAO_ANY, NULL, NULL );
+	self->typeBool = DaoType_New( daoNS, "bool", DAO_BOOLEAN, NULL, NULL );
+	self->typeInt = DaoType_New( daoNS, "int", DAO_INTEGER, NULL, NULL );
+	self->typeFloat = DaoType_New( daoNS, "float", DAO_FLOAT, NULL, NULL );
+	self->typeComplex = DaoType_New( daoNS, "complex", DAO_COMPLEX, NULL, NULL );
+	self->typeString = DaoType_New( daoNS, "string", DAO_STRING, NULL, NULL );
+	self->typeEnum = DaoType_New( daoNS, "enum", DAO_ENUM, NULL, NULL );
+	self->typeRoutine = DaoType_New( daoNS, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
+	return tht;
 }
 
 void DaoVmSpace_InitStdTypes( DaoVmSpace *self )
@@ -2712,21 +2726,21 @@ void DaoVmSpace_InitStdTypes( DaoVmSpace *self )
 
 #ifdef DAO_WITH_NUMARRAY
 	self->typeArray = DaoNamespace_WrapGenericType( daoNS, & daoArrayCore, DAO_ARRAY );
-	self->typeArrayEmpty = DaoType_Specialize( self->typeArray, & self->typeFloat, 1 );
+	self->typeArrayEmpty = DaoType_Specialize( self->typeArray, & self->typeFloat, 1, daoNS );
 	self->typeArrayEmpty = DaoType_GetConstType( self->typeArrayEmpty );
 	self->typeArrayEmpty->empty = 1;
 	self->typeArrays[DAO_NONE] = self->typeArrayEmpty;
-	self->typeArrays[DAO_BOOLEAN] = DaoType_Specialize( self->typeArray, & self->typeBool, 1 );
-	self->typeArrays[DAO_INTEGER] = DaoType_Specialize( self->typeArray, & self->typeInt, 1 );
-	self->typeArrays[DAO_FLOAT] = DaoType_Specialize( self->typeArray, & self->typeFloat, 1 );
-	self->typeArrays[DAO_COMPLEX] = DaoType_Specialize( self->typeArray, & self->typeComplex, 1 );
+	self->typeArrays[DAO_BOOLEAN] = DaoType_Specialize( self->typeArray, & self->typeBool, 1, daoNS );
+	self->typeArrays[DAO_INTEGER] = DaoType_Specialize( self->typeArray, & self->typeInt, 1, daoNS );
+	self->typeArrays[DAO_FLOAT] = DaoType_Specialize( self->typeArray, & self->typeFloat, 1, daoNS );
+	self->typeArrays[DAO_COMPLEX] = DaoType_Specialize( self->typeArray, & self->typeComplex, 1, daoNS );
 #endif
 
 	self->typeList = DaoNamespace_WrapGenericType( daoNS, & daoListCore, DAO_LIST );
 	self->typeMap = DaoNamespace_WrapGenericType( daoNS, & daoMapCore, DAO_MAP );
 
-	self->typeListAny = DaoType_Specialize( self->typeList, NULL, 0 );
-	self->typeMapAny  = DaoType_Specialize( self->typeMap, NULL, 0 );
+	self->typeListAny = DaoType_Specialize( self->typeList, NULL, 0, daoNS );
+	self->typeMapAny  = DaoType_Specialize( self->typeMap, NULL, 0, daoNS );
 
 	/*
 	// These types should not be accessible by developers using type annotation.
