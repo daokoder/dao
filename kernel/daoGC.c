@@ -484,7 +484,7 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanValue( (DaoValue*) type->nameSpace );
 				DaoObjectLogger_ScanArray( type->args );
 				DaoObjectLogger_ScanArray( type->bases );
-				DaoObjectLogger_ScanMap( type->interfaces, 1, 0 );
+				DaoObjectLogger_ScanMap( type->interfaces, 1, 1 );
 				break;
 			}
 		case DAO_TYPEKERNEL :
@@ -1983,7 +1983,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) type->nameSpace );
 			cycRefCountDecrements( type->args );
 			cycRefCountDecrements( type->bases );
-			count += DaoGC_ScanMap( type->interfaces, DAO_GC_DEC, 1, 0 );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_DEC, 1, 1 );
 			break;
 		}
 	case DAO_TYPEKERNEL :
@@ -2204,7 +2204,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) type->nameSpace );
 			cycRefCountIncrements( type->args );
 			cycRefCountIncrements( type->bases );
-			count += DaoGC_ScanMap( type->interfaces, DAO_GC_INC, 1, 0 );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_INC, 1, 1 );
 			break;
 		}
 	case DAO_TYPEKERNEL :
@@ -2446,7 +2446,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & type->cbtype );
 			directRefCountDecrement( (DaoValue**) & type->quadtype );
 			directRefCountDecrement( (DaoValue**) & type->nameSpace );
-			count += DaoGC_ScanMap( type->interfaces, DAO_GC_BREAK, 1, 0 );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_BREAK, 1, 1 );
 			break;
 		}
 	case DAO_TYPEKERNEL :

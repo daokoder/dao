@@ -52,8 +52,12 @@ void DaoInterface_Delete( DaoInterface *self );
 
 void DaoInterface_DeriveMethods( DaoInterface *self );
 
-int DaoInterface_Bind( DList *pairs, DList *fails );
-int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
+/*
+// DaoInterface_BindTo(): Bind an interface to a type;
+// Return NULL on success, otherwise return the first interface method
+// that is not compatible with the type;
+*/
+DaoRoutine* DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
 DaoCinType* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type );
 
 int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );

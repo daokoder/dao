@@ -162,16 +162,16 @@ static int DaoInterface_CheckMethod( DaoRoutine *routine, DaoType *type, DMap *b
 	return DaoRoutine_IsCompatible( method, routine->routType, binds );
 }
 
-int DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
+DaoRoutine* DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
 {
 	daoint i;
 
 	for(i=0; i<methods->size; ++i){
 		DaoRoutine *routine = methods->items.pRoutine[i];
-		if( DaoInterface_CheckMethod( routine, type, binds ) == 0 ) return 0;
+		if( DaoInterface_CheckMethod( routine, type, binds ) == 0 ) return routine;
 	}
 
-	return 1;
+	return NULL;
 }
 static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *binds )
 {
@@ -216,36 +216,44 @@ static void DMap_SortMethods( DMap *hash, DList *methods )
 	DMap_Delete( map );
 	DString_Delete( name );
 }
-int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds )
+DaoRoutine* DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds )
 {
 	DNode *it;
 	DMap *newbinds = NULL;
 	DList *methods;
+	DaoRoutine *incompatible;
 	void *pvoid[2];
-	daoint i, n, bl;
+	daoint i, n;
+
+	if( self->abtype->kernel->SetupMethods ){
+		DaoTypeKernel *kernel = self->abtype->kernel;
+		kernel->SetupMethods( kernel->nspace, self->abtype->core );
+	}
 
 	/* XXX locking */
-	if( type->interfaces == NULL ) type->interfaces = DHash_New( DAO_DATA_VALUE, 0 );
+	if( type->interfaces == NULL ){
+		type->interfaces = DHash_New( DAO_DATA_VALUE, DAO_DATA_VALUE );
+	}
 
 	pvoid[0] = type;
 	pvoid[1] = self->abtype;
-	if( (it = DMap_Find( type->interfaces, self )) ) return it->value.pVoid != NULL;
-	if( binds && DMap_Find( binds, pvoid ) ) return 1;
+	if( (it = DMap_Find( type->interfaces, self )) ) return it->value.pRoutine;
+	if( binds && DMap_Find( binds, pvoid ) ) return NULL;
 	if( binds ==NULL ) newbinds = binds = DHash_New( DAO_DATA_VOID2, 0 );
 	DaoInterface_TempBind( self, type, binds );
 	methods = DList_New(0);
 	DMap_SortMethods( self->methods, methods );
-	bl = DaoInterface_CheckBind( methods, type, binds );
+	incompatible = DaoInterface_CheckBind( methods, type, binds );
 	DList_Delete( methods );
 	if( newbinds ) DMap_Delete( newbinds );
-	DMap_Insert( type->interfaces, self, bl ? self : NULL );
-	if( bl == 0 ) return 0;
+	DMap_Insert( type->interfaces, self, incompatible );
+	if( incompatible ) return incompatible;
 	for(i=0,n=self->bases->size; i<n; i++){
 		DaoInterface *base = (DaoInterface*) self->bases->items.pValue[i];
 		if( DMap_Find( type->interfaces, base ) ) continue;
-		DMap_Insert( type->interfaces, base, base );
+		DMap_Insert( type->interfaces, base, NULL );
 	}
-	return 1;
+	return NULL;
 }
 DaoCinType* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type )
 {
@@ -269,15 +277,15 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 {
 	DMap *inters = self->interfaces;
 	DNode *it;
-	daoint i;
+
 	if( inter == NULL ) return DAO_MT_NOT;
-	if( inter->abtype->kernel->SetupMethods ){
-		DaoTypeKernel *kernel = inter->abtype->kernel;
-		kernel->SetupMethods( kernel->nspace, inter->abtype->core );
+	if( inters == NULL ){
+		return DAO_MT_SUB * (DaoInterface_BindTo( inter, self, binds ) == NULL);
 	}
-	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
-	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;
-	return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
+	if( (it = DMap_Find( inters, inter )) ){
+		return it->value.pRoutine ? DAO_MT_NOT : DAO_MT_SUB;
+	}
+	return DAO_MT_SUB * (DaoInterface_BindTo( inter, self, binds ) == NULL);
 }
 
 

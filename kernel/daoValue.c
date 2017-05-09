@@ -799,6 +799,8 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 		return NULL;
 	}else if( type->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) type->aux;
+		DaoRoutine *incompatible;
+
 		if( type->aux == NULL ){ /* type "interface": */
 			if( value->type != DAO_INTERFACE ) return NULL;
 			return value;
@@ -828,8 +830,19 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 			break;
 		}
 		/* Automatic binding when casted to an interface: */
-		if( DaoInterface_BindTo( inter, at, NULL ) ) return value;
-		return NULL;
+		incompatible = DaoInterface_BindTo( inter, at, NULL );
+		if( incompatible != NULL ){
+			DString *buffer = DString_New();
+			DString_AppendChars( buffer, "Interface method " );
+			DString_Append( buffer, inter->abtype->name );
+			DString_AppendChars( buffer, "::" );
+			DString_Append( buffer, incompatible->routName );
+			DString_AppendChars( buffer, "() is not available in the source type;" );
+			DaoProcess_DeferException( proc, "Error::Type", buffer->chars );
+			DString_Delete( buffer );
+			return NULL;
+		}
+		return value;
 	}else if( type->tid == DAO_VARIANT ){
 		DaoType *best = NULL;
 		int i, n, max = DAO_MT_NOT;

@@ -976,7 +976,7 @@ int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int de
 		if( it ){
 			return DAO_MT_EQ;
 		}else{
-			DMap_Insert( binds, pvoid, 0 );
+			DMap_Insert( binds, pvoid, NULL );
 		}
 	}
 	mt = DaoType_MatchToX( self, type, defs, binds, dep, mode );

@@ -3751,16 +3751,16 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 	invarToVar = at != NULL && at->invar != 0 && ct->invar == 0;
 
-	va = DaoValue_Convert( va, ct, invarToVar, self );
+	vc = DaoValue_Convert( va, ct, invarToVar, self );
 	if( self->status == DAO_PROCESS_STACKED ) return;
-	if( va == NULL ) goto FailConversion;
+	if( vc == NULL ) goto FailConversion;
+	va = vc;
 
 FastCasting:
 	DaoValue_Copy( va, vc2 );
 	return;
 FailConversion :
-	at = self->activeTypes[ vmc->a ];
-	if( at == NULL ) at = DaoNamespace_GetType( self->activeNamespace, va );
+	at = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoProcess_RaiseTypeError( self, at, ct, "casting" );
 }
 static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
@@ -5119,26 +5119,48 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 {
 	DaoType *warning = self->vmSpace->typeWarning;
 	DaoStream *stream = self->vmSpace->errorStream;
-	DaoException *except;
+	DaoException *exception = (DaoException*) DList_Back( self->exceptions );
+	DString *deferInfo = NULL;
 
 	if( self->activeRoutine == NULL ){
 		DaoStream_WriteChars( stream, "ERROR: no active routine to raise an exception!\n" );
 		return NULL;
 	}
 
+	if( exception != NULL && exception->ctype == etype && exception->callers->size == 0 ){
+		DString_Assign( self->string, exception->info );
+		deferInfo = self->string;
+	}else{
+		exception = NULL;
+	}
+
 	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
-		except = DaoException_New( etype );
-		DaoException_Init( except, self, info, NULL );
-		DaoException_Print( except, stream );
-		DaoException_Delete( except );
-		return except;
+		if( exception == NULL ) exception = DaoException_New( etype );
+
+		DaoException_Init( exception, self, info, NULL );
+		if( deferInfo ){
+			DString_AppendChars( exception->info, "\n" );
+			DString_Append( exception->info, deferInfo );
+			DaoException_Print( exception, stream );
+			DList_PopBack( self->exceptions );
+		}else{
+			DaoException_Print( exception, stream );
+			DaoException_Delete( exception );
+		}
+		return exception;
 	}
-	except = DaoException_New( etype );
-	DaoException_Init( except, self, info, NULL );
-	DList_Append( self->exceptions, (DaoValue*) except );
+	if( exception == NULL ) exception = DaoException_New( etype );
+
+	DaoException_Init( exception, self, info, NULL );
+	if( deferInfo ){
+		DString_AppendChars( exception->info, "\n" );
+		DString_Append( exception->info, deferInfo );
+	}else{
+		DList_Append( self->exceptions, (DaoValue*) exception );
+	}
 	DaoProcess_TryDebugging( self );
-	return except;
+	return exception;
 }
 void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data )
 {
@@ -5204,6 +5226,27 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 	DString_AppendChars( details, "\'." );
 	DaoProcess_RaiseError( self, "Type", details->chars );
 	DString_Delete( details );
+}
+
+void DaoProcess_DeferException( DaoProcess *self, const char *type, const char *info )
+{
+	DaoType *etype = DaoVmSpace_MakeExceptionType( self->vmSpace, type );
+	DaoException *exception = (DaoException*) DList_Back( self->exceptions );
+
+	if( etype == NULL ){
+		DaoProcess_RaiseError( self, "Param", "invalid exception type name" );
+		return;
+	}
+
+	if( exception != NULL && exception->ctype == etype && exception->callers->size == 0 ){
+		DString_AppendChars( exception->info, "\n" );
+		DString_AppendChars( exception->info, info );
+	}else{
+		exception = DaoException_New( etype );
+		DString_SetChars( exception->info, info );
+
+		DList_Append( self->exceptions, (DaoValue*) exception );
+	}
 }
 
 void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )

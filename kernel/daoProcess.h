@@ -198,6 +198,7 @@ DAO_DLL int DaoProcess_ExecuteCall( DaoProcess *self );
 
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
+DAO_DLL void DaoProcess_DeferException( DaoProcess *self, const char *type, const char *info );
 DAO_DLL void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear );
 
 DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
