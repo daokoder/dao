@@ -288,6 +288,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 	int att = 0;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 
+	if( self->debugging ) return;
 	if( self->topFrame == NULL ) return;
 	if( profiler ){
 		profiler->LeaveFrame( profiler, self, self->topFrame, 1 );
@@ -319,6 +320,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 }
 void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback )
 {
+	if( self->debugging ) return;
 	while( self->topFrame != rollback ) DaoProcess_PopFrame( self );
 }
 void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
@@ -2584,12 +2586,13 @@ FinishProcess:
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
 AbortProcess:
-	if( self->debugging ){
-		self->status = DAO_PROCESS_SUSPENDED;
-		self->pauseType = DAO_PAUSE_DEBUGGING;
-	}else{
-		self->status = DAO_PROCESS_ABORTED;
-	}
+	/*
+	// With self->debugging == 1, the process must be set to abort status,
+	// such that code block methods will be forced to terminate execution.
+	// This is necessary for debugging main thread execution where the main
+	// thread cannot be blocked in certain applications (GUI).
+	*/
+	self->status = DAO_PROCESS_ABORTED;
 
 ReturnFalse:
 
@@ -2620,9 +2623,6 @@ int DaoProcess_Execute( DaoProcess *self )
 {
 	int ret = DaoProcess_Start( self );
 #ifdef DAO_WITH_CONCURRENT
-	if( self->status == DAO_PROCESS_SUSPENDED && self->pauseType == DAO_PAUSE_DEBUGGING ){
-		return ret;
-	}
 	if( self->status >= DAO_PROCESS_SUSPENDED ){
 		DMutex mutex;
 		DCondVar condv;
@@ -3796,6 +3796,8 @@ static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue 
 	int async = vmc->b & DAO_CALL_ASYNC;
 	DaoObject *root = NULL;
 
+	if( self->vmSpace->options & DAO_OPTION_DEBUG ) return 0;
+
 	/*
 	// No tail call optimization for wrapped C/C++ functions.
 	// Because it is less useful and more inconvenient to setup properly.
@@ -3883,7 +3885,7 @@ static void DaoProcess_DoNativeCall( DaoProcess *self, DaoVmCode *vmc,
 #endif
 	DaoProcess_CallNativeFunction( self );
 	status = self->status;
-	if( ! self->debugging ) DaoProcess_PopFrame( self );
+	DaoProcess_PopFrame( self );
 
 	if( status == DAO_PROCESS_SUSPENDED ) self->status = status;
 }
@@ -3916,7 +3918,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_SetActiveFrame( self, self->firstFrame ); /* return value in stackValues[0] */
 		self->topFrame->active = self->firstFrame;
 		DaoProcess_CallNativeFunction( self );
-		if( ! self->debugging ) DaoProcess_PopFrame( self );
+		DaoProcess_PopFrame( self );
 
 		ret = self->stackValues[0];
 		if( ret && (ret->type >= DAO_CSTRUCT && ret->type <= DAO_CDATA) ){
@@ -4149,7 +4151,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 			DaoProcess_CallNativeFunction( self );
 			status = self->status;
-			if( ! self->debugging ) DaoProcess_PopFrame( self );
+			DaoProcess_PopFrame( self );
 			if( status == DAO_PROCESS_SUSPENDED ) self->status = status;
 		}else{
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->body->regCount );
