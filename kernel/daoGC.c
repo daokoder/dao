@@ -2335,22 +2335,28 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoCstruct *cstruct = (DaoCstruct*) value;
 			DaoType *ctype = cstruct->ctype;
 
+			/*
+			// DaoGC_ScanCstruct() must be called before DaoVmSpace_ReleaseCdata2().
+			// Because the latter may set DaoCdata::data to NULL, which prevents
+			// the HandleGC() callback of the cdata from properly unlinking
+			// the reference of the cdata object in the field (dao_cdata) of
+			// a deeply wrapped C/C++ type; 
+			*/
+			DaoGC_ScanCstruct( cstruct, DAO_GC_BREAK );
 			if( value->type == DAO_CDATA && value->xCdata.vmSpace != NULL ){
 				DaoCdata *cdata = (DaoCdata*) value;
 				DaoVmSpace *vmspace = cdata->vmSpace;
 				if( DaoGC_IsConcurrent() ) DaoVmSpace_LockCache( vmspace );
-				if( cdata->cycRefCount == 0 && cdata->data != NULL ){
+				if( cdata->data != NULL ){
 					DaoVmSpace_ReleaseCdata2( vmspace, cdata->ctype, cdata->data );
 				}
 				if( DaoGC_IsConcurrent() ) DaoVmSpace_UnlockCache( vmspace );
-				if( cdata->cycRefCount ) break;  /* Postponed; */
 			}
 
 			directRefCountDecrement( (DaoValue**) & cstruct->object );
 			directRefCountDecrement( (DaoValue**) & cstruct->ctype );
 			cstruct->trait |= DAO_VALUE_BROKEN;
 			cstruct->ctype = ctype;
-			DaoGC_ScanCstruct( cstruct, DAO_GC_BREAK );
 			if( value->type == DAO_CDATA ) DaoCdata_SetData( (DaoCdata*) value, NULL );
 			break;
 		}
