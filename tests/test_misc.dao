@@ -105,3 +105,18 @@ TestTailCall( 5 )
 {{Called by:  TestTailCall()}} [^%n]* %s*
 {{Called by:  __main__()}} [^%n]* %s*
 @[test(code_03)]
+
+
+
+
+
+@[test(code_01)]
+std.try{ std.load( "WrongModule" ) }
+std.load( "WrongModule" )
+@[test(code_01)]
+@[test(code_01)]
+{{ERROR}} .*
+{{Invalid number of parameter}} .*
+{{ERROR}} .*
+{{Invalid number of parameter}} .*
+@[test(code_01)]

@@ -1,0 +1,32 @@
+
+#{
+
+This script is wrong in Test::Meth(). If an application tries to load
+this script twice, it must produce the same error in Test::Meth().
+If the second loading produces an error in Test::Test(), complaining
+the parameter type of m.append(), there must be a problem in specializing
+list<Klass> and its methods, due to the possibility that the same namespace
+used to specialize list<Klass> in the first loading is also used in the
+second loading. This is no longer the case in the current implementation
+of Dao, but regression tests must be done for this (see test_misc.dao).
+
+#}
+
+class Klass
+{
+}
+
+class Test
+{
+	var m: list<Klass> = {};
+
+	routine Test(){
+		m.append( Klass() );
+	}
+
+	routine Meth(){
+		Test(1);
+	}
+}
+
+t = Test();
