@@ -3185,7 +3185,13 @@ void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
 
 	cdata = (DaoCdata*) node->value.pValue;
 	if( cdata->ctype == type || type == NULL ){
-		cdata->data = NULL;
+		/*
+		// In C/C++ modules, DaoVmSpace_ReleaseCdata() could be called in
+		// class desctructors with a null @type parameter, to remove its
+		// wrapping cdata object from the cache. Setting its @data field
+		// to null to prevent double deletion of the wrapped C/C++ object.
+		*/
+		if( type == NULL ) cdata->data = NULL;
 		cdata->vmSpace = NULL;
 		DMap_EraseNode( self->cdataWrappers, node );
 	}else{
