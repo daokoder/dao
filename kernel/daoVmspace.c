@@ -3190,6 +3190,11 @@ void DaoVmSpace_ReleaseCdata2( DaoVmSpace *self, DaoType *type, void *data )
 		// class desctructors with a null @type parameter, to remove its
 		// wrapping cdata object from the cache. Setting its @data field
 		// to null to prevent double deletion of the wrapped C/C++ object.
+		//
+		// Otherwise, do not set @data to null, because it might still
+		// hold references to Dao values such as its wrapping cdata object,
+		// and it is needed by the GC to handle these (potential cyclic)
+		// references properly.
 		*/
 		if( type == NULL ) cdata->data = NULL;
 		cdata->vmSpace = NULL;

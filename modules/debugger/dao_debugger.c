@@ -35,7 +35,7 @@
 #include "daoVmspace.h"
 
 extern void SplitByWhiteSpaces( const char *str, DList *tokens );
-extern void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str );
+extern void Dao_AboutVar( DaoProcess *proc, DaoType *type, DaoValue *var, DString *str );
 
 static const char *const sep =
 "-------------------------------------------------------------------\n";
@@ -106,7 +106,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 				ushort_t reg = (ushort_t)strtod( tokens->items.pString[1]->chars, 0 );
 				DaoType *tp = proc->activeTypes[ reg ];
 				DString_Clear( input );
-				Dao_AboutVar( proc->activeNamespace, proc->activeValues[reg], input );
+				Dao_AboutVar( proc, NULL, proc->activeValues[reg], input );
 				DaoStream_WriteChars( stream, "type: " );
 				if( tp )
 					DaoStream_WriteString( stream, tp->name );

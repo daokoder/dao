@@ -1391,6 +1391,7 @@ static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 	if( N == 0 ){
 		if( value->type != DAO_STRING ) return DAO_ERROR_VALUE;
 		DString_Assign( self->xString.value, value->xString.value );
+		return DAO_OK;
 	}
 
 	if( N != 1 ) return DAO_ERROR_INDEX;
