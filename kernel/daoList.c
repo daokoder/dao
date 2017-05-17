@@ -216,6 +216,7 @@ void DList_Insert( DList *self, void *val, daoint id )
 		DList_PushBack( self, val );
 		return;
 	}
+	if( self->type && val != NULL ) val = DList_CopyItem( self, val );
 	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
 		if( self->offset > 0 ) memmove( buffer, self->items.pVoid, self->size*sizeof(void*) );
@@ -223,13 +224,8 @@ void DList_Insert( DList *self, void *val, daoint id )
 		self->items.pVoid = (void**) dao_realloc( buffer, (self->bufsize+1)*sizeof(void*) );
 		self->offset = 0;
 	}
-	if( self->type && val != NULL ){
-		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
-		self->items.pVoid[ id ] = DList_CopyItem( self, val );
-	}else{
-		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
-		self->items.pVoid[id] = val;
-	}
+	for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
+	self->items.pVoid[id] = val;
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	self->size++;
 }
@@ -307,6 +303,7 @@ void DList_Erase( DList *self, daoint start, daoint n )
 void* DList_PushFront( DList *self, void *val )
 {
 	void **buffer = self->items.pVoid - self->offset;
+	if( self->type && val != NULL ) val = DList_CopyItem( self, val );
 	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( self->offset > 0 ){
 		/* make sure the concurrent gc won't access an invalid pointer: */
@@ -321,11 +318,7 @@ void* DList_PushFront( DList *self, void *val )
 		memmove( buffer + self->offset, buffer, self->size*sizeof(void*) );
 		self->items.pVoid = buffer + self->offset - 1;
 	}
-	if( self->type && val != NULL ){
-		self->items.pVoid[0] = DList_CopyItem( self, val );
-	}else{
-		self->items.pVoid[0] = val;
-	}
+	self->items.pVoid[0] = val;
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	self->size ++;
 	self->offset --;
@@ -368,17 +361,14 @@ void* DList_PopFront( DList *self )
 void* DList_PushBack( DList *self, void *val )
 {
 	void **buffer = self->items.pVoid - self->offset;
+	if( self->type && val != NULL ) val = DList_CopyItem( self, val );
 	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
 		self->bufsize += self->bufsize/5 + 5;
 		buffer = (void**) dao_realloc( buffer, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buffer + self->offset;
 	}
-	if( self->type && val != NULL ){
-		self->items.pVoid[ self->size ] = DList_CopyItem( self, val );
-	}else{
-		self->items.pVoid[ self->size ] = val;
-	}
+	self->items.pVoid[ self->size ] = val;
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	self->size++;
 	return self->items.pVoid[ self->size - 1 ];
@@ -408,12 +398,9 @@ void* DList_PopBack( DList *self )
 void  DList_SetItem( DList *self, daoint index, void *value )
 {
 	if( index >= self->size ) return;
+	if( self->type && value != NULL ) value = DList_CopyItem( self, value );
 	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
-	if( self->type && value ){
-		self->items.pVoid[ index ] = DList_CopyItem( self, value );
-	}else{
-		self->items.pVoid[index] = value;
-	}
+	self->items.pVoid[index] = value;
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void* DList_GetItem( DList *self, daoint index )
