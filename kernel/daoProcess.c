@@ -2028,7 +2028,7 @@ CallEntry:
 		}OPNEXT() OPCASE( NOT_F ){
 			LocalBool(vmc->c) = ! LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( MINUS_I ){
-			LocalBool(vmc->c) = - LocalInt(vmc->a);
+			LocalInt(vmc->c) = - LocalInt(vmc->a);
 		}OPNEXT() OPCASE( MINUS_F ){
 			LocalFloat(vmc->c) = - LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( MINUS_C ){
