@@ -1846,6 +1846,7 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 	DaoValue *B = args[1];
 	DString *C;
 	int D = 0;
+	int returned = 0;
 
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
@@ -1871,18 +1872,22 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 		DaoArray *na = (DaoArray*) A;
 		DaoArray *nc = na;
 		if( op->a != op->c ){
+			returned = 1;
 			nc = DaoProcess_PutArray( proc );
 			if( nc->etype == DAO_NONE ) nc->etype = na->etype;
 		}
 		DaoArray_DoBinary_ArrayNumber( nc, na, B, op->code, proc );
+		if( !returned ) DaoProcess_PutValue( proc, (DaoValue*) nc );
 	}else if( A->type >= DAO_INTEGER && A->type <= DAO_COMPLEX && B->type == DAO_ARRAY ){
 		DaoArray *nb = (DaoArray*) B;
 		DaoArray *nc = nb;
 		if( op->b != op->c ){
+			returned = 1;
 			nc = DaoProcess_PutArray( proc );
 			if( nc->etype == DAO_NONE ) nc->etype = nb->etype;
 		}
 		DaoArray_DoBinary_NumberArray( nc, A, nb, op->code, proc );
+		if( !returned ) DaoProcess_PutValue( proc, (DaoValue*) nc );
 	}else if( A->type == DAO_ARRAY && B->type == DAO_ARRAY ){
 		DaoArray *na = (DaoArray*) A;
 		DaoArray *nb = (DaoArray*) B;
@@ -1910,10 +1915,12 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 		}else if( op->b == op->c ){
 			nc = nb;
 		}else{
+			returned = 1;
 			nc = DaoProcess_PutArray( proc );
 			if( nc->etype == DAO_NONE ) nc->etype = na->etype > nb->etype ? na->etype : nb->etype;
 		}
 		DaoArray_DoBinary_ArrayArray( nc, na, nb, op->code, proc );
+		if( !returned ) DaoProcess_PutValue( proc, (DaoValue*) nc );
 	}
 
 	return NULL;
