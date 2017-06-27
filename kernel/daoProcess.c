@@ -506,7 +506,11 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		/* Avoid copying: */
+		/*
+		// Avoid copying:
+		// Marking the destination type as invar will ensure no-copying for cstruct/cdata;
+		// See DaoValue_MoveCstruct();
+		*/
 		if( DaoValue_Move2( svalue, & dest[0], DaoType_GetInvarType( partype ), defs ) ){
 			passed = 1;
 			selfChecked = 1;
@@ -1530,9 +1534,15 @@ CallEntry:
 					DaoValue_Copy( vA, & locVars[vmc->c] );
 				}
 			}
-		}OPNEXT() OPCASE( MOVE ) OPCASE( UNTAG ) {
+		}OPNEXT() OPCASE( MOVE ) {
 			self->activeCode = vmc;
 			DaoProcess_Move( self, locVars[vmc->a], & locVars[vmc->c], locTypes[vmc->c] );
+			goto CheckException;
+		}OPNEXT() OPCASE( UNTAG ) {
+			self->activeCode = vmc;
+			/* Avoid copying: See DaoProcess_PassParams(); */
+			type = DaoType_GetInvarType( locTypes[vmc->c] );
+			DaoProcess_Move( self, locVars[vmc->a], & locVars[vmc->c], type );
 			goto CheckException;
 		}OPNEXT() OPCASE( CAST ){
 			DaoProcess_DoCast( self, vmc );
