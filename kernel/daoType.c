@@ -1112,11 +1112,13 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		vms = DaoType_GetVmSpace( self );
 		tp = vms->typeArrays[ value->xArray.etype ];
 		if( tp == self ) return DAO_MT_EQ;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUBX;
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		return DaoType_Match( tp, self, defs, NULL, 0, mode );
 	case DAO_LIST :
 		tp = value->xList.ctype;
 		if( tp == self ) return DAO_MT_EQ;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUBX;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL || tp->empty )
@@ -1125,6 +1127,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	case DAO_MAP :
 		tp = value->xMap.ctype;
 		if( tp == self ) return DAO_MT_EQ;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUBX;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL || tp->empty )
@@ -1133,6 +1136,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 	case DAO_TUPLE :
 		tp = value->xTuple.ctype;
 		if( tp == self ) return DAO_MT_EQ;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUBX;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xTuple.size < (self->args->size - self->variadic) ) return DAO_MT_NOT;

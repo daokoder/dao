@@ -4,6 +4,7 @@ interface InterA
 {
 	routine size()=>int
 	routine serialize()=>string
+	static routine statmeth()=>int
 }
 
 # Concrete interface for int:
@@ -17,6 +18,7 @@ interface InterA for int
 		return self + 1;
 	}
 	routine serialize() => string { return "abc" + (string) (int) self; }
+	static routine statmeth()=>int { return 456 }
 }
 
 var a: InterA = 123       # a: value type InterA<int>; variable type InterA;
@@ -24,7 +26,7 @@ var b = (InterA) 123;     # b: value type InterA<int>; variable type InterA<int>
 var c: InterA<int> = 123  # c: value type InterA<int>; variable type InterA<int>;
 
 io.writeln( a.size() )
-io.writeln( "value", (int) a )
+io.writeln( "value", (int) a, a.statmeth() )
 
 var d: int = c
 
