@@ -457,7 +457,8 @@ int DaoType_IsPrimitiveOrImmutable( DaoType *self )
 
 enum DaoTypeMatchMode
 {
-	DAO_MODE_INVAR_DEST = 1
+	DAO_MODE_INVAR_SRC  = 1,
+	DAO_MODE_INVAR_DEST = 2
 };
 
 int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode );
@@ -588,7 +589,10 @@ static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, 
 		/* Matching to @T<SomeType> has to be precise: */
 		if( mt < DAO_MT_EQ && !(mode & DAO_MODE_INVAR_DEST) ) return DAO_MT_NOT;
 	}
-	if( defs ) MAP_Insert( defs, type, self );
+	if( defs ){
+		if( mode & DAO_MODE_INVAR_SRC ) self = DaoType_GetInvarType( self );
+		MAP_Insert( defs, type, self );
+	}
 	return mt;
 }
 
@@ -631,7 +635,7 @@ int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive )
 	if( self->konst == 1 || self->invar == 0 || type->invar != 0 ) return 1;
 	if( enforePrimitive == 0 && DaoType_IsPrimitiveOrImmutable( self ) ) return 1;
 	if( DaoType_IsImmutable( self ) ) return 1;
-	return type->tid == DAO_ANY || type->tid == DAO_THT;
+	return type->tid == DAO_THT;
 }
 
 int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep, int mode )
@@ -686,8 +690,10 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	}else if( self->invar || type->invar ){
 		if( DaoType_CheckInvarMatch( self, type, 0 ) == 0 ) return 0;
 
-		if( self->invar ) self = DaoType_GetBaseType( self );
-		if( type->invar ){
+		if( self->invar ){
+			self = DaoType_GetBaseType( self );
+			mode |= DAO_MODE_INVAR_SRC;
+		}else if( type->invar ){
 			type = DaoType_GetBaseType( type );
 			mode |= DAO_MODE_INVAR_DEST;
 		}
