@@ -1272,6 +1272,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		if( nameTok->name == DTOK_ID_THTYPE ){
 			if( nested->size == selfpar && type->tid != DAO_ROUTINE ) goto ErrorInvalidParam;
 		}
+		/* Invariable classes must be instantiated with primitive or immutable parameters: */
 		if( invarhost && (routine->attribs & DAO_ROUT_INITOR) ){
 			DaoType *type2 = type;
 			if( type2->tid == DAO_PAR_VALIST ) type2 = (DaoType*) type2->aux;
@@ -7797,6 +7798,18 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DList *cid, int r
 	int p1 = self->vmcLast->first;
 	int p3 = p1 + self->vmcLast->last;
 	int i, N = enode->count;
+
+	if( type ){  /* Could by "any" etc.; */
+		int tid = 0;
+		switch( self->vmcLast->code ){
+		case DVM_TUPLE  : tid = DAO_TUPLE; break;
+		case DVM_LIST   : tid = DAO_LIST; break;
+		case DVM_MAP    : tid = DAO_MAP; break;
+		case DVM_VECTOR :
+		case DVM_MATRIX : tid = DAO_ARRAY; break;
+		}
+		if( type->tid != tid ) type = NULL;
+	}
 
 	vmcValue.code = self->vmcLast->code;
 	vmcValue.b = self->vmcLast->b;
