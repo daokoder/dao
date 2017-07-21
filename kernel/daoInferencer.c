@@ -3855,7 +3855,7 @@ SkipChecking:
 					if( types[opc]->variadic == 0 && opb > types[opc]->args->size ){
 						goto InvalidEnum;
 					}
-					if( mode == DVM_ENUM_MODE0 ){
+					if( mode == DVM_ENUM_MODE0 && opb == types[opc]->args->size ){
 						for(j=0; j<opb; ++j){
 							DaoType *t = types[opc]->args->items.pType[j];
 							tt = types[opa+j];

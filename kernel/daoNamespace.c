@@ -1392,6 +1392,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return self->vmSpace->typeComplex;
 	case DAO_STRING :
 		return self->vmSpace->typeString;
+	case DAO_ENUM :
+		if( N == 0 ) return self->vmSpace->typeEnum;
+		break;
 	case DAO_ARRAY :
 		if( self->vmSpace->typeArray == NULL ) return NULL; /* Numeric array not enable; */
 		return DaoType_Specialize( self->vmSpace->typeArray, itypes, N, self );
@@ -1399,6 +1402,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return DaoType_Specialize( self->vmSpace->typeList, itypes, N, self );
 	case DAO_MAP :
 		return DaoType_Specialize( self->vmSpace->typeMap, itypes, N, self );
+	case DAO_TUPLE :
+		if( N == 0 ) return self->vmSpace->typeTuple;
+		break;
 	case DAO_INTERFACE :
 		if( aux == NULL ) break; /* Maybe the general "interface" type; */
 		return aux->xInterface.abtype;

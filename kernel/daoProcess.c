@@ -3611,11 +3611,12 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			tuple = DaoTuple_New( vmc->b );
 		}
-		if( tuple->ctype ){
-			DaoType **TS = tuple->ctype->args->items.pType;
+		if( tuple->ctype && tuple->ctype->args && tuple->ctype->args->size ){
+			DList *arglist = tuple->ctype->args;
+			DaoType **itypes = arglist->items.pType;
 			for(i=0,n=tuple->size; i<n; i++){
-				DaoType *tp = TS[i]->tid == DAO_PAR_NAMED ? (DaoType*)TS[i]->aux : TS[i];
-				DaoValue_Move( src[i], tuple->values + i, tp );
+				DaoType *itype = DaoType_GetArgument( tuple->ctype, i, 1 );
+				DaoValue_Move( src[i], tuple->values + i, itype );
 			}
 		}else{
 			for(i=0,n=tuple->size; i<n; i++) DaoValue_Copy( src[i], tuple->values + i );

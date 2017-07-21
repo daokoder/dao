@@ -421,6 +421,27 @@ DaoType* DaoType_GetVarType( DaoType *self )
 	DaoType_RelinkQuadTypes( base, var );
 	return var;
 }
+
+DaoType* DaoType_GetArgument( DaoType *self, int index, int strip )
+{
+	DaoType *arg = NULL;
+
+	if( self->args == NULL || self->args->size == 0 ) return NULL;
+
+	if( index < self->args->size ){
+		arg = self->args->items.pType[index];
+	}else if( self->variadic ){
+		arg = self->args->items.pType[self->args->size-1];
+	}
+
+	if( arg == NULL ) return NULL;
+
+	if( arg->tid >= DAO_PAR_NAMED && arg->tid <= DAO_PAR_VALIST ){
+		arg = (DaoType*) arg->aux;
+	}
+	return arg;
+}
+
 int DaoType_IsImmutable( DaoType *self )
 {
 	int i;
@@ -847,6 +868,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		}
 		break;
 	case DAO_TUPLE :
+		if( type->args == NULL || type->args->size == 0 ) return DAO_MT_SUBX;
+		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_LOOSE;
 		/* Source tuple type must contain at least as many item as the target tuple: */
 		if( (self->args->size - self->variadic) < (type->args->size - type->variadic) ){
 			return DAO_MT_NOT;

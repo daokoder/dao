@@ -2696,6 +2696,8 @@ DaoType* DaoVmSpace_InitCoreTypes( DaoVmSpace *self )
 	self->typeString = DaoType_New( daoNS, "string", DAO_STRING, NULL, NULL );
 	self->typeEnum = DaoType_New( daoNS, "enum", DAO_ENUM, NULL, NULL );
 	self->typeRoutine = DaoType_New( daoNS, "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
+
+	self->typeEnum->subtid = DAO_ENUM_ANY;
 	return tht;
 }
 
