@@ -61,19 +61,6 @@ void DaoValue_Init( void *value, char type )
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
 }
 
-DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx )
-{
-	DaoValue *value = DaoType_FindValue( self, field->value );
-	if( value ) return DaoNamespace_GetType( ctx->nameSpace, value );
-	return NULL;
-}
-
-DaoValue* DaoValue_DoGetField( DaoValue *self, DaoString *field, DaoProcess *proc )
-{
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	return DaoType_FindValue( type, field->value );
-}
-
 static int DaoType_CheckTypeRange( DaoType *self, int min, int max )
 {
 	if( self->tid >= min && self->tid <= max ) return 1;
@@ -2359,28 +2346,28 @@ static DaoFunctionEntry daoStringMeths[] =
 
 DaoTypeCore daoStringCore =
 {
-	"string",                                            /* name */
-	sizeof(DaoString),                                   /* size */
-	{ NULL },                                            /* bases */
-	{ NULL },                                            /* casts */
-	NULL,                                                /* numbers */
-	daoStringMeths,                                      /* methods */
-	DaoValue_CheckGetField,     DaoValue_DoGetField,     /* GetField */
-	NULL,                       NULL,                    /* SetField */
-	DaoString_CheckGetItem,     DaoString_DoGetItem,     /* GetItem */
-	DaoString_CheckSetItem,     DaoString_DoSetItem,     /* SetItem */
-	DaoString_CheckUnary,       DaoString_DoUnary,       /* Unary */
-	DaoString_CheckBinary,      DaoString_DoBinary,      /* Binary */
-	DaoString_CheckConversion,  DaoString_DoConversion,  /* Conversion */
-	DaoString_CheckForEach,     DaoString_DoForEach,     /* ForEach */
-	DaoString_Print,                                     /* Print */
-	NULL,                                                /* Slice */
-	NULL,                                                /* Compare */
-	NULL,                                                /* Hash */
-	NULL,                                                /* Create */
-	NULL,                                                /* Copy */
-	(DaoDeleteFunction) DaoString_Delete,                /* Delete */
-	NULL                                                 /* HandleGC */
+	"string",                                                /* name */
+	sizeof(DaoString),                                       /* size */
+	{ NULL },                                                /* bases */
+	{ NULL },                                                /* casts */
+	NULL,                                                    /* numbers */
+	daoStringMeths,                                          /* methods */
+	DaoValue_CheckGetValueField,  DaoValue_DoGetValueField,  /* GetField */
+	NULL,                         NULL,                      /* SetField */
+	DaoString_CheckGetItem,       DaoString_DoGetItem,       /* GetItem */
+	DaoString_CheckSetItem,       DaoString_DoSetItem,       /* SetItem */
+	DaoString_CheckUnary,         DaoString_DoUnary,         /* Unary */
+	DaoString_CheckBinary,        DaoString_DoBinary,        /* Binary */
+	DaoString_CheckConversion,    DaoString_DoConversion,    /* Conversion */
+	DaoString_CheckForEach,       DaoString_DoForEach,       /* ForEach */
+	DaoString_Print,                                         /* Print */
+	NULL,                                                    /* Slice */
+	NULL,                                                    /* Compare */
+	NULL,                                                    /* Hash */
+	NULL,                                                    /* Create */
+	NULL,                                                    /* Copy */
+	(DaoDeleteFunction) DaoString_Delete,                    /* Delete */
+	NULL                                                     /* HandleGC */
 };
 
 
@@ -4166,28 +4153,28 @@ static DaoFunctionEntry daoListMeths[] =
 
 DaoTypeCore daoListCore =
 {
-	"list<@T=any>",                                  /* name */
-	sizeof(DaoList),                                 /* size */
-	{ NULL },                                        /* bases */
-	{ NULL },                                        /* casts */
-	NULL,                                            /* numbers */
-	daoListMeths,                                    /* methods */
-	DaoValue_CheckGetField,   DaoValue_DoGetField,   /* GetField */
-	NULL,                     NULL,                  /* SetField */
-	DaoList_CheckGetItem,     DaoList_DoGetItem,     /* GetItem */
-	DaoList_CheckSetItem,     DaoList_DoSetItem,     /* SetItem */
-	DaoList_CheckUnary,       DaoList_DoUnary,       /* Unary */
-	DaoList_CheckBinary,      DaoList_DoBinary,      /* Binary */
-	DaoList_CheckConversion,  DaoList_DoConversion,  /* Conversion */
-	DaoList_CheckForEach,     DaoList_DoForEach,     /* ForEach */
-	DaoList_Print,                                   /* Print */
-	NULL,                                            /* Slice */
-	NULL,                                            /* Compare */
-	NULL,                                            /* Hash */
-	NULL,                                            /* Create */
-	NULL,                                            /* Copy */
-	(DaoDeleteFunction) DaoList_Delete,              /* Delete */
-	NULL                                             /* HandleGC */
+	"list<@T=any>",                                          /* name */
+	sizeof(DaoList),                                         /* size */
+	{ NULL },                                                /* bases */
+	{ NULL },                                                /* casts */
+	NULL,                                                    /* numbers */
+	daoListMeths,                                            /* methods */
+	DaoValue_CheckGetValueField,  DaoValue_DoGetValueField,  /* GetField */
+	NULL,                         NULL,                      /* SetField */
+	DaoList_CheckGetItem,         DaoList_DoGetItem,         /* GetItem */
+	DaoList_CheckSetItem,         DaoList_DoSetItem,         /* SetItem */
+	DaoList_CheckUnary,           DaoList_DoUnary,           /* Unary */
+	DaoList_CheckBinary,          DaoList_DoBinary,          /* Binary */
+	DaoList_CheckConversion,      DaoList_DoConversion,      /* Conversion */
+	DaoList_CheckForEach,         DaoList_DoForEach,         /* ForEach */
+	DaoList_Print,                                           /* Print */
+	NULL,                                                    /* Slice */
+	NULL,                                                    /* Compare */
+	NULL,                                                    /* Hash */
+	NULL,                                                    /* Create */
+	NULL,                                                    /* Copy */
+	(DaoDeleteFunction) DaoList_Delete,                      /* Delete */
+	NULL                                                     /* HandleGC */
 };
 
 
@@ -5135,28 +5122,28 @@ static DaoFunctionEntry daoMapMeths[] =
 
 DaoTypeCore daoMapCore =
 {
-	"map<@K=any,@V=any>",                           /* name */
-	sizeof(DaoMap),                                 /* size */
-	{ NULL },                                       /* bases */
-	{ NULL },                                       /* casts */
-	NULL,                                           /* numbers */
-	daoMapMeths,                                    /* methods */
-	DaoValue_CheckGetField,   DaoValue_DoGetField,  /* GetField */
-	NULL,                     NULL,                 /* SetField */
-	DaoMap_CheckGetItem,      DaoMap_DoGetItem,     /* GetItem */
-	DaoMap_CheckSetItem,      DaoMap_DoSetItem,     /* SetItem */
-	DaoMap_CheckUnary,        DaoMap_DoUnary,       /* Unary */
-	DaoMap_CheckBinary,       DaoMap_DoBinary,      /* Binary */
-	DaoMap_CheckConversion,   DaoMap_DoConversion,  /* Conversion */
-	DaoMap_CheckForEach,      DaoMap_DoForEach,     /* ForEach */
-	DaoMap_Print,                                   /* Print */
-	NULL,                                           /* Slice */
-	NULL,                                           /* Compare */
-	NULL,                                           /* Hash */
-	NULL,                                           /* Create */
-	NULL,                                           /* Copy */
-	(DaoDeleteFunction) DaoMap_Delete,              /* Delete */
-	NULL                                            /* HandleGC */
+	"map<@K=any,@V=any>",                                    /* name */
+	sizeof(DaoMap),                                          /* size */
+	{ NULL },                                                /* bases */
+	{ NULL },                                                /* casts */
+	NULL,                                                    /* numbers */
+	daoMapMeths,                                             /* methods */
+	DaoValue_CheckGetValueField,  DaoValue_DoGetValueField,  /* GetField */
+	NULL,                         NULL,                      /* SetField */
+	DaoMap_CheckGetItem,          DaoMap_DoGetItem,          /* GetItem */
+	DaoMap_CheckSetItem,          DaoMap_DoSetItem,          /* SetItem */
+	DaoMap_CheckUnary,            DaoMap_DoUnary,            /* Unary */
+	DaoMap_CheckBinary,           DaoMap_DoBinary,           /* Binary */
+	DaoMap_CheckConversion,       DaoMap_DoConversion,       /* Conversion */
+	DaoMap_CheckForEach,          DaoMap_DoForEach,          /* ForEach */
+	DaoMap_Print,                                            /* Print */
+	NULL,                                                    /* Slice */
+	NULL,                                                    /* Compare */
+	NULL,                                                    /* Hash */
+	NULL,                                                    /* Create */
+	NULL,                                                    /* Copy */
+	(DaoDeleteFunction) DaoMap_Delete,                       /* Delete */
+	NULL                                                     /* HandleGC */
 };
 
 
@@ -6003,22 +5990,22 @@ DaoType* DaoCstruct_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *c
 
 	if( value ) return DaoNamespace_GetType( ctx->nameSpace, value );
 
-	return DaoType_CheckGetField( self, name );
+	return DaoValue_CheckGetField( self, name );
 }
 
 DaoValue* DaoCstruct_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
-	return DaoType_DoGetField( self->xCstruct.ctype, self, name, proc );
+	return DaoValue_DoGetField( self, self->xCstruct.ctype, name, proc );
 }
 
 int DaoCstruct_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
-	return DaoType_CheckSetField( self, name, value );
+	return DaoValue_CheckSetField( self, name, value );
 }
 
 int DaoCstruct_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
-	return DaoType_DoSetField( self->xCstruct.ctype, self, name, value, proc );
+	return DaoValue_DoSetField( self, self->xCstruct.ctype, name, value, proc );
 }
 
 DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )

@@ -1098,6 +1098,111 @@ DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self )
 }
 
 
+DaoType* DaoValue_CheckGetValueField( DaoType *self, DaoString *field, DaoRoutine *ctx )
+{
+	DaoValue *value = DaoType_FindValue( self, field->value );
+	if( value ) return DaoNamespace_GetType( ctx->nameSpace, value );
+	return NULL;
+}
+
+DaoValue* DaoValue_DoGetValueField( DaoValue *self, DaoString *field, DaoProcess *proc )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	return DaoType_FindValue( type, field->value );
+}
+
+DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *name )
+{
+	DaoRoutine *rout = DaoType_FindFunction( self, name->value );
+	DaoType *argtype;
+	DString *buffer;
+
+	if( rout != NULL ) return rout->routType;
+
+	buffer = DString_NewChars( "." );
+	DString_Append( buffer, name->value );
+	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
+	}else{
+		rout = DaoType_FindFunctionChars( self, "." );
+		if( rout == NULL ) return NULL;
+		argtype = rout->nameSpace->vmSpace->typeString;
+		rout = DaoRoutine_MatchByType( rout, self, & argtype, 1, DVM_CALL );
+	}
+	if( rout == NULL ) return NULL;
+	return (DaoType*) rout->routType->aux;
+}
+
+DaoValue* DaoValue_DoGetField( DaoValue *self, DaoType *type, DaoString *name, DaoProcess *proc )
+{
+	DaoValue *value = DaoType_FindValue( type, name->value );
+	DaoRoutine *rout;
+
+	if( value != NULL ) return value;
+
+	DString_SetChars( proc->string, "." );
+	DString_Append( proc->string, name->value );
+	rout = DaoType_FindFunction( type, proc->string );
+	if( rout != NULL ){
+		DaoProcess_PushCall( proc, rout, self, NULL, 0 );
+	}else{
+		DaoValue *arg = (DaoValue*) name;
+		rout = DaoType_FindFunctionChars( type, "." );
+		if( rout == NULL ) return NULL;
+		DaoProcess_PushCall( proc, rout, self, & arg, 1 );
+	}
+	return NULL;
+}
+
+int DaoValue_CheckSetField( DaoType *self, DaoString *name, DaoType *value )
+{
+	DString *buffer = DString_NewChars( "." );
+	DaoRoutine *rout;
+	DaoType *args[2];
+
+	DString_Append( buffer, name->value );
+	DString_AppendChars( buffer, "=" );
+	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
+
+	if( rout != NULL ){
+		rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
+		if( rout == NULL ) return DAO_ERROR_VALUE;
+	}else{
+		rout = DaoType_FindFunctionChars( self, ".=" );
+		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+
+		args[0] = rout->nameSpace->vmSpace->typeString;
+		args[1] = value;
+		rout = DaoRoutine_MatchByType( rout, self, args, 2, DVM_CALL );
+		if( rout == NULL ) return DAO_ERROR_VALUE;
+	}
+	return DAO_OK;
+}
+
+int DaoValue_DoSetField( DaoValue *self, DaoType *type, DaoString *name, DaoValue *value, DaoProcess *proc )
+{
+    DaoRoutine *rout;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name->value );
+    DString_AppendChars( proc->string, "=" );
+    rout = DaoType_FindFunction( type, proc->string );
+	if( rout != NULL ){
+		return DaoProcess_PushCall( proc, rout, self, & value, 1 );
+	}else{
+		DaoValue *args[2];
+		args[0] = (DaoValue*) name;
+		args[1] = value;
+		rout = DaoType_FindFunctionChars( type, ".=" );
+		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+		return DaoProcess_PushCall( proc, rout, self, args, 2 );
+	}
+	return DAO_ERROR_FIELD_ABSENT;
+}
+
 void DaoValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );

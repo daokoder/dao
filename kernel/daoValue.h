@@ -123,6 +123,14 @@ DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 DAO_DLL int DaoValue_IsNumber( DaoValue *self );
 
+DAO_DLL DaoType* DaoValue_CheckGetValueField( DaoType *self, DaoString *field, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoValue_DoGetValueField( DaoValue *self, DaoString *field, DaoProcess *proc );
+
+DAO_DLL DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *name );
+DAO_DLL DaoValue* DaoValue_DoGetField( DaoValue *self, DaoType *type, DaoString *name, DaoProcess *proc );
+DAO_DLL int DaoValue_CheckSetField( DaoType *self, DaoString *name, DaoType *value );
+DAO_DLL int DaoValue_DoSetField( DaoValue *self, DaoType *type, DaoString *name, DaoValue *value, DaoProcess *proc );
+
 DAO_DLL void DaoValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc );
 
 DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self );

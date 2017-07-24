@@ -2810,34 +2810,31 @@ static DaoFunctionEntry daoArrayMeths[] =
 
 
 
-extern DaoType* DaoValue_CheckGetField( DaoType *self, DaoString *field, DaoRoutine *ctx );
-extern DaoValue* DaoValue_DoGetField( DaoValue *self, DaoString *field, DaoProcess *proc );
-
 
 DaoTypeCore daoArrayCore =
 {
-	"array<@T<none|bool|int|float|complex>=none>",     /* name */
-	sizeof(DaoArray),                                  /* size */
-	{ NULL },                                          /* bases */
-	{ NULL },                                          /* casts */
-	NULL,                                              /* numbers */
-	daoArrayMeths,                                     /* methods */
-	DaoValue_CheckGetField,    DaoValue_DoGetField,    /* GetField */
-	NULL,                      NULL,                   /* SetField */
-	DaoArray_CheckGetItem,     DaoArray_DoGetItem,     /* GetItem */
-	DaoArray_CheckSetItem,     DaoArray_DoSetItem,     /* SetItem */
-	DaoArray_CheckUnary,       DaoArray_DoUnary,       /* Unary */
-	DaoArray_CheckBinary,      DaoArray_DoBinary,      /* Binary */
-	DaoArray_CheckConversion,  DaoArray_DoConversion,  /* Conversion */
-	DaoArray_CheckForEach,     DaoArray_DoForEach,     /* ForEach */
-	DaoArray_Print,                                    /* Print */
-	NULL,                                              /* Slice */
-	NULL,                                              /* Compare */
-	NULL,                                              /* Hash */
-	NULL,                                              /* Create */
-	NULL,                                              /* Copy */
-	(DaoDeleteFunction) DaoArray_Delete,               /* Delete */
-	NULL                                               /* HandleGC */
+	"array<@T<none|bool|int|float|complex>=none>",           /* name */
+	sizeof(DaoArray),                                        /* size */
+	{ NULL },                                                /* bases */
+	{ NULL },                                                /* casts */
+	NULL,                                                    /* numbers */
+	daoArrayMeths,                                           /* methods */
+	DaoValue_CheckGetValueField,  DaoValue_DoGetValueField,  /* GetField */
+	NULL,                         NULL,                      /* SetField */
+	DaoArray_CheckGetItem,        DaoArray_DoGetItem,        /* GetItem */
+	DaoArray_CheckSetItem,        DaoArray_DoSetItem,        /* SetItem */
+	DaoArray_CheckUnary,          DaoArray_DoUnary,          /* Unary */
+	DaoArray_CheckBinary,         DaoArray_DoBinary,         /* Binary */
+	DaoArray_CheckConversion,     DaoArray_DoConversion,     /* Conversion */
+	DaoArray_CheckForEach,        DaoArray_DoForEach,        /* ForEach */
+	DaoArray_Print,                                          /* Print */
+	NULL,                                                    /* Slice */
+	NULL,                                                    /* Compare */
+	NULL,                                                    /* Hash */
+	NULL,                                                    /* Create */
+	NULL,                                                    /* Copy */
+	(DaoDeleteFunction) DaoArray_Delete,                     /* Delete */
+	NULL                                                     /* HandleGC */
 };
 
 

@@ -292,12 +292,12 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 
 static DaoType* DaoInterface_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	return DaoType_CheckGetField( self, name );
+	return DaoValue_CheckGetField( self, name );
 }
 
 static int DaoInterface_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
-	return DaoType_CheckSetField( self, name, value );
+	return DaoValue_CheckSetField( self, name, value );
 }
 
 static DaoType* DaoInterface_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
@@ -620,7 +620,7 @@ void DaoCinValue_Delete( DaoCinValue *self )
 */
 static DaoType* DaoCinValue_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx )
 {
-	DaoType *res = DaoType_CheckGetField( self, name );
+	DaoType *res = DaoValue_CheckGetField( self, name );
 	if( res == NULL ){
 		DaoTypeCore *core = self->aux->xCinType.target->core;
 		if( core != NULL && core->CheckGetField != NULL ){
@@ -632,7 +632,7 @@ static DaoType* DaoCinValue_CheckGetField( DaoType *self, DaoString *name, DaoRo
 
 static DaoValue* DaoCinValue_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
-	DaoValue *res = DaoType_DoGetField( self->xCinValue.cintype->vatype, self, name, proc );
+	DaoValue *res = DaoValue_DoGetField( self, self->xCinValue.cintype->vatype, name, proc );
 	if( res == NULL ){
 		DaoType *target = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 		if( target == NULL ) target = self->xCinValue.cintype->target;
@@ -645,7 +645,7 @@ static DaoValue* DaoCinValue_DoGetField( DaoValue *self, DaoString *name, DaoPro
 
 static int DaoCinValue_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
-	int res = DaoType_CheckSetField( self, name, value );
+	int res = DaoValue_CheckSetField( self, name, value );
 	if( res != DAO_OK ){
 		DaoTypeCore *core = self->aux->xCinType.target->core;
 		if( core != NULL && core->CheckSetField != NULL ){
@@ -657,7 +657,7 @@ static int DaoCinValue_CheckSetField( DaoType *self, DaoString *name, DaoType *v
 
 static int DaoCinValue_DoSetField( DaoValue *self, DaoString *name, DaoValue *value, DaoProcess *proc )
 {
-	int res = DaoType_DoSetField( self->xCinValue.cintype->vatype, self, name, value, proc );
+	int res = DaoValue_DoSetField( self, self->xCinValue.cintype->vatype, name, value, proc );
 	if( res != DAO_OK ){
 		DaoType *target = DaoValue_GetType( self->xCinValue.value, proc->vmSpace );
 		if( target == NULL ) target = self->xCinValue.cintype->target;
