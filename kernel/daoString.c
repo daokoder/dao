@@ -678,8 +678,8 @@ void DString_MakePath( DString *base, DString *path )
 	if( path->chars[0] == '/' ) return;
 
 	base = DString_Copy( base );
-	Dao_NormalizePathSep( base );
-	Dao_NormalizePathSep( path );
+	Dao_NormalizePath( base );
+	Dao_NormalizePath( path );
 	while( DString_Match( path, " ^ %.%. / ", NULL, NULL ) ){
 		if( DString_Match( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
 			DString_Change( path, " ^ %.%. / ", "", 1 );

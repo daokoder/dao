@@ -67,11 +67,29 @@ int Dao_FileStat( const char *path, struct stat *buf )
 }
 
 
-void Dao_NormalizePathSep( DString *path )
+void Dao_NormalizePath( DString *path )
 {
+	daoint i, k = 1;
+
+	if( path->size == 0 ) return;
+
 #ifdef WIN32
-	DString_Change( path, "\\", "/", 0 );
+	for(i=0; i<path->size; ++i){
+		if( path->chars[i] == '\\' ) path->chars[i] = '/';
+	}
 #endif
+
+	for(i=1; i<path->size; ++i){
+		if( path->chars[k-1] != '/' || path->chars[i] != '/' ){
+			path->chars[k] = path->chars[i];
+			k += 1;
+		}
+	}
+	path->chars[k] = '\0';
+	path->size = k;
+
+	DString_Change( path, "/+ %. /+", "/", 0 );
+	DString_Change( path, "%w+ / %.%. /*", "", 0 );
 }
 
 double Dao_GetCurrentTime()

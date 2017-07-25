@@ -1256,6 +1256,7 @@ DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 	DaoNamespace *ns = NULL;
 
 	DString_SetChars( path, file );
+	Dao_NormalizePath( path );
 	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
 	case DAO_MODULE_NONE : ns = DaoVmSpace_FindNamespace( self, path ); break;
 	case DAO_MODULE_DAC :
@@ -2667,7 +2668,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 		DString base = DString_WrapBytes( paths.chars + i, len );
 		DString_SetChars( path, command );
 		DString_MakePath( & base, path );
-		Dao_NormalizePathSep( path );
+		Dao_NormalizePath( path );
 		Dao_CompleteWinExeFile( path );
 		if( Dao_IsFile( path->chars ) ) return 1;
 		if( j == DAO_NULLPOS ) break;
@@ -2836,7 +2837,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_Reserve( masterVmSpace->startPath, 512 );
 	cwd = getcwd( masterVmSpace->startPath->chars, 511 );
 	DString_Reset( masterVmSpace->startPath, cwd ? strlen( cwd ) : 0 );
-	Dao_NormalizePathSep( masterVmSpace->startPath );
+	Dao_NormalizePath( masterVmSpace->startPath );
 
 	DString_AppendPathSep( masterVmSpace->startPath );
 	if( command ){
@@ -2844,7 +2845,7 @@ DaoVmSpace* DaoInit( const char *command )
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
 		DString_SetChars( masterVmSpace->daoBinPath, command );
-		Dao_NormalizePathSep( masterVmSpace->daoBinPath );
+		Dao_NormalizePath( masterVmSpace->daoBinPath );
 #ifdef WIN32
 		absolute = isalpha( command[0] ) && command[1] == ':';
 #endif
@@ -2910,8 +2911,12 @@ void DaoParser_Warn( DaoParser *self, int code, DString *ext );
 
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser *parser )
 {
-	DString *name = DString_Copy( fname );
 	DaoNamespace *ns = NULL;
+	DString *name;
+
+	Dao_NormalizePath( fname );
+	name = DString_Copy( fname );
+
 	switch( DaoVmSpace_CompleteModuleName( self, fname, 0 ) ){
 	case DAO_MODULE_NONE : ns = DaoVmSpace_FindNamespace( self, fname ); break;
 	case DAO_MODULE_DAC :

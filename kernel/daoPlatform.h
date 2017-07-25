@@ -96,7 +96,7 @@
 #include<wchar.h>
 
 
-DAO_DLL void Dao_NormalizePathSep( DString *path );
+DAO_DLL void Dao_NormalizePath( DString *path );
 DAO_DLL int Dao_IsFile( const char *file );
 DAO_DLL int Dao_IsDir( const char *file );
 DAO_DLL FILE* Dao_OpenFile( const char *file, const char *mode );
