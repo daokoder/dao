@@ -5424,6 +5424,8 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
 		DaoProcess_DoGetConstField( self, vmc, mode ); break;
+	case DVM_CAST :
+		DaoProcess_DoCast( self, vmc ); break;
 	case DVM_LIST :
 		if( (vmc->b >> 14) == DVM_ENUM_MODE0 ){
 			DaoProcess_DoList( self, vmc );

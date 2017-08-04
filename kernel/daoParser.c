@@ -6257,6 +6257,8 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 
 	result.prev = self->vmcLast;
 	if( rb > 0 && rb < end && maybeType && tokens[rb]->line == tokens[rb+1]->line ){
+		DaoInode *last = self->vmcLast;
+		int regcount = self->regCount;
 		int cur, count = self->errors->size;
 		self->curToken = rb + 1;
 		/* To skip the explicit enum type, which is for the entire casting expression: */
@@ -6274,14 +6276,23 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 				GC_DecRC( type );
 				goto ParseNoCasting;
 			}
-			regC = DaoParser_PushRegister( self );
-			it = DaoRoutine_AddConstant( self->routine, (DaoValue*) type );
-			DaoParser_PushTokenIndices( self, start, rb, self->curToken-1 );
-			DaoParser_AddCode( self, DVM_CAST, enode.reg, it, regC );
-			result.reg = regC;
-			result.lvalue = 0;
-			result.first = back->next;
-			result.last = result.update = self->vmcLast;
+			if( enode.konst ){
+				DaoValue *v2 = DaoParser_GetVariable( self, enode.konst );
+				result.reg = DaoParser_MakeArithConst( self, DVM_CAST, v2, (DaoValue*) type, & result.konst, last, regcount );
+				if( result.reg < 0 ){
+					DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
+					return result;
+				}
+			}else{
+				regC = DaoParser_PushRegister( self );
+				it = DaoRoutine_AddConstant( self->routine, (DaoValue*) type );
+				DaoParser_PushTokenIndices( self, start, rb, self->curToken-1 );
+				DaoParser_AddCode( self, DVM_CAST, enode.reg, it, regC );
+				result.reg = regC;
+				result.lvalue = 0;
+				result.first = back->next;
+				result.last = result.update = self->vmcLast;
+			}
 			return result;
 		}
 ParseNoCasting:
@@ -7843,14 +7854,20 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	*cst = 0;
 	vmc.code = code;
 	proc = DaoParser_ReserveFoldingOperands( self, 3 );
-	if( code == DVM_NAMEVA ) vmc.a = DaoRoutine_AddConstant( proc->activeRoutine, a );
-	if( code == DVM_GETF ) vmc.b = DaoRoutine_AddConstant( proc->activeRoutine, b );
-	if( code == DVM_GETDI ) vmc.b = b->xInteger.value;
-	if( a ) DaoValue_Copy( a, & proc->activeValues[1] );
-	if( b ) DaoValue_Copy( b, & proc->activeValues[2] );
+
 	GC_DecRC( proc->activeTypes[0] );
 	proc->activeTypes[0] = NULL;
 	proc->activeCode = & vmc;
+
+	if( code == DVM_NAMEVA ) vmc.a = DaoRoutine_AddConstant( proc->activeRoutine, a );
+	if( code == DVM_GETF ) vmc.b = DaoRoutine_AddConstant( proc->activeRoutine, b );
+	if( code == DVM_GETDI ) vmc.b = b->xInteger.value;
+	if( code == DVM_CAST ){
+		vmc.b = DaoRoutine_AddConstant( proc->activeRoutine, b ); 
+		DaoValue_Move( b, (DaoValue**) proc->activeTypes, NULL );
+	} 
+	if( a ) DaoValue_Copy( a, & proc->activeValues[1] );
+	if( b ) DaoValue_Copy( b, & proc->activeValues[2] );
 	value = DaoParser_EvalConst( self, proc, 2 );
 	if( value == NULL ) return -1;
 	DaoParser_PopCodes2( self, back );

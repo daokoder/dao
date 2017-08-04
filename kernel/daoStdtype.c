@@ -1356,7 +1356,7 @@ static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, 
 static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	if( N == 0 ){
-		if( value->tid > DAO_FLOAT ) return DAO_ERROR_VALUE;
+		if( value->tid != DAO_STRING && ! (value->tid & DAO_ANY) ) return DAO_ERROR_VALUE;
 		return DAO_OK;
 	}
 	if( N != 1 ) return DAO_ERROR_INDEX;
