@@ -3078,14 +3078,6 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	DaoType *type;
 
 	/*
-	// The new exception type will be nested inside its parent type,
-	// so it must be handled by the same VM space as the parent type.
-	// Otherwise, this "self" VM space cannot be deleted cleanly.
-	// The root exception type is managed by the master VM space.
-	*/
-	self = masterVmSpace;
-
-	/*
 	// Locking is necessary because these exceptions are placed in a common
 	// namespace DaoVmSpace::daoNamespace. Also, it is necessary to lock this
 	// method altogether, so that no duplicated exception will be created.
