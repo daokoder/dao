@@ -1489,12 +1489,30 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_Append( copy->name, type->name );
 			if( i+1 < (int)self->args->size ) DString_AppendChar( copy->name, sep );
 		}
-		if( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE)
-				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
-			if( self->kernel->sptree ){
-				DaoType *sptype = self->kernel->abtype;
-				DList *args = copy->args;
-				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.classType;
+		if( self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
+			DList *args = copy->args;
+			DaoType *gentype = NULL;
+			DaoType *sptype = NULL;
+
+			/*
+			// The self type might use arbitrary type holders as its arguments.
+			// Use the original generic types to ensure proper specialize the defined type.
+			*/
+			switch( self->tid ){
+			case DAO_ARRAY : gentype = ns->vmSpace->typeArray; break;
+			case DAO_LIST  : gentype = ns->vmSpace->typeList; break;
+			case DAO_MAP   : gentype = ns->vmSpace->typeMap; break;
+			}
+			sptype = DaoType_Specialize( gentype, args->items.pType, args->size, ns );
+			if( sptype ){
+				DMap_Erase2( defs, copy );
+				return sptype;
+			}
+		}else if( self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE ){
+			DaoType *sptype = self->kernel->abtype;
+			DList *args = copy->args;
+			if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.classType;
+			if( sptype->kernel->sptree ){
 				sptype = DaoType_Specialize( sptype, args->items.pType, args->size, ns );
 				if( sptype ){
 					DMap_Erase2( defs, copy );

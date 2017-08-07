@@ -2414,7 +2414,7 @@ static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *ro
 	DMap *defs3 = self->defs3;
 
 	DMap_Reset( defs3 );
-	if( DaoType_MatchTo( routype, rout->routType, defs3 ) >= DAO_MT_EQ ) return rout;
+	if( DaoType_MatchTo( routype, rout->routType, defs3 ) >= DAO_MT_EQ && defs3->size == 0 ) return rout;
 	if( rout->original ) rout = orig = rout->original;
 
 	/* Do not specialize if the routine is not compiled yet! */
@@ -2719,7 +2719,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		if( defs2->size > k || rout->routType->aux->xType.tid == DAO_THT ){
 			DaoType *routype = DaoType_DefineTypes( rout2->routType, NS, defs2 );
 			DMap_Reset( defs3 );
-			if( DaoType_MatchTo( routype, rout->routType, defs3 ) < DAO_MT_EQ ){
+			if( DaoType_MatchTo( routype, rout->routType, defs3 ) < DAO_MT_EQ || defs3->size ){
 				rout = DaoInferencer_Specialize( self, rout2, defs2, inode );
 				if( rout == NULL ) goto InvalidParam;
 			}
