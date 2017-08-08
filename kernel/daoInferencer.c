@@ -439,73 +439,6 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 	return DaoRoutine_CheckTypeX( routType, ns, selftype, argtypes, argcount, code, def, parpass, 1 );
 }
 
-DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *routines, DList *partypes, int call, int *which, int *matched )
-{
-	DString *name;
-	DaoType *type, *type2, **types;
-	DaoType *retype = (DaoType*) routype->aux;
-	DaoVmSpace *VMS = NS->vmSpace;
-	DList *routypes = DList_New(0);
-	int parpass[DAO_MAX_PARAM];
-	int parcount = partypes->size;
-	int j, k, max = 0;
-
-	if( routines ){
-		for(j=0; j<routines->size; j++){
-			type = routines->items.pRoutine[j]->routType;
-			DList_Append( routypes, type );
-		}
-	}else{
-		DList_Append( routypes, routype );
-	}
-	*matched = 0;
-	routype = NULL;
-	for(j=0; j<routypes->size; j++){
-		type = routypes->items.pType[j];
-		k = type->args->size;
-		partypes->size = parcount;
-		while( partypes->size < k ) DList_Append( partypes, VMS->typeAny );
-		k = DaoRoutine_CheckTypeX( type, NS, NULL, partypes->items.pType, k, call, 0, parpass, 0 );
-		*matched += k != 0 && k == max;
-		if( k > max ){
-			if( routines ) *which = j;
-			*matched = 0;
-			routype = type;
-			max = k;
-		}
-	}
-	DList_Delete( routypes );
-	if( routype == NULL ) return NULL;
-	DaoRoutine_CheckTypeX( routype, NS, NULL, partypes->items.pType, parcount, call, 0, parpass, 0 );
-	partypes->size = 0;
-	k = routype->args->size - (routype->variadic != 0);
-	for(j=0; j<k; j++){
-		if( parpass[j] ) continue;
-		DList_Append( partypes, routype->args->items.pType[j] );
-	}
-	if( routype->variadic ) DList_Append( partypes, DList_Back( routype->args ) );
-	if( call == DVM_MCALL && partypes->items.pType[0]->tid == DAO_OBJECT ){
-		DaoClass *klass = (DaoClass*) partypes->items.pType[0]->aux;
-		if( klass->attribs & DAO_CLS_ASYNCHRONOUS ){
-			retype = DaoType_Specialize( VMS->typeFuture, & retype, retype != NULL, NS );
-		}
-	}
-	k = partypes->size;
-	types = partypes->items.pType;
-	type = DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, (DaoValue*) retype, types, k );
-	if( routype->cbtype == NULL ) return type;
-	name = DString_Copy( type->name );
-	DString_Append( name, routype->cbtype->name );
-	type2 = DaoNamespace_FindType( NS, name );
-	DString_Delete( name );
-	if( type2 ) return type2;
-	type = DaoType_Copy( type );
-	DString_Append( type->name, routype->cbtype->name );
-	GC_Assign( & type->cbtype, routype->cbtype );
-	DaoNamespace_AddType( NS, type->name, type );
-	return type;
-}
-
 static void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *argtypes[], int argcount, int code, DMap *defs )
 {
 	int argindex, parindex;
@@ -3165,7 +3098,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( ct != NULL && ct->invar != 0 && K == DAO_CODE_SETF ){
 					if( ct->tid != DAO_CLASS && ct->tid != DAO_NAMESPACE ) goto ModifyConstant;
 				}else if( ct != NULL && ct->invar != 0 && K > DAO_CODE_GETG ){
-					if( (code < DVM_RANGE || code > DVM_MPACK) && code != DVM_TUPLE_SIM ){
+					if( (code < DVM_RANGE || code > DVM_PACK) && code != DVM_TUPLE_SIM ){
 						goto ModifyConstant;
 					}
 				}
@@ -3930,35 +3863,18 @@ SkipChecking:
 				break;
 			}
 		case DVM_PACK :
-		case DVM_MPACK :
 			{
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->args->items.pType[0];
-				if( at->tid == DAO_ROUTINE ){
-					int wh = 0, mc = 0, call = DVM_CALL + (code - DVM_PACK);
-					DList *routines;
-					rout = (DaoRoutine*)consts[opa];
-					if( rout == NULL && at->subtid == DAO_ROUTINES ) rout = (DaoRoutine*) at->aux;
-					routines = (rout && rout->overloads) ? rout->overloads->routines : NULL;
-					self->array->size = 0;
-					for(j=1; j<=opb; j++) DList_Append( self->array, types[opa+j] );
-					ct = DaoRoutine_PartialCheck( NS, at, routines, self->array, call, & wh, & mc );
-					if( mc > 1 ) return DaoInferencer_Error( self, DTE_TYPE_AMBIGIOUS_PFA );
-					if( ct == NULL ) goto InvalidOper;
-				}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+				if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
 					ct = VMS->typeAny;
 				}else if( at->tid == DAO_CLASS ){
-					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
 					if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ) goto InvalidOper;
 					if( klass->attribs & (DAO_CLS_PRIVATE_VAR|DAO_CLS_PROTECTED_VAR) ) goto InvalidOper;
 					if( opb >= klass->instvars->size ) goto InvalidEnum;
 					str = klass->className;
 					ct = klass->objType;
-					if( code == DVM_MPACK ){
-						opa += 1;
-						opb -= 1;
-					}
 					for(j=1; j<=opb; j++){
 						int id = j;
 						bt = types[opa+j];
@@ -3974,10 +3890,6 @@ SkipChecking:
 					}
 				}else if( at->tid == DAO_TUPLE ){
 					ct = at;
-					if( code == DVM_MPACK ){
-						opa += 1;
-						opb -= 1;
-					}
 					if( opb < (at->args->size - at->variadic) ) goto InvalidEnum;
 					if( at->variadic == 0 && opb > at->args->size ) goto InvalidEnum;
 					for(j=0; j<opb; j++){

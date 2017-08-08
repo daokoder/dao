@@ -98,7 +98,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "VECTOR",     DVM_VECTOR,     DAO_CODE_ENUM,    1 },
 	{ "MATRIX",     DVM_MATRIX,     DAO_CODE_MATRIX,  1 },
 	{ "PACK",       DVM_PACK,       DAO_CODE_ENUM2,   1 },
-	{ "MPACK",      DVM_MPACK,      DAO_CODE_ENUM2,   1 },
 	{ "ROUTINE",    DVM_ROUTINE,    DAO_CODE_ROUTINE, 1 },
 	{ "GOTO",       DVM_GOTO,       DAO_CODE_JUMP,    0 },
 	{ "SWITCH",     DVM_SWITCH,     DAO_CODE_BRANCH,  0 },

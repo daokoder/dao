@@ -1146,7 +1146,7 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_NAMEVA , && LAB_RANGE ,
 		&& LAB_TUPLE  , && LAB_LIST , && LAB_MAP ,
 		&& LAB_VECTOR , && LAB_MATRIX ,
-		&& LAB_PACK  , && LAB_MPACK ,
+		&& LAB_PACK ,
 		&& LAB_ROUTINE ,
 		&& LAB_GOTO ,
 		&& LAB_SWITCH , && LAB_CASE ,
@@ -1644,7 +1644,7 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_DoMatrix( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( PACK ) OPCASE( MPACK ){
+		}OPNEXT() OPCASE( PACK ){
 			DaoProcess_DoPacking( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
@@ -3968,21 +3968,6 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		if( rout->pFunc ){
 			DaoProcess_DoNativeCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
 			return;
-		}else if( rout->overloads == NULL && rout->body == NULL ){  /* function curry: */
-			DaoValue *caller = (DaoValue*) rout->original;
-			DaoVmCode vmc2 = *vmc;
-			if( rout->original == NULL ){
-				DaoProcess_RaiseError( self, "Type", "abstract routine not callable" );
-				return;
-			}
-			if( rout->original->routType->attrib & DAO_TYPE_SELF ) vmc2.code = DVM_MCALL;
-			array = DList_New(0);
-			bindings = rout->routConsts->value;
-			for(i=0; i<bindings->size; i++) DList_Append( array, bindings->items.pValue[i] );
-			for(i=0; i<npar; i++) DList_Append( array, params[i] );
-			DaoProcess_DoCall2( self, & vmc2, caller, NULL, array->items.pValue, NULL, array->size );
-			DList_Delete( array );
-			return;
 		}
 		/* No need to pass implicit self type, invar method will be checked separately */
 		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
@@ -4640,8 +4625,6 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 #endif
 }
 
-DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DList *RS, DList *TS, int C, int *W, int *M );
-
 void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, k;
@@ -4651,14 +4634,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 	DaoVariable **mtype;
 	DaoValue **values = self->activeValues + opa + 1;
 	DaoValue *p = self->activeValues[opa];
-	DaoValue *selfobj = NULL;
 	DNode *node;
-
-	if( vmc->code == DVM_MPACK && p->type != DAO_ROUTINE ){
-		selfobj = values[0];
-		values ++;
-		opb --;
-	}
 
 	self->activeCode = vmc;
 	switch( p->type ){
@@ -4695,51 +4671,6 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 					break;
 				}
 			}
-			break;
-		}
-	case DAO_ROUTINE :
-		{
-			int wh = 0, mc = 0, call = DVM_CALL + (vmc->code - DVM_PACK);
-			DaoNamespace *NS = self->activeNamespace;
-			DaoRoutine *parout = DaoRoutine_New( NS, NULL, 0 );
-			DaoRoutine *routine = (DaoRoutine*) p;
-			DaoType *routype = routine->routType;
-			DaoList *bindings = NULL;
-			DList *routines = NULL;
-			DList *partypes = DList_New(0);
-
-			for(i=0; i<opb; i++) DList_Append( partypes, DaoNamespace_GetType( NS, values[i] ) );
-
-			if( routine->overloads ){
-				routines = routine->overloads->routines;
-			}else if( routine->body == NULL && routine->pFunc == NULL && routine->original ){
-				bindings = routine->routConsts;
-				routine = routine->original;
-			}
-			parout->routType = DaoRoutine_PartialCheck( NS, routype, routines, partypes, call, & wh, & mc );
-			GC_IncRC( parout->routType );
-			DList_Delete( partypes );
-			if( mc > 1 ){
-				DaoRoutine_Delete( parout );
-				DaoProcess_RaiseError( self, NULL,
-						"ambigious partial function application on overloaded functions" );
-				break;
-			}else if( parout->routType == NULL ){
-				DaoRoutine_Delete( parout );
-				DaoProcess_RaiseError( self, NULL, "invalid partial function application" );
-				break;
-			}
-			if( routine->overloads ){
-				parout->original = routines->items.pRoutine[wh];
-			}else{
-				parout->original = routine;
-			}
-			GC_IncRC( parout->original );
-			if( bindings ) DList_Assign( parout->routConsts->value, bindings->value );
-			/* skip the self value if the routine needs none: */
-			i = vmc->code == DVM_MPACK && (parout->original->routType->attrib & DAO_TYPE_SELF) == 0;
-			for(; i<opb; i++) DList_Append( parout->routConsts->value, values[i] );
-			DaoProcess_SetValue( self, vmc->c, (DaoValue*) parout );
 			break;
 		}
 	case DAO_TYPE :
@@ -5449,7 +5380,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 		DaoProcess_DoMath( self, vmc, self->activeValues[ vmc->c ], self->activeValues[1] );
 		break;
 	case DVM_PACK :
-	case DVM_MPACK :
 		DaoProcess_DoPacking( self, vmc );
 		break;
 	case DVM_CALL :

@@ -7086,13 +7086,7 @@ InvalidSection:
 					int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 					if( rb < 0 ) return error;
 
-					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y */
-						DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
-						extra = back->prev;
-						back->code = DVM_LOAD;
-						back->b = 0;
-						code = DVM_MPACK;
-					}else if( result.last &&  DaoVmCode_CheckPermutable( back->code ) ){
+					if( result.last &&  DaoVmCode_CheckPermutable( back->code ) ){
 						extra = back;
 					}else{
 						DaoParser_PushTokenIndices( self, postart, start, start );
