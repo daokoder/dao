@@ -2539,13 +2539,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			DaoRoutine_CheckError( NS, NULL, at, NULL, tp, argc, codemode, errors );
 			goto InvalidParam;
 		}
-		if( at->name->chars[0] == '@' ){
-			ct = tp[0];
-			if( pp[0] && pp[0]->type == DAO_ROUTINE ) ct = pp[0]->xRoutine.routType;
-			DaoInferencer_UpdateType( self, opc, ct );
-			AssertTypeMatching( ct, types[opc], defs );
-			goto TryPushBlockReturnType;
-		}
 		DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 1 );
 		ct = types[opa];
 	}else{
@@ -2840,7 +2833,13 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			DList *its = argtypes[opb-1]->args;
 			DList_Clear( self->types2 );
 			for(k=0; k<(opb-1); k++) DList_Append( self->types2, argtypes[k] );
-			for(k=0; k<its->size; k++) DList_Append( self->types2, its->items.pType[k] );
+			for(k=0; k<its->size; k++){
+				DaoType *it = its->items.pType[k];
+				if( it->tid >= DAO_PAR_NAMED && it->tid <= DAO_PAR_VALIST ){
+					it = (DaoType*)it->aux;
+				}
+				DList_Append( self->types2, it );
+			}
 			argtypes = self->types2->items.pType;
 			argcount = self->types2->size;
 		}
