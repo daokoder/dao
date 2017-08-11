@@ -190,6 +190,7 @@ int main( int argc, char **argv )
 		int fails2 = 0, mfails2 = 0;
 		if( logopt == argc ) return 1;
 		vmSpace = DaoInit( argv[0] );
+		vmSpace->options |= DAO_OPTION_AUTOVAR;
 		string = DString_New();
 		summary = DString_New();
 		info = DString_New();
@@ -256,6 +257,7 @@ int main( int argc, char **argv )
 	if( (logopt+1) < argc ) logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 	for(i=1; i<logopt; ++i){
 		vmSpace = DaoInit( argv[0] );
+		vmSpace->options |= DAO_OPTION_AUTOVAR;
 
 		ns = DaoVmSpace_GetNamespace( vmSpace, "dao" );
 

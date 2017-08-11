@@ -151,19 +151,20 @@ enum DaoNamespaceOption
 	DAO_NS_AUTO_GLOBAL = (1<<0)
 };
 
-/* Execution options, combinable by | */
+/* Execution options (see daoVmspace.c for command line options): */
 enum DaoOptions
 {
-	DAO_OPTION_HELP     = (1<<0), /* -h, --help:         print this help information; */
-	DAO_OPTION_VINFO    = (1<<1), /* -v, --version:      print version information; */
-	DAO_OPTION_INTERUN  = (1<<2), /* -i, --interactive:  run in interactive mode; */
-	DAO_OPTION_DEBUG    = (1<<3), /* -d, --debug:        run in debug mode; */
-	DAO_OPTION_PROFILE  = (1<<4), /* -p, --profile:      run in profile mode; */
-	DAO_OPTION_LIST_BC  = (1<<5), /* -l, --list-code:    print compiled bytecodes; */
-	DAO_OPTION_JIT      = (1<<6), /* -j, --jit:          enable JIT compiling; */
-	DAO_OPTION_COMP_BC  = (1<<7), /* -c, --compile:      compile to bytecodes; */
-	DAO_OPTION_ARCHIVE  = (1<<8), /* -a, --archive:      build archive file; */
-	DAO_OPTION_SANDBOX  = (1<<9), /* -s, --sandbox:      run in sandbox mode; */
+	DAO_OPTION_HELP     = (1<<0),  /* Print this help information; */
+	DAO_OPTION_VINFO    = (1<<1),  /* Print version information; */
+	DAO_OPTION_INTERUN  = (1<<2),  /* Run in interactive mode; */
+	DAO_OPTION_DEBUG    = (1<<3),  /* Run in debug mode; */
+	DAO_OPTION_PROFILE  = (1<<4),  /* Run in profile mode; */
+	DAO_OPTION_LIST_BC  = (1<<5),  /* Print compiled bytecodes; */
+	DAO_OPTION_JIT      = (1<<6),  /* Enable JIT compiling; */
+	DAO_OPTION_COMP_BC  = (1<<7),  /* Compile to bytecodes; */
+	DAO_OPTION_ARCHIVE  = (1<<8),  /* Build archive file; */
+	DAO_OPTION_SANDBOX  = (1<<9),  /* Run in sandbox mode; */
+	DAO_OPTION_AUTOVAR  = (1<<10), /* Enable automatic variable declaration; */
 
 	/*
 	// DAO_OPTION_IDE:

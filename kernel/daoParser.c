@@ -4395,11 +4395,20 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 		DaoByteBlock *block = self->byteBlock;
 		DaoToken *varTok = self->toks->items.pToken[k];
 		DString *name = & varTok->string;
-		int regC = DaoParser_DeclareVariable( self, varTok, store, type );
+		int regC = 0;
 		int id = 0;
 		/*
 		printf( "declaring %s\n", varTok->string.chars );
 		*/
+		if( explicit_store || (vms->options & DAO_OPTION_AUTOVAR) ){
+			regC = DaoParser_DeclareVariable( self, varTok, store, type );
+		}else{
+			regC = DaoParser_GetRegister( self, varTok );
+			if( regC < 0 ){
+				DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
+				goto ReturnError;
+			}
+		}
 		if( regC < 0 ) goto ReturnError;
 		if( store & DAO_DECL_CONST ){
 			DaoConstant *konst;

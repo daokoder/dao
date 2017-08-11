@@ -200,6 +200,7 @@ static const char *const cmd_help =
 "   -a, --archive:        build archive file;\n"
 "   -l, --list-code:      print compiled bytecodes;\n"
 "   -j, --jit:            enable just-in-time compiling;\n"
+"   --autovar:            enable automatic variable declaration;\n"
 "   -Ox:                  optimization level (x=0 or 1);\n"
 "   --threads=number      minimum number of threads for processing tasklets;\n"
 "   --path=directory      add module searching path;\n"
@@ -963,6 +964,8 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}else if( strcmp( token->chars, "--jit" ) ==0 ){
 				self->options |= DAO_OPTION_JIT;
 				daoConfig.jit = 1;
+			}else if( strcmp( token->chars, "--autovar" ) ==0 ){
+				self->options |= DAO_OPTION_AUTOVAR;
 			}else if( strstr( token->chars, "--threads=" ) == token->chars ){
 				daoConfig.cpu = strtol( token->chars + 10, 0, 0 );
 			}else if( strstr( token->chars, "--path=" ) == token->chars ){

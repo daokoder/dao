@@ -2640,13 +2640,14 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			DaoType_MatchTo( at, at->kernel->abtype->aux->xCtype.classType, defs2 );
 		}
 		k = defs2->size;
-		DaoRoutine_PassParamTypes( rout2, bt, tp, argc, code, defs2 );
+		if( rout->original ) rout = rout->original;
+		DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
 
 		if( defs2->size > k || rout->routType->aux->xType.tid == DAO_THT ){
-			DaoType *routype = DaoType_DefineTypes( rout2->routType, NS, defs2 );
+			DaoType *routype = DaoType_DefineTypes( rout->routType, NS, defs2 );
 			DMap_Reset( defs3 );
 			if( DaoType_MatchTo( routype, rout->routType, defs3 ) < DAO_MT_EQ || defs3->size ){
-				rout = DaoInferencer_Specialize( self, rout2, defs2, inode );
+				rout = DaoInferencer_Specialize( self, rout, defs2, inode );
 				if( rout == NULL ) goto InvalidParam;
 			}
 		}
@@ -3445,6 +3446,8 @@ SkipChecking:
 				}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE ){
 					vmc->code = DVM_MOVE_PP;
 				}
+			}else if( at == types[opc] ){
+				GC_Assign( & consts[opc], consts[opa] );
 			}
 			break;
 		case DVM_MOVE :

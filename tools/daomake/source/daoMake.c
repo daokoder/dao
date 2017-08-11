@@ -3771,6 +3771,7 @@ int main( int argc, char *argv[] )
 	DNode *it;
 
 	vmSpace = DaoInit( argv[0] );
+	vmSpace->options |= DAO_OPTION_AUTOVAR;
 	daomake_current_path = DString_New();
 	DString_Reset( daomake_current_path, 1024 );
 	getcwd( daomake_current_path->chars, 1024 );
