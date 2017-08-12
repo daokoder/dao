@@ -3104,7 +3104,15 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		}
 		DMap_Reset( defs );
-		DMap_Assign( defs, (DMap*)DList_Back( self->typeMaps ) );
+		/*
+		// Specialization should only use type mappings from the routine signature,
+		// and use additional type mappings from each variable declaration.
+		//
+		// The type mappings from the routine signature are in the first element
+		// in self->typeMaps. After extensive testing, self->typeMaps will be
+		// replaced with a simpler field.
+		*/
+		DMap_Assign( defs, (DMap*)DList_Front( self->typeMaps ) );
 
 #if 0
 		DaoRoutine_AnnotateCode( routine, *(DaoVmCodeX*)inode, mbs, 24 );
