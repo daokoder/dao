@@ -186,7 +186,8 @@ DaoParser* DaoParser_New()
 	self->vmcFree = NULL;
 
 	self->allConsts = DHash_New( DAO_DATA_STRING, 0 );
-	self->initTypes = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
+	self->initTypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
+	self->localInitTypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 
 	self->scopeOpenings = DList_New(0);
 	self->scopeClosings = DList_New(0);
@@ -268,6 +269,7 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->outers ) DArray_Delete( self->outers );
 	if( self->allConsts ) DMap_Delete( self->allConsts );
 	DMap_Delete( self->initTypes );
+	DMap_Delete( self->localInitTypes );
 	DMap_Delete( self->table );
 
 	DaoParser_ReleaseEvaluator( self );
@@ -358,6 +360,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->argName = NULL;
 
 	DMap_Clear( self->initTypes );
+	DMap_Clear( self->localInitTypes );
 	DMap_Reset( self->table );
 	DaoParser_ClearCodes( self );
 	DaoParser_ReleaseEvaluator( self );
@@ -1034,13 +1037,7 @@ static DaoType* DaoParser_MakeVarTypeHolder( DaoParser *self )
 	DList_Append( self->nameSpace->auxData, type );
 	return type;
 }
-static DaoType* DaoParser_MakeParTypeHolder( DaoParser *self, DString *name )
-{
-	DaoType *type = DaoType_New( self->nameSpace, "@", DAO_THT, NULL, NULL );
-	DString_Append( type->name, name );
-	DMap_Insert( self->initTypes, type->name, type );
-	return type;
-}
+
 DaoToken* DaoToken_Copy( DaoToken *self );
 
 static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int left )
@@ -1218,10 +1215,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			if( type == NULL ) type = self->vmSpace->typeAny;
 			if( invarpar ) type = DaoType_GetInvarType( type );
 			type = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, (DaoValue*)type, NULL, 0 );
-		}else if( tki == DTOK_ID_THTYPE ){
-			type = DaoParser_ParseType( self, i, right-1, &i, NULL );
-			if( type == NULL ) goto ErrorInvalidParam;
-			type = DaoNamespace_GetType( NS, (DaoValue*) type );
 		}else if( tki2 == DTOK_COLON || tki2 == DTOK_ASSN ){
 			i ++;
 			if( tki2 == DTOK_COLON ){
@@ -1260,7 +1253,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				i = comma;
 			}
 		}else if( tokens[i]->type == DTOK_IDENTIFIER ){
-			type = DaoParser_MakeParTypeHolder( module, tks );
+			/* Should be a unique type holder type: */
+			type = DaoType_New( module->nameSpace, "@", DAO_THT, NULL, NULL );
+			DString_Append( type->name, tks );
+			DList_Append( self->nameSpace->auxData, type );
 			i += 1;
 		}else{
 			goto ErrorInvalidParam;
@@ -1360,9 +1356,13 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		if( routine->body == NULL ){
 			retype = DaoNamespace_MakeValueType( NS, dao_none_value );
 		}else{
-			DString_Assign( mbs, routine->routName );
-			if( isalpha( mbs->chars[0] ) == 0 ) DString_SetChars( mbs, "X" );
-			retype = DaoParser_MakeParTypeHolder( self, mbs );
+			/* Should be a unique type holder type: */
+			retype = DaoType_New( self->nameSpace, "@", DAO_THT, NULL, NULL );
+			if( routine->routName->chars[0] == 0 ){
+				DString_AppendChars( retype->name, "X" );
+			}else{
+				DString_Append( retype->name, routine->routName );
+			}
 		}
 	}
 	if( invarhost && DaoType_IsPrimitiveOrImmutable( retype ) == 0 ){
@@ -1476,7 +1476,10 @@ static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
 		DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
 	}
 }
+
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst );
+static DaoType* DaoParser_ParseType3( DaoParser *self, int start, int end, int *next, DList *types );
+
 static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 {
 	DaoValue *value;
@@ -1544,15 +1547,26 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	if( value == NULL ) return NULL;
 	return DaoNamespace_MakeValueType( ns, value );
 }
+
 static DaoType* DaoParser_FindTypeHolder( DaoParser *self, DString *name )
 {
 	DNode *it = NULL;
-	if( self->innerParser ) it = DMap_Find( self->innerParser->initTypes, name );
+	if( self->innerParser ){
+		/*
+		// Currently parsing types in routine signature:
+		// Type holder types in routine signature must be handled within the signature;
+		*/
+		it = DMap_Find( self->innerParser->initTypes, name );
+		return it ? it->value.pType : NULL;
+	}
 	if( it == NULL ) it = DMap_Find( self->initTypes, name );
+	if( it == NULL ) it = DMap_Find( self->localInitTypes, name );
 	if( it ) return it->value.pType;
-	if( self->outerParser ) return DaoParser_FindTypeHolder( self->outerParser, name );
+	/* Closures should not access type holder types from outside routine: */
+	/* if( self->outerParser ) return DaoParser_FindTypeHolder( self->outerParser, name ); */
 	return NULL;
 }
+
 static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, int *newpos )
 {
 	DaoType *type = NULL;
@@ -1587,9 +1601,13 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	}else if( token->name == DKEY_NONE ){
 		type = DaoNamespace_MakeValueType( NS, dao_none_value );
 	}else if( token->name == DTOK_ID_THTYPE ){
-		DMap *initypes = self->innerParser ? self->innerParser->initTypes : self->initTypes;
 		type = DaoType_New( NS, token->string.chars, DAO_THT, NULL, NULL );
-		DMap_Insert( initypes, type->name, type );
+		/* See comments in DaoParser_FindTypeHolder(); */
+		if( self->innerParser ){
+			DMap_Insert( self->innerParser->initTypes, type->name, type );
+		}else{
+			DMap_Insert( self->localInitTypes, type->name, type );
+		}
 	}else{
 		/* scoped type or user defined template class */
 		type = DaoParser_ParseUserType( self, start, end, newpos );
@@ -1627,7 +1645,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valt
 		}else if( tokens[i]->type == DTOK_DOTS ){
 			i += 1;
 			if( tokens[i]->type == DTOK_COLON ){
-				type = DaoParser_ParseType( self, i+1, end, & i, types );
+				type = DaoParser_ParseType3( self, i+1, end, & i, types );
 				if( type == NULL ) goto InvalidTypeForm;
 			}
 			if( type == NULL ) type = self->vmSpace->typeAny;
@@ -1640,7 +1658,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valt
 				if( i + 2 > end ) goto InvalidTypeForm;
 				i = i + 2;
 			}
-			type = DaoParser_ParseType( self, i, end, & i, types );
+			type = DaoParser_ParseType3( self, i, end, & i, types );
 			if( type == NULL ) goto InvalidTypeForm;
 			if( valtype == 0 && type->valtype && type->tid != DAO_NONE ) goto InvalidTypeForm;
 			if( invar ) type = DaoType_GetInvarType( type );
@@ -1653,7 +1671,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valt
 		if( i > end ) break;
 ReturnType:
 		if( tokens[i]->type == DTOK_FIELD ){
-			type = DaoParser_ParseType( self, i+1, end, & i, NULL );
+			type = DaoParser_ParseType3( self, i+1, end, & i, NULL );
 			if( type == NULL ) return NULL;
 			if( i <= end ) goto InvalidTypeForm;
 			return type;
@@ -1667,6 +1685,7 @@ InvalidTypeForm:
 	DaoParser_ErrorToken( self, DAO_INVALID_TYPE_FORM, tokens[i] );
 	return NULL;
 }
+
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *holders, DList *defaults, DString *name )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -1684,7 +1703,7 @@ int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *h
 			holder = DaoParser_ParseValueType( self, i );
 			i += 1;
 		}else{
-			holder = DaoParser_ParseType( self, i, end-1, &i, NULL );
+			holder = DaoParser_ParseType3( self, i, end-1, &i, NULL );
 		}
 		if( holder == NULL ) return 0;
 		if( name ){
@@ -1692,7 +1711,7 @@ int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *h
 			DString_Append( name, holder->name );
 		}
 		if( i < end && tokens[i]->type == DTOK_ASSN ){
-			deft = DaoParser_ParseType( self, i+1, end-1, &i, NULL );
+			deft = DaoParser_ParseType3( self, i+1, end-1, &i, NULL );
 			if( deft == NULL ) return 0;
 		}
 		if( deft == NULL && DList_Back( defaults ) != NULL ){
@@ -1846,10 +1865,9 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 		initype = (DaoValue*) type;
 		if( type->tid == DAO_THT && start < end && tokens[start+1]->name == DTOK_LT ){
 			DString *name;
-			DaoParser *scope = self->innerParser ? self->innerParser : self;
 			int gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start+1, end );
 			if( gt < 0 ) goto WrongType;
-			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
+			vartype = DaoParser_ParseType3( self, start + 2, gt, newpos, types );
 			if( vartype == NULL || *newpos != gt ) goto WrongType;
 			name = DaoParser_GetString( self );
 			DString_Assign( name, type->name );
@@ -1858,8 +1876,14 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			DString_AppendChar( name, '>' );
 			type2 = DaoParser_FindTypeHolder( self, name );
 			if( type2 == NULL ) type2 = DaoType_New( NS, name->chars, DAO_THT, (DaoValue*) vartype, NULL );
-			DMap_Insert( scope->initTypes, type2->name, type2 );
-			DMap_Insert( scope->initTypes, type->name, type2 );
+			/* See comments in DaoParser_FindTypeHolder(); */
+			if( self->innerParser ){
+				DMap_Insert( self->innerParser->initTypes, type2->name, type2 );
+				DMap_Insert( self->innerParser->initTypes, type->name, type2 );
+			}else{
+				DMap_Insert( self->localInitTypes, type2->name, type2 );
+				DMap_Insert( self->localInitTypes, type->name, type2 );
+			}
 			type = type2;
 			*newpos = gt + 1;
 			if( type2 == NULL ) goto WrongType;
@@ -2002,7 +2026,8 @@ InvalidTypeForm:
 	DaoParser_ErrorToken( self, DAO_INVALID_TYPE_FORM, tokens[start] );
 	return NULL;
 }
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DList *types )
+
+static DaoType* DaoParser_ParseType3( DaoParser *self, int start, int end, int *next, DList *types )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2034,6 +2059,13 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DL
 	return type;
 InvalidType:
 	return NULL;
+}
+
+DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DList *types )
+{
+	DMap_Clear( self->localInitTypes );
+
+	return DaoParser_ParseType3( self, start, end, next, types );
 }
 
 int DaoParser_ParseRoutine( DaoParser *self );

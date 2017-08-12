@@ -38,26 +38,26 @@
 
 
 /*
-// Dao abstract type:
-// type class for number, string, ... list<X>, ...
+// Dao Abstract Type:
+// Type class for number, string, ... list<X>, etc.;
 //
-// for core types: number, string, complex, list, map, array
-// eg:DaoType.name = "int", "float", "string", ...
-//    DaoType.tid = DAO_INTEGER, DAO_STRING, ...
+// For core types: none, bool, int, float, complex, string, ...
+//    DaoType.name = "none", "bool", "int", "float", "string", ...
+//    DaoType.tid = DAO_NONE, DAO_BOOLEAN, DAO_INTEGER, DAO_STRING, ...
 //
-// for Dao class and routine types:
+// For Dao class and routine types:
 //    DaoType.name = "foo", "bar", ...
 //    DaoType.count = 0;
 //    DaoType.tid = DAO_CLASS, DAO_CDATA,
 //    DaoType.aux = the Dao class or C type
 //
-// for item types: list<float>, map<string,float>, ...
+// For generic types: list<float>, map<string,float>, ...
 //    DaoType.name = "list<float>", "map<string,float>", ...
 //    DaoType.tid = DAO_LIST, DAO_MAP
 //    DaoType.aux = NULL;
 //    DaoType.args[] = item DaoType(s) : X<args[0],args[1],...>
 //
-// for routine type: routine(float,string):float
+// For routine type: routine(float,string):float
 //    DaoType.name = "routine<float,string=>float>"
 //    DaoType.tid = DAO_ROUTINE
 //    DaoType.aux = returned type
@@ -73,10 +73,11 @@
 //        routine<a:float,b:?=>?>: foo( a : float, b : @b ){}
 //        routine<a:float,b:?=>?>: foo( a : float, b ) : @b{}
 //
-// for named parameter passing: name => value
-//    DaoType.name = "string:type" or "string=type"
+// For named parameter types:
+//    DaoType.name = "name:type" or "name=type"
 //    DaoType.tid = DAO_PAR_NAMED or DAO_PAR_DEFAULT
 //    DaoType.aux = actual type
+//
 */
 struct DaoType
 {

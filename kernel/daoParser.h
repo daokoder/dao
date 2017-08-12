@@ -102,7 +102,8 @@ struct DaoParser
 
 	DHash_(DString*,int)  *allConsts;  /* implicit and explict local constants; */
 
-	DMap_(DString*,DaoType*)  *initTypes; /* type holders from parameters and up routine; */
+	DHash_(DString*,DaoType*)  *initTypes; /* type holders from parameters and up routine; */
+	DHash_(DString*,DaoType*)  *localInitTypes; /* type holders from within routine body; */
 
 	short  levelBase;
 	short  lexLevel;

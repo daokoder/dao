@@ -914,6 +914,12 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	/* If c == 0, the de-const type should be used: */
 	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
 
+	/*
+	// Type specialization should only be done for explicit variable declaration.
+	// This is handled in type inference for DVM_SETVG and DVM_MOVE.
+	*/
+
+#if 0
 	if( types[id] != NULL ){
 		/*
 		// Specialize the declared or previously inferred (not completely specialized) type.
@@ -925,6 +931,7 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	}else{
 		if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 	}
+#endif
 
 	GC_Assign( & types[id], type );
 	return types[id];
@@ -3280,9 +3287,34 @@ SkipChecking:
 					return DaoInferencer_ErrorTypeNotMatching( self, at, *type2 );
 				}
 			}
-			if( type2 && (*type2 == NULL || (*type2)->tid == DAO_UDT || (*type2)->tid == DAO_THT) ){
-				GC_Assign( type2, at );
+
+			if( type2 ){
+				/*
+				// Initialization of automatically declared global variable
+				// will not have 0x2 flag set. Such SETVG should be handled
+				// like the other SETVX instructions.
+				// Note: adding 0x2 flag by the parser for such SETVG is not
+				// an option, because it will not work if the initialization
+				// value is an invariable.
+				*/
+				if( code == DVM_SETVG && (opc & 0x2) ){
+					if( *type2 != NULL ){
+						DaoType_ResetTypeHolders( *type2, defs );
+						if( DaoType_MatchTo( at, *type2, defs ) ){
+							at = DaoType_DefineTypes( *type2, NS, defs );
+							GC_Assign( type2, at );
+						}
+					}else if( at->attrib & DAO_TYPE_SPEC ){
+						at = DaoType_DefineTypes( at, NS, defs );
+						GC_Assign( type2, at );
+					}else{
+						GC_Assign( type2, at );
+					}
+				}else if( *type2 == NULL || (*type2)->tid == DAO_UDT || (*type2)->tid == DAO_THT ){
+					GC_Assign( type2, at );
+				}
 			}
+
 			/* less strict checking */
 			if( types[opa]->tid & DAO_ANY ) break;
 			if( type2 == NULL ) break;
@@ -3458,9 +3490,16 @@ SkipChecking:
 				at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
 				if( at == NULL ) return 0;
 				if( opb & 0x2 ){
-					at = DaoType_DefineTypes( at, NS, defs );
-
-					if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
+					if( types[opc] != NULL ){
+						DaoType_ResetTypeHolders( types[opc], defs );
+						if( DaoType_MatchTo( at, types[opc], defs ) ){
+							at = DaoType_DefineTypes( types[opc], NS, defs );
+							GC_Assign( & types[opc], at );
+						}
+					}else if( at->attrib & DAO_TYPE_SPEC ){
+						at = DaoType_DefineTypes( at, NS, defs );
+						GC_Assign( & types[opc], at );
+					}else{
 						GC_Assign( & types[opc], at );
 					}
 				}else{
@@ -4073,7 +4112,7 @@ SkipChecking:
 			break;
 		case DVM_SETVH_BB : case DVM_SETVH_II : case DVM_SETVH_FF : case DVM_SETVH_CC :
 			tp = typeVH[opc] + opb;
-			at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+			at = DaoInferencer_HandleVarInvarDecl( self, at, 0 );
 			if( at == NULL ) return 0;
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( *tp == NULL || (*tp)->tid == DAO_UDT || (*tp)->tid == DAO_THT ){
@@ -4086,7 +4125,7 @@ SkipChecking:
 			break;
 		case DVM_SETVS_BB : case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
 			var = routine->variables->items.pVar[opb];
-			at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+			at = DaoInferencer_HandleVarInvarDecl( self, at, 0 );
 			if( at == NULL ) return 0;
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
@@ -4100,7 +4139,7 @@ SkipChecking:
 		case DVM_SETVO_BB : case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
 			var = hostClass->instvars->items.pVar[opb];
-			at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+			at = DaoInferencer_HandleVarInvarDecl( self, at, 0 );
 			if( at == NULL ) return 0;
 			if( var->subtype == DAO_INVAR ){
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
@@ -4116,7 +4155,7 @@ SkipChecking:
 			break;
 		case DVM_SETVK_BB : case DVM_SETVK_II : case DVM_SETVK_FF : case DVM_SETVK_CC :
 			var = hostClass->variables->items.pVar[opb];
-			at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+			at = DaoInferencer_HandleVarInvarDecl( self, at, 0 );
 			if( at == NULL ) return 0;
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
