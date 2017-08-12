@@ -5,7 +5,7 @@
 routine Test()[X:int=>string] => string
 {
 	io.writeln( "In functional method!" );
-	s = yield( 123 ); # execute the code section;
+	var s = yield( 123 ); # execute the code section;
 	io.writeln( "Yielded value:", s );
 	return s;
 }
@@ -23,6 +23,6 @@ routine Test( alist : list<@T> )[ item :@T, index :int => none|int ] =>list<@T>
 	return alist.collect{ [X,Y] yield(X,Y) };
 }
 
-res = Test( {11,22,33,44} ){ [X] X > 22 }
+var res = Test( {11,22,33,44} ){ [X] X > 22 }
 
 io.writeln( res, std.about(res) );

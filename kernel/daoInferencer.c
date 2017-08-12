@@ -333,7 +333,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		code = DVM_MCALL;
 	}
 
-	defs = DMap_New(0,0);
+	defs = DHash_New(0,0);
 	if( routType->args ){
 		parcount = routType->args->size;
 		if( parcount ){
@@ -2349,12 +2349,9 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *rout, DMap *defs2, DaoInode *inode )
 {
 	DaoNamespace *NS = self->routine->nameSpace;
-	DaoType *routype = DaoType_DefineTypes( rout->routType, NS, defs2 );
 	DaoRoutine *orig = rout, *rout2 = rout;
 	DMap *defs3 = self->defs3;
 
-	DMap_Reset( defs3 );
-	if( DaoType_MatchTo( routype, rout->routType, defs3 ) >= DAO_MT_EQ && defs3->size == 0 ) return rout;
 	if( rout->original ) rout = orig = rout->original;
 
 	/* Do not specialize if the routine is not compiled yet! */
@@ -2646,15 +2643,34 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			*/
 			DaoType_MatchTo( at, at->kernel->abtype->aux->xCtype.classType, defs2 );
 		}
+
+		/*
+		// Specialization must be checked against the original routine,
+		// in case that it has been specialized for compatible types.
+		// For example:
+		//   routine testing( a, b: string ){ io.writeln( std.about(a) ) }
+		//   testing( 1, "a" )
+		//   testing( 2.5, "b" )
+		//
+		// For the second call, the routine will be resolved to the routine
+		// specialized for the first call with integer parameter. Checking
+		// with the specialized routine cannot lead to new sepcialization.
+		*/
 		k = defs2->size;
-		if( rout->original ) rout = rout->original;
-		DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
+		rout2 = rout->original ? rout->original : rout;
+		DaoRoutine_PassParamTypes( rout2, bt, tp, argc, code, defs2 );
 
 		if( defs2->size > k || rout->routType->aux->xType.tid == DAO_THT ){
-			DaoType *routype = DaoType_DefineTypes( rout->routType, NS, defs2 );
+			/*
+			// When the original routine is specialized with the given parameters
+			// here, the specialized signature need to be different from the signature
+			// of the resolved routine, otherwise there is no need to specialize.
+			*/
+			DaoType *routype = DaoType_DefineTypes( rout2->routType, NS, defs2 );
+
 			DMap_Reset( defs3 );
 			if( DaoType_MatchTo( routype, rout->routType, defs3 ) < DAO_MT_EQ || defs3->size ){
-				rout = DaoInferencer_Specialize( self, rout, defs2, inode );
+				rout = DaoInferencer_Specialize( self, rout2, defs2, inode );
 				if( rout == NULL ) goto InvalidParam;
 			}
 		}
