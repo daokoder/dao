@@ -3509,12 +3509,12 @@ SkipChecking:
 					if( types[opc] != NULL ){
 						DaoType_ResetTypeHolders( types[opc], defs );
 						if( DaoType_MatchTo( at, types[opc], defs ) ){
-							at = DaoType_DefineTypes( types[opc], NS, defs );
-							GC_Assign( & types[opc], at );
+							DaoType *type = DaoType_DefineTypes( types[opc], NS, defs );
+							GC_Assign( & types[opc], type );
 						}
 					}else if( at->attrib & DAO_TYPE_SPEC ){
-						at = DaoType_DefineTypes( at, NS, defs );
-						GC_Assign( & types[opc], at );
+						DaoType *type = DaoType_DefineTypes( at, NS, defs );
+						GC_Assign( & types[opc], type );
 					}else{
 						GC_Assign( & types[opc], at );
 					}
