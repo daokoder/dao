@@ -412,7 +412,6 @@ int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count )
 		DString_AppendBytes( output, buf, k );
 		count -= k;
 	}
-	if( close ) fclose( fin );
 	return output->size - size;
 }
 int DaoFile_WriteString( FILE* file, DString *str )
