@@ -2426,7 +2426,7 @@ CallEntry:
 			switch( vmc->a ){
 			case DVM_MATH_CEIL : LocalInt(vmc->c) = ceil( arg ); break;
 			case DVM_MATH_FLOOR: LocalInt(vmc->c) = floor( arg ); break;
-			case DVM_MATH_ABS  : LocalInt(vmc->c) = abs( arg );  break;
+			case DVM_MATH_ABS  : LocalInt(vmc->c) = labs( arg );  break;
 			case DVM_MATH_ACOS : LocalFloat(vmc->c) = acos( arg ); break;
 			case DVM_MATH_ASIN : LocalFloat(vmc->c) = asin( arg ); break;
 			case DVM_MATH_ATAN : LocalFloat(vmc->c) = atan( arg ); break;
@@ -3697,7 +3697,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 		return 0;
 	}else if( A->type == DAO_INTEGER && func <= DVM_MATH_ABS ){
 		daoint res = A->xInteger.value;
-		if( func == DVM_MATH_ABS ) res = abs( res );
+		if( func == DVM_MATH_ABS ) res = labs( res );
 		if( C && C->type == DAO_INTEGER ){
 			C->xInteger.value = res;
 		}else{

@@ -2304,11 +2304,11 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVirtualModule *module )
 		fin = Dao_OpenFile( data, "r" );
 		node = DMap_Find( self->vfiles, fname );
 		if( node == NULL && fin != NULL ){
-			DaoFile_ReadPart( fin, source, abs(n), 4 );
+			DaoFile_ReadPart( fin, source, labs(n), 4 );
 			if( source->size == 4 ){
 				DaoVirtualFile *vfile = DaoVirtualFile_New();
 				DString_SetChars( vfile->data, data );
-				vfile->offset = abs(n) + 4;
+				vfile->offset = labs(n) + 4;
 				vfile->size = DaoDecodeUInt32( source->chars );
 				MAP_Insert( self->vfiles, fname, vfile );
 			}
