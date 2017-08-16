@@ -14,7 +14,7 @@ routine Test( o: AA )
 	o.Meth( 123 );
 	io.writeln( o[1] );
 	io.writeln( o.name );
-	for( i in o ) io.writeln(i)
+	for(var i in o ) io.writeln(i)
 }
 
 class BB
@@ -28,7 +28,7 @@ class BB
 		iter[1] = 0;
 	}
 	routine []( iter: tuple<bool,int> ){
-		id = iter[1];
+		var id = iter[1];
 		iter[0] = iter[1] + 1 < 5;
 		iter[1] += 1;
 		return id;
@@ -42,4 +42,4 @@ class CC : BB
 Test( BB() );
 Test( CC() );
 
-for( i in BB() ) io.writeln(i)
+for(var i in BB() ) io.writeln(i)

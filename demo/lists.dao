@@ -1,8 +1,8 @@
 
-list1 = { 1, 2, 3 }    # list<int>
-list2 = { 1.0, 2, 3 }  # list<float>
-list3 = { 1 : 5 }      # list<int>
-list4 = list{ 1 : 2 : 5 }  # list<int>
+var list1 = { 1, 2, 3 }    # list<int>
+var list2 = { 1.0, 2, 3 }  # list<float>
+var list3 = { 1 : 5 }      # list<int>
+var list4 = list{ 1 : 2 : 5 }  # list<int>
 
 io.writeln( list1 )
 io.writeln( list2 )

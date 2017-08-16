@@ -27,7 +27,7 @@ class Klass ( Base, Mixin )
 	routine Meth2( a : int ){ io.writeln( self, index, value, a ) }
 }
 
-k = Klass()
+var k = Klass()
 
 io.writeln( k.index )
 

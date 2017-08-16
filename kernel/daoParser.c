@@ -4437,7 +4437,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 		}else{
 			regC = DaoParser_GetRegister( self, varTok );
 			if( regC < 0 ){
-				DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
+				DaoParser_Error( self, DAO_SYMBOL_NOT_AUTO_DEFINED, & varTok->string );
 				goto ReturnError;
 			}
 		}
@@ -5779,8 +5779,8 @@ static int DaoParser_ParseSymbol( DaoParser *self, DString *symbol )
 	DNode *node;
 	DaoNamespace *ns = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DaoType *type = DaoNamespace_MakeSymbolType( ns, symbol->chars );
 	if( (node = MAP_Find( self->allConsts, symbol )) == NULL ){
+		DaoType *type = DaoNamespace_MakeSymbolType( ns, symbol->chars );
 		self->denum->value = 0;
 		DaoEnum_SetType( self->denum, type );
 		node = MAP_Insert( self->allConsts, symbol, routine->routConsts->value->size );

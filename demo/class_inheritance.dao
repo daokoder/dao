@@ -38,7 +38,7 @@ class CC : BB
 	routine Virt(){ io.writeln( "CC::Virt()", self ) }
 }
 
-c = CC();
+var c = CC();
 
 io.writeln( c.cst == "abc" ? "ok" : "error" );
 io.writeln( c.obj == "abc" ? "ok" : "error" );
@@ -48,5 +48,5 @@ io.writeln( c.Meth() == 123 ? "ok" : "error" );
 io.writeln( c.Meth(1) );
 
 c.CallVirt();
-a: AA = c
+var a: AA = c
 a.Virt()

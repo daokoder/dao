@@ -40,6 +40,7 @@ static const char* const daoCtInfo[] =
 	"Getter/setter may not be used for",
 	"Value was used",
 	"Symbol possibly undefined",
+	"Symbol not defined (auto declaration is disabled, please add \"var/invar\" before the declaration, or use --autovar to turn auto declaration on)",
 	"Symbol not defined",
 	"Symbol was defined",
 	"Need symbol of constant",

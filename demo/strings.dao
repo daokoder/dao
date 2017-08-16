@@ -1,11 +1,11 @@
-mbs = "hello"
-wcs = "道语言"
+var mbs = "hello"
+var wcs = "道语言"
 
 # verbatim strings:
-mbs2 = @[] some text @[]
+var mbs2 = @[] some text @[]
 
 # C++ codes in MBS:
-cpp =
+var cpp =
 @[cpp x]
 class AA
 {
@@ -16,7 +16,7 @@ struct BB{};
 
 
 # Lua codes in MBS:
-lua =
+var lua =
 @[lua]
 local a = 1;
 function Test()
@@ -25,7 +25,7 @@ end
 @[lua]
 
 # HTML codes in WCS:
-html =
+var html =
 @[html:123456]
 <body>
 <span name="test"></span>

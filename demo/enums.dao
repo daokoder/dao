@@ -26,7 +26,7 @@ case Bool::True  : io.writeln( "Bool::True" )
 
 # Symbols can be assigned to a variable of an 
 # enum symbol type, as long as they are compatible:
-bl : Bool = $True
+var bl : Bool = $True
 io.writeln( bl )
 
 
@@ -34,7 +34,7 @@ io.writeln( bl )
 # enum CardSuit { Club, Diamond, Heart, Spade }
 type CardSuit = enum<Club,Diamond,Heart,Spade>
 
-card : CardSuit = $Spade
+var card : CardSuit = $Spade
 card = CardSuit::Spade
 
 # In the following switch-case, the case constants $XYZ

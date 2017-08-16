@@ -23,17 +23,17 @@ class Test
 	}
 }
 
-t = Test();
+var t = Test();
 
-a = (int)t;
-b = (float)t;
-c = (string)t;
-v = (array<int>)t;
-v2 = (tuple<a:int,b:float>)t;
+var a = (int)t;
+var b = (float)t;
+var c = (string)t;
+var v = (array<int>)t;
+var v2 = (tuple<a:int,b:float>)t;
 
 io.writeln( a, b, c, v2, std.about(v2) )
 
-e = Exception::Error( "testing" );
+var e = Exception::Error( "testing" );
 io.writeln( (string)e );
 
 # a = (int)e; # error

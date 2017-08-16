@@ -45,7 +45,7 @@ routine Test()
 		return 999
 	}
 
-	for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) }
+	for(var i = 2 : 5 ) defer { io.writeln( "deferred", i ) }
 
 	std.error( Error( "something" ) )
 	io.writeln( "returning" );

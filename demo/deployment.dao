@@ -4,6 +4,6 @@
 load aux
 load mixins
 
-text = std::resource( "resource.txt" )
+var text = std::resource( "resource.txt" )
 
 io.writeln( text )

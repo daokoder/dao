@@ -25,7 +25,7 @@ routine Another::Test( o : One )
 	io.writeln( o.index );
 }
 
-o = One();
-a = Another();
+var o = One();
+var a = Another();
 a.Test( o );
 o.Test2(0)

@@ -3,7 +3,7 @@
 # First example:
 ####################################
 
-intstring : list<int|string> = {};
+var intstring : list<int|string> = {};
 
 intstring.append( 123 );
 intstring.append( "abc" );
@@ -34,7 +34,7 @@ class BB
 routine Test( object: AA | BB | HasSizeMethod )
 {
 # casting to an interface will invoke automatic binding:
-	object2 = (HasSizeMethod) object;
+	var object2 = (HasSizeMethod) object;
 	io.writeln( object2.Size() )
 }
 
@@ -72,8 +72,8 @@ class FakeImage
 	routine[]( i: int, js: none|tuple<int|none,int|none> )=>array<int>
 	{
 # one can simply return image[i,js], but the following is for demonstration purpose:
-		j1 = 0;
-		j2 = image.dim(1) - 1;
+		var j1 = 0;
+		var j2 = image.dim(1) - 1;
 		if( js == none ) return image[i,:];
 		if( js[0] != none ) j1 = js[0];
 		if( js[1] != none ) j2 = js[1];
@@ -81,7 +81,7 @@ class FakeImage
 	}
 }
 
-image = FakeImage();
+var image = FakeImage();
 io.writeln( image[1,1:] );
 io.writeln( image[2,:1] );
 
@@ -97,10 +97,10 @@ routine Sum( alist : list<@T<int|string>> ) => @T
 	return alist.sum();
 }
 
-s = Sum( { 1, 2, 3 } );
+var s = Sum( { 1, 2, 3 } );
 #s += "a"; # typing error
 io.writeln( s );
 
-s2 = Sum( { "a", "b", "c" } );
+var s2 = Sum( { "a", "b", "c" } );
 io.writeln( s2 );
 

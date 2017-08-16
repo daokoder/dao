@@ -1,7 +1,7 @@
 
 # Anonymous functions and closures can be created using the same syntax
 # as defining a normal function but without function name. For example,
-#     rout = routine( a :int ){ io.writeln( a ) }
+#     var rout = routine( a :int ){ io.writeln( a ) }
 #
 # In anonymous functions or closures, the default parameters can be
 # non-constant expressions that will be evaluated at the time of creation
@@ -18,11 +18,11 @@
 # resolved locally, and then the local constants and variables of the outer
 # scopes are searched. The class members and global data are searched at last.
 
-closures = {};
+var closures = {};
 
-for( i = 1 : 5 ){
-	ls = { i };
-	closure = routine(){
+for(var i = 1 : 5 ){
+	var ls = { i };
+	var closure = routine(){
 		io.writeln( ls, i )
 	}
 	closures.append( closure )
@@ -32,10 +32,10 @@ for( closure in closures ) closure()
 
 routine Test()
 {
-	abc = "abc"
-	rout = routine(){
+	var abc = "abc"
+	var rout = routine(){
 		io.writeln( "outer closure", abc )
-		rout = routine(){
+		var rout = routine(){
 			io.writeln( "inner closure", abc )
 		}
 		return rout;
@@ -43,5 +43,5 @@ routine Test()
 	return rout()
 }
 
-rout = Test()
+var rout = Test()
 rout()

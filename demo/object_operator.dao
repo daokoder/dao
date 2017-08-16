@@ -1,9 +1,9 @@
 
 class Test{}
 
-t1 = Test();
-t2 = Test();
-eq = t1 == t2;
+var t1 = Test();
+var t2 = Test();
+var eq = t1 == t2;
 
 
 class Integer
@@ -84,15 +84,15 @@ class Integer
 }
 
 
-n1 = Integer(10);
-n2 = Integer(20);
+var n1 = Integer(10);
+var n2 = Integer(20);
 # n3 =  1 + n2; # no longer supported, now the first operand must be a user type;
-n4 = n1 +  2;
-n5 = n1 + n2;
-n6 = - n5;
-n7 = n5 - n4;
-n8 = n5 < n4;
-n9 = n5 > n4;
+var n4 = n1 +  2;
+var n5 = n1 + n2;
+var n6 = - n5;
+var n7 = n5 - n4;
+var n8 = n5 < n4;
+var n9 = n5 > n4;
 
 io.writeln( n4, n5, n6, n7, n8, n9 );
 
@@ -108,11 +108,11 @@ io.writeln( n8, n9 );
 n9.value = 10;
 n8.value = 20;
 io.writeln( "=======", n8, n9 );
-for( i = 1 : 2 ) n9 = n8 + n9
+for(var i = 1 : 2 ) n9 = n8 + n9
 io.writeln( "=======" );
 n9 += n8
 
-ls = { n8 + n9 }
+var ls = { n8 + n9 }
 
 std.about( n8 + n9 );
 
@@ -120,6 +120,6 @@ invar n11 = Integer(10);
 #io.writeln( % n11 )
 #io.writeln( n9 + n11 )
 
-k : any = n9
+var k : any = n9
 io.writeln( "The following should raise an error!" )
 io.writeln( k + n11 ) # Error

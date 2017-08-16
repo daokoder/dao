@@ -63,8 +63,8 @@ Test2()
 # if the "block" raises an exception, the default "value" is returned
 # instead, and the exception is suppressed.
 
-ls = { "A", "B", "C" }
-it = "X";
+var ls = { "A", "B", "C" }
+var it = "X";
 
 std.exec {
 	defer ( any ) { return "X" }
