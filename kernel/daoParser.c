@@ -1095,6 +1095,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start-1, -1 );
 			cast = DaoParser_ParseType( self, start, rb-1, & rb, NULL );
 			if( cast == NULL || tokens[rb]->name != DTOK_RB ) goto ErrorInvalidOperator;
+			DString_SetChars( routine->routName, "(" );
+			DString_Append( routine->routName, cast->name );
+			DString_AppendChars( routine->routName, ")" );
+			start = rb + 1;
 		}
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, rb+1, -1, 1 );
 	}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
@@ -1103,10 +1107,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	}else if( tokens[start-1]->type != DTOK_IDENTIFIER ){
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
 	}else if( tokens[start]->name == DTOK_LT ){ /* constructor of template types */
-		int lb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, -1 );
-		if( lb < 0 ) return -1;
-		for(i=start; i<=lb; i++) DString_Append( routine->routName, & tokens[i]->string );
-		start = lb + 1;
+		int rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, -1 );
+		if( rb < 0 ) return -1;
+		for(i=start; i<=rb; i++) DString_Append( routine->routName, & tokens[i]->string );
+		start = rb + 1;
 	}
 	if( lb < 0 ) goto ErrorInvalidOperator;
 	if( lb > start ){
@@ -4279,6 +4283,15 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			return DaoParser_MultipleAssignment( self, start, rb, to, store );
 		}
 	}
+	/*
+	// Workaround for for-in loop;
+	//
+	// Note:
+	// Handling of expressions in DaoParser_ParseVarExpressions() wouldn't
+	// be necessary once the support for automatic variable declaration
+	// is removed completely (TODO)!
+	*/
+	if( (to + 1) < self->tokens->size && tokens[to+1]->name == DKEY_IN ) expression = 0;
 	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_CEIL ){
 		DList_Append( self->toks, ptok );
 		if( (++k) > to ) break;
@@ -4374,6 +4387,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
 			goto ReturnError;
 		}
+	}else if( (to + 1) < self->tokens->size && tokens[to+1]->name == DKEY_IN ){
+		/* for(var x in ls): x needs no initialization; */
 	}else if( self->isClassBody == 0 ){
 		DaoParser_Error2( self, DAO_VARIABLE_WITHOUT_INIT, start, end, 0 );
 		goto ReturnError;
@@ -4427,18 +4442,26 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 		DaoByteBlock *block = self->byteBlock;
 		DaoToken *varTok = self->toks->items.pToken[k];
 		DString *name = & varTok->string;
-		int regC = 0;
+		int regC = -1;
 		int id = 0;
 		/*
 		printf( "declaring %s\n", varTok->string.chars );
 		*/
-		if( explicit_store || (vms->options & DAO_OPTION_AUTOVAR) ){
-			regC = DaoParser_DeclareVariable( self, varTok, store, type );
-		}else{
-			regC = DaoParser_GetRegister( self, varTok );
-			if( regC < 0 ){
-				DaoParser_Error( self, DAO_SYMBOL_NOT_AUTO_DEFINED, & varTok->string );
-				goto ReturnError;
+		/*
+		// Check previous declaration;
+		// It wouldn't be necessary once support for --autovar is removed (TODO).
+		*/
+		if( explicit_store == 0 ) regC = DaoParser_GetRegister( self, varTok );
+
+		if( regC < 0 ){
+			if( explicit_store || (vms->options & DAO_OPTION_AUTOVAR) ){
+				regC = DaoParser_DeclareVariable( self, varTok, store, type );
+			}else{
+				regC = DaoParser_GetRegister( self, varTok );
+				if( regC < 0 ){
+					DaoParser_Error( self, DAO_SYMBOL_NOT_AUTO_DEFINED, & varTok->string );
+					goto ReturnError;
+				}
 			}
 		}
 		if( regC < 0 ) goto ReturnError;
@@ -5428,21 +5451,11 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 	if( rb >= 0 ) in = DaoParser_FindOpenToken( self, DKEY_IN, start+2, rb, 0 );
 	if( (rb < 0 || rb >= end) && in < 0 ) return -1;
-	if( tokens[start+2]->name == DKEY_VAR ){
-		store = DAO_DECL_LOCAL|DAO_DECL_VAR;
-		movetype = 1|(1<<1);
-		start += 1;
-	}else if( tokens[start+2]->name == DKEY_INVAR ){
-		store = DAO_DECL_LOCAL|DAO_DECL_INVAR;
-		movetype = 1|(3<<1);
-		movemask = 0x0;
-		start += 1;
-	}
 
 	DaoParser_AddScope( self, DVM_UNUSED, NULL );
 	if( in >= 0 ){
 		DList *tuples;
-		int k, L, elem, semic, regItemt, reg, exp, first, firstIter;
+		int k, L, st, elem, semic, regItemt, reg, exp, first, firstIter;
 		daoint *t;
 
 		elem = start + 2;
@@ -5452,13 +5465,32 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		regItemt = 0;
 		tuples = DList_New(0);
 		while( semic >=0 ){
+			store = 0;
+			movetype = 0;
+			if( tokens[elem]->name == DKEY_VAR ){
+				store = DAO_DECL_LOCAL|DAO_DECL_VAR;
+				movetype = 1|(1<<1);
+				elem += 1;
+			}else if( tokens[elem]->name == DKEY_INVAR ){
+				store = DAO_DECL_LOCAL|DAO_DECL_INVAR;
+				movetype = 1|(3<<1);
+				movemask = 0x0;
+				elem += 1;
+			}
 			if( tokens[elem+1]->name != DKEY_IN ){
 				DaoParser_Error( self, DAO_INVALID_FORIN, NULL );
 				goto CleanUp;
 			}
+			st = store;
+			if( store & DAO_DECL_INVAR ){
+				st = store & (~DAO_DECL_INVAR); /* To compile "invar a" as "var a"; */
+				st |= DAO_DECL_VAR;
+			}
+			pos = DaoParser_ParseVarExpressions( self, elem, elem, st );
+			if( pos < 0 ) return -1;
+
 			tok = tokens[elem];
 			reg = DaoParser_GetRegister( self, tok );
-			if( reg < 0 || store ) reg = DaoParser_DeclareVariable( self, tok, store, NULL );
 			if( reg < 0 ) goto CleanUp;
 			if( LOOKUP_ISCST( reg ) ){
 				DaoParser_Error( self, DAO_EXPR_MODIFY_CONSTANT, & tok->string );
@@ -5541,10 +5573,23 @@ CleanUp:
 		DList_Delete( tuples );
 		return -1;
 	}
+
+	if( tokens[start+2]->name == DKEY_VAR ){
+		store = DAO_DECL_LOCAL|DAO_DECL_VAR;
+		movetype = 1|(1<<1);
+		start += 1;
+	}else if( tokens[start+2]->name == DKEY_INVAR ){
+		store = DAO_DECL_LOCAL|DAO_DECL_INVAR;
+		movetype = 1|(3<<1);
+		movemask = 0x0;
+		start += 1;
+	}
 	colon1 = DaoParser_FindOpenToken( self, DTOK_COLON, start+2, rb, 0 );
 	if( colon1 >=0 ){
 		int eq, index, first, step, last = 0;
-		int loc, pos, st, up, id, set = 0;
+		int loc, pos, up, id, set = 0;
+		int st = store;
+
 		eq = DaoParser_FindOpenToken( self, DTOK_ASSN, start+2, colon1, 1 );
 		if( eq < 0 ) return -1;
 		if( start+2 != eq-1 ){
@@ -5554,7 +5599,10 @@ CleanUp:
 		}
 		tokens[colon1]->type = DTOK_SEMCO;
 		tokens[colon1]->name = DTOK_SEMCO;
-		st = store & (~DAO_DECL_INVAR); /* To compile "invar a=init" as "var a=init"; */
+		if( store & DAO_DECL_INVAR ){
+			st = store & (~DAO_DECL_INVAR); /* To compile "invar a" as "var a"; */
+			st |= DAO_DECL_VAR;
+		}
 		pos = DaoParser_ParseVarExpressions( self, start+2, colon1-1, st );
 		tokens[colon1]->type = DTOK_COLON;
 		tokens[colon1]->name = DTOK_COLON;

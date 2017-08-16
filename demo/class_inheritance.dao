@@ -43,7 +43,7 @@ var c = CC();
 io.writeln( c.cst == "abc" ? "ok" : "error" );
 io.writeln( c.obj == "abc" ? "ok" : "error" );
 io.writeln( c.obj2 == 0C ? "ok" : "error" );
-io.writeln( c.Meth() == 123 ? "ok" : "error" );
+io.writeln( c.Meth() == "abc" ? "ok" : "error" );
 
 io.writeln( c.Meth(1) );
 

@@ -4,6 +4,12 @@ class Test
 	var value = { 123.2, 456.5 };
 
 	# conversion to float:
+	routine (int) () {
+		io.writeln( "casting to float" );
+		return value.sum();
+	}
+
+	# conversion to float:
 	routine (float) () {
 		io.writeln( "casting to float" );
 		return value.sum();
@@ -29,7 +35,7 @@ var a = (int)t;
 var b = (float)t;
 var c = (string)t;
 var v = (array<int>)t;
-var v2 = (tuple<a:int,b:float>)t;
+var v2 = (tuple<float,float>)t;
 
 io.writeln( a, b, c, v2, std.about(v2) )
 

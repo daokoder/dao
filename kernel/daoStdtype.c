@@ -4556,7 +4556,7 @@ static DaoType* DaoMap_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[
 	DaoType *left = args[0];
 	DaoType *right = args[1];
 
-	if( op->code == DVM_IN && right->tid == DAO_LIST ) return vms->typeBool;
+	if( op->code == DVM_IN && right->tid == DAO_MAP ) return vms->typeBool;
 	return NULL;
 }
 
