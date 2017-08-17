@@ -1,5 +1,5 @@
 
-# make -f Makefile.daomake macosx MODE=debug OPTIONS="--option-BUNDLE-SCRIPT demo/deployment --option-BUNDLE-RESOURCES demo/resource.txt"
+# make -f Makefile.daomake macosx MODE=debug OPTIONS="--option-BUNDLE-SCRIPT demo/deployment --option-BUNDLE-RESOURCES resource.txt"
 
 load aux
 load mixins

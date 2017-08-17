@@ -12,7 +12,7 @@ routine CharToNumber( source : string )
 {
 	var numbers = "\t";
 	var count = 0;
-	for( char in source ){
+	for(var char in source ){
 		if( %numbers - count > 58 ){
 			numbers += "\n\t";
 			count = %numbers;
@@ -66,7 +66,7 @@ routine ArchiveToCSource( archive : string )
 		}
 		pos += 2 + m + 4 + n;
 	}
-	modules = 'DaoVModule dao_virtual_modules[] =\n{\n' + modules;
+	modules = 'DaoVirtualModule dao_virtual_modules[] =\n{\n' + modules;
 	modules += '  { NULL, 0, NULL, NULL }\n};\n';
 	return onloads + sources + modules, finders;
 }

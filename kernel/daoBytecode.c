@@ -2912,6 +2912,7 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	DaoByteBlock *path = DaoByteCoder_LookupStringBlock( self, block, A );
 	DaoByteBlock *mod = DaoByteCoder_LookupBlock( self, block, B );
 	DaoNamespace *ns = NULL;
+	DaoConstant *konst;
 	DString *spath;
 
 	if( self->error ) return;
@@ -2938,6 +2939,8 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	}else{
 		DaoNamespace_AddConst( self->nspace, mod->value->xString.value, (DaoValue*) ns, 0 );
 	}
+	konst = DaoConstant_New( (DaoValue*) ns, DAO_GLOBAL_CONSTANT );
+	DList_Append( self->nspace->constants, konst );
 }
 static void DaoByteCoder_DecodeNamespace( DaoByteCoder *self, DaoByteBlock *block )
 {
