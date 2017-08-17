@@ -1269,9 +1269,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			e1 = hasdeft;  e2 = right;
 			goto ErrorMiddleDefault;
 		}
-		if( nameTok->name == DTOK_ID_THTYPE ){
-			if( nested->size == selfpar && type->tid != DAO_ROUTINE ) goto ErrorInvalidParam;
-		}
 		/* Invariable classes must be instantiated with primitive or immutable parameters: */
 		if( invarhost && (routine->attribs & DAO_ROUT_INITOR) ){
 			DaoType *type2 = type;
@@ -3104,7 +3101,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int t = tokens[start]->name;
-		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_CEIL ) goto ErrorClassDefinition;
+		if( t != DTOK_IDENTIFIER && t < DKEY_CEIL ) goto ErrorClassDefinition;
 		klass = DaoClass_New( NS );
 		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 
@@ -6696,23 +6693,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = rb + 1;
-	}else if( tki == DTOK_ID_THTYPE && tki2 == DTOK_LB ){
-		DaoToken tok = *tokens[start];
-		regLast = DaoParser_GetRegister( self, & tok );
-		if( regLast <0 ){
-			DString_SetChars( self->string, tokens[start]->string.chars + 1 );
-			tok.string = *self->string;
-			regLast = DaoParser_GetRegister( self, & tok );
-			if( regLast < 0 ){
-				DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, self->string );
-				return error;
-			}
-		}
-		if( LOOKUP_ISCST( regLast ) ) result.konst = regLast;
-		result.reg = regLast = DaoParser_GetNormRegister( self, regLast, 0, start, 0, start );
-		result.first = last->next;
-		result.last = result.update = self->vmcLast;
-		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_COLON
 			|| (tki >= DKEY_ANY && tki <= DKEY_TUPLE) || tki >= DKEY_CEIL || tki == DKEY_SELF ){
 		int count = self->errors->size;

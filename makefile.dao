@@ -441,12 +441,10 @@ if( DaoMake::IsDir( "modules/help" ) ){
 
 demos = {
 	"demo/arrays.dao",
-	"demo/aspects.dao",
 	"demo/class_forward_claration.dao",
 	"demo/class_inheritance.dao",
 	"demo/classes.dao",
 	"demo/closures.dao",
-	"demo/decorators.dao",
 	"demo/defers.dao",
 	"demo/disjoint_union.dao",
 	"demo/enums.dao",
