@@ -1312,6 +1312,7 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	daoint i;
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
+	if( parent->var || parent->invar ) parent = DaoType_GetBaseType( parent );
 	if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA ){
 		if( DaoType_MatchToParent( object->xCstruct.ctype, parent, NULL, 0 ) ) return object;
 	}else if( object->type == DAO_CTYPE ){

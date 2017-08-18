@@ -965,6 +965,7 @@ DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent )
 {
 	DaoValue *sup;
 	if( parent == NULL ) return NULL;
+	if( parent->var || parent->invar ) parent = DaoType_GetBaseType( parent );
 	if( self->clsType == parent ) return (DaoValue*) self;
 	if( self->parent == NULL ) return NULL;
 	if( self->parent->type == DAO_CLASS ){

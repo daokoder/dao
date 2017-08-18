@@ -2,6 +2,20 @@
 @[test(code_01)]
 class A
 {
+	var index = 123
+}
+var x = A
+io.writeln( std.about(x) )
+@[test(code_01)]
+@[test(code_01)]
+{{class<A>}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+class A
+{
 	type T = A
 
 	var index = 123
