@@ -1162,17 +1162,17 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 			pm = LOOKUP_PM( it->value.pInt );
 			st = LOOKUP_ST( it->value.pInt );
 			id = LOOKUP_ID( it->value.pInt );
-			if( pm != DAO_PERM_PUBLIC || value == NULL ) continue;
+			if( pm != DAO_PERM_PUBLIC ) continue;
 
 			search = MAP_Find( self->lookupTable, name );
-			if( search && value->type == DAO_ROUTINE && up == 0 ){
+			if( search && value && value->type == DAO_ROUTINE && up == 0 ){
 				DaoNS_ImportRoutine( self, name, (DaoRoutine*)value, pm );
 				continue;
 			}
 			if( search ) continue;
 			if( st == DAO_GLOBAL_CONSTANT ){
 				DaoConstant *cst = ns->constants->items.pConst[id];
-				if( cst->value->type == DAO_ROUTINE ){
+				if( cst->value && cst->value->type == DAO_ROUTINE ){
 					DaoNamespace_AddConst( self, name, cst->value, pm );
 					continue;
 				}
