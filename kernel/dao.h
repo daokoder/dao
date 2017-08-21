@@ -525,9 +525,31 @@ struct DaoProfiler
 struct DaoHandler
 {
 	void (*PrintNote)( DaoHandler *self, DaoValue *value );
-	void (*PrintError)( DaoHandler *self, const char *msg, const char *file, int start, int end );
+	/*
+	// Print a value as note.
+	// It can be used to print value with annotations for interactive environments;
+	*/
 
-	int  (*MigrateCall)( DaoHandler *self, DaoProcess *process );
+	void (*PrintError)( DaoHandler *self, const char *msg, const char *file, int start, int end );
+	/*
+	// Print a message for an error that occurred in source file "file" at location
+	// indicated by "start" and "end" (usually token index range).
+	// It can be used to show error messages in editors.
+	*/
+
+	int (*SearchModule)( DaoHandler *self, DString *fname );
+	/*
+	// Search module file.
+	// Return 1 on success and 0 otherwise.
+	// Full module file path is stored in "fname" when successful.
+	//
+	// If this method is available, it will be called after the standard
+	// module searching fails. This method can be used to enable extra
+	// searching paths temporarily with messing up the current searching
+	// paths. 
+	*/
+
+	int (*MigrateCall)( DaoHandler *self, DaoProcess *process );
 	/*
 	// MigrateCall(): migrating a C/C++ function call to another thread.
 	//
@@ -543,7 +565,7 @@ struct DaoHandler
 	// object, and block the current thread until the execution is finished.
 	//
 	// This method is mainly useful for migrating some calls that must be called
-	// in certain thread. For example, in some frameworks/toolkits, some calls
+	// in a certain thread. For example, in some frameworks/toolkits, some calls
 	// must be executed in the main thread to deal with UI and graphics.
 	*/
 };

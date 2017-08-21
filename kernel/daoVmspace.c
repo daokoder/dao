@@ -2413,6 +2413,9 @@ int DaoVmSpace_SearchModulePath( DaoVmSpace *self, DString *fname, int lib )
 		goto Found;
 	}
 	if( DaoVmSpace_SearchInPaths( self, self->pathSearching, fname ) ) goto Found;
+	if( self->handler && self->handler->SearchModule ){
+		if( self->handler->SearchModule( self->handler, fname ) ) goto Found;
+	}
 	goto NotFound;
 
 Found:
