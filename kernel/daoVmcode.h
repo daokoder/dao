@@ -129,8 +129,8 @@ enum DaoOpcode
 	DVM_MOVE_BB , DVM_MOVE_BI , DVM_MOVE_BF ,
 	DVM_MOVE_IB , DVM_MOVE_II , DVM_MOVE_IF ,
 	DVM_MOVE_FB , DVM_MOVE_FI , DVM_MOVE_FF ,
+	DVM_MOVE_CB , DVM_MOVE_CI , DVM_MOVE_CF ,
 
-	DVM_MOVE_CF ,
 	DVM_MOVE_CC , /* complex = complex */
 	DVM_MOVE_SS , /* string = string */
 	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be const; */

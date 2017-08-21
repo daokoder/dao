@@ -4207,14 +4207,10 @@ SkipChecking:
 		case DVM_MOVE_BB : case DVM_MOVE_BI : case DVM_MOVE_BF :
 		case DVM_MOVE_IB : case DVM_MOVE_II : case DVM_MOVE_IF :
 		case DVM_MOVE_FB : case DVM_MOVE_FI : case DVM_MOVE_FF :
-		case DVM_MOVE_CF :
+		case DVM_MOVE_CB : case DVM_MOVE_CI : case DVM_MOVE_CF :
 			k = DAO_FLOAT - DAO_BOOLEAN + 1;
 			TT1 = DAO_BOOLEAN + (code - DVM_MOVE_BB) % k;
-			TT3 = DAO_BOOLEAN + ((code - DVM_MOVE_BB)/k) % k;
-			if( code == DVM_MOVE_CF ){
-				TT1 = DAO_FLOAT;
-				TT2 = DAO_COMPLEX;
-			}
+			TT3 = DAO_BOOLEAN + ((code - DVM_MOVE_BB)/k) % 4;
 			at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
 			if( at == NULL ) return 0;
 			if( opb & 0x2 ){

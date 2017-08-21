@@ -1176,8 +1176,9 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_MOVE_BB , && LAB_MOVE_BI , && LAB_MOVE_BF ,
 		&& LAB_MOVE_IB , && LAB_MOVE_II , && LAB_MOVE_IF ,
 		&& LAB_MOVE_FB , && LAB_MOVE_FI , && LAB_MOVE_FF ,
+		&& LAB_MOVE_CB , && LAB_MOVE_CI , && LAB_MOVE_CF ,
+		&& LAB_MOVE_CC , 
 
-		&& LAB_MOVE_CF , && LAB_MOVE_CC , 
 		&& LAB_MOVE_SS , && LAB_MOVE_PP , && LAB_MOVE_XX ,
 
 		&& LAB_NOT_B , && LAB_NOT_I , && LAB_NOT_F ,
@@ -2008,6 +2009,12 @@ CallEntry:
 			LocalFloat(vmc->c) = LocalBool(vmc->a) != 0;
 		}OPNEXT() OPCASE( MOVE_FI ){
 			LocalFloat(vmc->c) = LocalInt(vmc->a);
+		}OPNEXT() OPCASE( MOVE_CB ){
+			locVars[vmc->c]->xComplex.value.real = locVars[vmc->a]->xBoolean.value;
+			locVars[vmc->c]->xComplex.value.imag = 0.0;
+		}OPNEXT() OPCASE( MOVE_CI ){
+			locVars[vmc->c]->xComplex.value.real = locVars[vmc->a]->xInteger.value;
+			locVars[vmc->c]->xComplex.value.imag = 0.0;
 		}OPNEXT() OPCASE( MOVE_CF ){
 			locVars[vmc->c]->xComplex.value.real = locVars[vmc->a]->xFloat.value;
 			locVars[vmc->c]->xComplex.value.imag = 0.0;

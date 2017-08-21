@@ -177,6 +177,8 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MOVE_FB",    DVM_MOVE_FB,    DAO_CODE_MOVE,    0 },
 	{ "MOVE_FI",    DVM_MOVE_FI,    DAO_CODE_MOVE,    0 },
 	{ "MOVE_FF",    DVM_MOVE_FF,    DAO_CODE_MOVE,    0 },
+	{ "MOVE_CB",    DVM_MOVE_CB,    DAO_CODE_MOVE,    0 },
+	{ "MOVE_CI",    DVM_MOVE_CI,    DAO_CODE_MOVE,    0 },
 	{ "MOVE_CF",    DVM_MOVE_CF,    DAO_CODE_MOVE,    0 },
 	{ "MOVE_CC",    DVM_MOVE_CC,    DAO_CODE_MOVE,    0 },
 	{ "MOVE_SS",    DVM_MOVE_SS,    DAO_CODE_MOVE,    0 },
