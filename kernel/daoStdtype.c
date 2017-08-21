@@ -92,7 +92,7 @@ daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc )
 {
 	if( index < 0 ) index += size;
 	if( index >= 0 && index < size ) return index;
-	DaoProcess_RaiseError( proc, "Index::Range", NULL );
+	if( proc ) DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	return -1;
 }
 
@@ -100,7 +100,7 @@ daoint Dao_CheckNumberEndIndex( daoint index, daoint size, DaoProcess *proc )
 {
 	if( index < 0 ) index += size;
 	if( index >= 0 && index <= size ) return index;
-	DaoProcess_RaiseError( proc, "Index::Range", NULL );
+	if( proc ) DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	return -1;
 }
 

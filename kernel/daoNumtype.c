@@ -1502,7 +1502,7 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 
 static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *proc )
 {
-	DaoTuple *iterator;
+	DaoTuple *tuple;
 	DaoArray *res, *self = (DaoArray*) selfv;
 	daoint pos, end, size = self->size;
 
@@ -1528,26 +1528,28 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 			}
 			break;
 		case DAO_TUPLE :
-			iterator = (DaoTuple*) index[0];
-			if( iterator->subtype != DAO_ITERATOR ) return NULL;
-			if( iterator->values[1]->type != DAO_INTEGER ) return NULL;
-			pos = Dao_CheckNumberIndex( iterator->values[1]->xInteger.value, size, proc );
-			iterator->values[0]->xBoolean.value = (pos + 1) < size;
-			iterator->values[1]->xInteger.value = pos + 1;
-			if( pos < 0 ) return NULL;
-			switch( self->etype ){
-			case DAO_BOOLEAN : DaoProcess_PutBoolean( proc, self->data.b[pos] ); break;
-			case DAO_INTEGER : DaoProcess_PutInteger( proc, self->data.i[pos] ); break;
-			case DAO_FLOAT   : DaoProcess_PutFloat( proc, self->data.f[pos] ); break;
-			case DAO_COMPLEX : DaoProcess_PutComplex( proc, self->data.c[pos] ); break;
-			default : break;
+			tuple = (DaoTuple*) index[0];
+			if( tuple->subtype == DAO_ITERATOR ){
+				if( tuple->values[1]->type != DAO_INTEGER ) return NULL;
+				pos = Dao_CheckNumberIndex( tuple->values[1]->xInteger.value, size, proc );
+				tuple->values[0]->xBoolean.value = (pos + 1) < size;
+				tuple->values[1]->xInteger.value = pos + 1;
+				if( pos < 0 ) return NULL;
+				switch( self->etype ){
+				case DAO_BOOLEAN : DaoProcess_PutBoolean( proc, self->data.b[pos] ); break;
+				case DAO_INTEGER : DaoProcess_PutInteger( proc, self->data.i[pos] ); break;
+				case DAO_FLOAT   : DaoProcess_PutFloat( proc, self->data.f[pos] ); break;
+				case DAO_COMPLEX : DaoProcess_PutComplex( proc, self->data.c[pos] ); break;
+				default : break;
+				}
+			}else if( tuple->subtype == DAO_RANGE ){
+				res = DaoProcess_PutArray( proc );
+				DaoArray_SetNumType( res, self->etype );
+				GC_Assign( & res->original, self );
+				DaoArray_MakeSlice( self, proc, index, 1, res );
 			}
 			break;
 		default:
-			res = DaoProcess_PutArray( proc );
-			DaoArray_SetNumType( res, self->etype );
-			GC_Assign( & res->original, self );
-			DaoArray_MakeSlice( self, proc, index, 1, res );
 			break;
 		}
 	}else if( N <= self->ndim ){
@@ -1623,7 +1625,7 @@ static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	}else{
 		int i, count = 0;
 		for(i=0; i<N; ++i){
-			if( index[i]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
+			if( index[i]->tid == DAO_TUPLE && index[i]->subtid == DAO_RANGE ){
 				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
 			}else{
 				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
