@@ -154,6 +154,12 @@ DAO_DLL void DaoType_ExportArguments( DaoType *self, DList *args, int noname );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
+/*
+// Get non-none type from type|none and none|type
+// (as well as from single-item or nested variant types):
+*/
+DAO_DLL DaoType* DaoType_GetAutoCastType( DaoType *self );
+
 DAO_DLL int DaoType_IsImmutable( DaoType *self );
 DAO_DLL int DaoType_IsPrimitiveOrImmutable( DaoType *self );
 DAO_DLL int DaoType_ChildOf( DaoType *self, DaoType *other );

@@ -3,9 +3,9 @@ class Test
 {
 	var value = { 123.2, 456.5 };
 
-	# conversion to float:
+	# conversion to int:
 	routine (int) () {
-		io.writeln( "casting to float" );
+		io.writeln( "casting to int" );
 		return value.sum();
 	}
 

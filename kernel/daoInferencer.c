@@ -1160,29 +1160,6 @@ static int DaoInferencer_AssertPairNumberType( DaoInferencer *self, DaoType *typ
 	if( itp->tid > DAO_FLOAT && ! DaoType_LooseChecking(itp) ) return 0;
 	return 1;
 }
-static DaoType* DaoType_GetAutoCastType2( DaoType *self )
-{
-	if( self->tid != DAO_VARIANT ) return NULL;
-	if( self->args->size == 1 ){
-		return self->args->items.pType[0];
-	}else if( self->args->size == 2 ){
-		DaoType *T1 = self->args->items.pType[0];
-		DaoType *T2 = self->args->items.pType[1];
-		if( T1->tid == DAO_NONE ) return T2;
-		if( T2->tid == DAO_NONE ) return T1;
-	}
-	return NULL;
-}
-static DaoType* DaoType_GetAutoCastType( DaoType *self )
-{
-	int invar = self->invar;
-	int konst = self->konst;
-	DaoType *type = DaoType_GetAutoCastType2( self );
-	if( type == NULL ) return NULL;
-	if( konst ) return DaoType_GetConstType( type );
-	if( invar ) return DaoType_GetInvarType( type );
-	return type;
-}
 
 
 #define AssertTypeMatching( source, target, defs ) \

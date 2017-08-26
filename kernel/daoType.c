@@ -305,6 +305,31 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 	return NULL;
 }
 
+static DaoType* DaoType_GetAutoCastType2( DaoType *self )
+{
+	if( self->tid != DAO_VARIANT ) return NULL;
+	if( self->args->size == 1 ){
+		return self->args->items.pType[0];
+	}else if( self->args->size == 2 ){
+		DaoType *T1 = self->args->items.pType[0];
+		DaoType *T2 = self->args->items.pType[1];
+		if( T1->tid == DAO_NONE ) return T2;
+		if( T2->tid == DAO_NONE ) return T1;
+	}
+	return NULL;
+}
+
+DaoType* DaoType_GetAutoCastType( DaoType *self )
+{
+	int invar = self->invar;
+	int konst = self->konst;
+	DaoType *type = DaoType_GetAutoCastType2( self );
+	if( type == NULL ) return NULL;
+	if( konst ) return DaoType_GetConstType( type );
+	if( invar ) return DaoType_GetInvarType( type );
+	return type;
+}
+
 /*
 // Output:
 // quads[0] = base type;

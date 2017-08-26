@@ -44,6 +44,10 @@
 #include"readline/history.h"
 #endif
 
+#ifdef UNIX
+#include <execinfo.h>
+#endif
+
 #include"signal.h"
 /*#include"mcheck.h" */
 
@@ -78,6 +82,7 @@ static char* DaoReadLine( const char *s, DString *buffer )
 	readingline = 0;
 	return DString_GetData( buffer );
 }
+
 static void DaoSignalHandler( int sig )
 {
 #ifdef DAO_WITH_THREAD
@@ -102,6 +107,26 @@ static void DaoSignalHandler( int sig )
 	}else{
 		printf( "keyboard interrupt...\n" );
 	}
+}
+
+static void DaoStackTrace( int sig )
+{
+#ifdef UNIX
+	void *array[128];
+	int size = backtrace(array, 128);
+	char **strings = backtrace_symbols(array, size);
+	int i;
+
+	printf( "ERROR: program failed with segmentation error!\n" );
+	printf( "The calling stack for the error:\n" );
+
+	for(i = 0; i < size; ++i) printf("%s\n", strings[i]);
+	free(strings);
+#else
+	printf( "ERROR: program failed with segmentation error!\n" );
+#endif
+	fflush( stdout );
+	exit( sig );
 }
 
 
@@ -313,6 +338,7 @@ int main( int argc, char **argv )
 #endif
 
 	signal( SIGINT, DaoSignalHandler );
+	signal( SIGSEGV, DaoStackTrace );
 
 	/* Start execution. */
 	k = DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
