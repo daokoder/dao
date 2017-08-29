@@ -62,11 +62,11 @@ DaoType* DaoFileStream_Type( DaoVmSpace *vmspace )
 }
 DaoType* DaoStringStream_Type( DaoVmSpace *vmspace )
 {
-	return DaoVmSpace_GetType( vmspace, & daoPipeStreamCore );
+	return DaoVmSpace_GetType( vmspace, & daoStringStreamCore );
 }
 DaoType* DaoPipeStream_Type( DaoVmSpace *vmspace )
 {
-	return DaoVmSpace_GetType( vmspace, & daoStringStreamCore );
+	return DaoVmSpace_GetType( vmspace, & daoPipeStreamCore );
 }
 
 

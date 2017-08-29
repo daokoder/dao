@@ -790,6 +790,18 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		if( type->tid == DAO_THT || type->tid == DAO_UDT ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds, dep, mode );
 		}
+	}else if( self->tid == DAO_VARIANT ){
+		/* Handle variant first in case it is matching to an interface; */
+		mt = DAO_MT_EQ;
+		mt3 = DAO_MT_NOT;
+		for(i=0; i<self->args->size; ++i){
+			it1 = self->args->items.pType[i];
+			mt2 = DaoType_Match( it1, type, defs, binds, dep, mode );
+			if( mt2 < mt ) mt = mt2;
+			if( mt2 > mt3 ) mt3 = mt2;
+		}
+		if( mt == 0 ) return mt3 ? DAO_MT_ANYX : DAO_MT_NOT;
+		return mt;
 	}else if( type->tid == DAO_CINVALUE ){
 		mt = DaoType_MatchTo( self, type->aux->xCinType.target, NULL );
 		if( mt >= DAO_MT_CIV ) return DAO_MT_SIM;
@@ -993,17 +1005,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			return DAO_MT_SIM;
 		}
 		return DaoType_MatchToParent( self, type, defs, dep );
-	case DAO_VARIANT :
-		mt = DAO_MT_EQ;
-		mt3 = DAO_MT_NOT;
-		for(i=0,n=self->args->size; i<n; i++){
-			it1 = self->args->items.pType[i];
-			mt2 = DaoType_Match( it1, type, defs, binds, dep, mode );
-			if( mt2 < mt ) mt = mt2;
-			if( mt2 > mt3 ) mt3 = mt2;
-		}
-		if( mt == 0 ) return mt3 ? DAO_MT_ANYX : DAO_MT_NOT;
-		return mt;
 	default : break;
 	}
 	if( mt > DAO_MT_EXACT ) mt = DAO_MT_NOT;

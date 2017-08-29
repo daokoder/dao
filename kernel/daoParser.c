@@ -5175,27 +5175,13 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}
 	}
 
-	while( i <= end && tokens[i]->name == DKEY_IMPORT && tokens[i]->line == tokens[i-1]->line ){
-		do {
-			if( (i+1) > end ) goto ErrorLoad;
-			if( tokens[i+1]->name == DTOK_IDENTIFIER ){
-				i = DaoParser_ParseImportStatement( self, i+1, end, 1 );
-				if( i < 0 ) goto ErrorLoad;
-			}else if( tokens[i+1]->name == DTOK_LCB ){
-				if( modlist->size > 1 ) goto ErrorLoad;
-				i = DaoParser_ImportSymbols( self, mod, i+1, end, 0 );
-				if( i < 0 ) goto ErrorLoad;
-				i += 1;
-			}else{
-				goto ErrorLoad;
-			}
-		} while( i <= end && tokens[i]->name == DTOK_COMMA );
+	if( i <= end && tokens[i]->name != DKEY_IMPORT ){
+		DaoParser_CheckStatementSeparation( self, i-1, end );
 	}
 
 	/*
 	   printf("ns=%p; mod=%p; myns=%p\n", ns, mod, nameSpace);
 	 */
-	DaoParser_CheckStatementSeparation( self, i-1, end );
 	if( modpaths ) DList_Delete( modpaths );
 
 	return i;
