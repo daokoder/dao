@@ -1002,7 +1002,10 @@ int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
 	}
 	return 1;
 }
-/* Invalid comparison returns either -100 or 100: */
+/*
+// String-like lexicographical comparison, for map key mainly;
+// Invalid comparison returns either -100 or 100:
+*/
 int DaoArray_Compare( DaoArray *x, DaoArray *y )
 {
 	dao_boolean *xb = x->data.b, *yb = y->data.b;
@@ -1043,6 +1046,65 @@ int DaoArray_Compare( DaoArray *x, DaoArray *y )
 	}
 	if( x->size == y->size  ) return 0;
 	return x->size < y->size ? -100 : 100;
+}
+
+/*
+// Full element-wise comparison;
+*/
+int DaoArray_FullCompare( DaoArray *x, DaoArray *y )
+{
+	dao_boolean *xb = x->data.b, *yb = y->data.b;
+	dao_integer *xi = x->data.i, *yi = y->data.i;
+	dao_float   *xf = x->data.f, *yf = y->data.f;
+	dao_complex *xc = x->data.c, *yc = y->data.c;
+	daoint size = x->size;
+	daoint i = 0;
+	int eq = 0;
+	int lt = 0;
+	int gt = 0;
+
+	if( x->size != y->size ) return x->size < y->size ? -100 : 100;
+
+	if( x->etype == DAO_BOOLEAN && y->etype == DAO_BOOLEAN ){
+		for(i=0; i<size; ++i, ++xb, ++yb){
+			dao_boolean e1 = *xb;
+			dao_boolean e2 = *yb;
+			eq |= e1 == e2;
+			lt |= e1 < e2;
+			gt |= e1 > e2;
+			if( lt & gt ) break;
+		}
+	}else if( x->etype == DAO_INTEGER && y->etype == DAO_INTEGER ){
+		for(i=0; i<size; ++i, ++xi, ++yi){
+			dao_integer e1 = *xi;
+			dao_integer e2 = *yi;
+			eq |= e1 == e2;
+			lt |= e1 < e2;
+			gt |= e1 > e2;
+			if( lt & gt ) break;
+		}
+	}else if( x->etype == DAO_FLOAT && y->etype == DAO_FLOAT ){
+		for(i=0; i<size; ++i, ++xf, ++yf){
+			dao_float e1 = *xf;
+			dao_float e2 = *yf;
+			eq |= e1 == e2;
+			lt |= e1 < e2;
+			gt |= e1 > e2;
+			if( lt & gt ) break;
+		}
+	}else if( x->etype != DAO_COMPLEX && y->etype != DAO_COMPLEX ){
+		for(i=0; i<size; ++i){
+			dao_float e1 = DaoArray_GetFloat( x, i );
+			dao_float e2 = DaoArray_GetFloat( y, i );
+			eq |= e1 == e2;
+			lt |= e1 < e2;
+			gt |= e1 > e2;
+			if( lt & gt ) break;
+		}
+	}else{
+		return (daoint) x < (daoint) y ? -100 : 100;
+	}
+	return (lt<<2)|(gt<<1)|eq;
 }
 
 daoint dao_powi( daoint x, daoint n )
@@ -1822,14 +1884,12 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	case DVM_LT  : case DVM_LE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
 		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
-		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
 		if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		if( right->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		return ctx->nameSpace->vmSpace->typeBool;
 	case DVM_EQ  : case DVM_NE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
 		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
-		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
 		return ctx->nameSpace->vmSpace->typeBool;
 	case DVM_IN :
 		if( left->tid == DAO_NONE ) return NULL;
@@ -1895,18 +1955,18 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 		DaoArray *nb = (DaoArray*) B;
 		DaoArray *nc;
 		if( op->code >= DVM_LT && op->code <= DVM_NE ){
-			int D = DaoValue_Compare( A, B );
+			int D = DaoArray_FullCompare( na, nb );
 			switch( op->code ){
 			case DVM_LT:
-				if( abs( D ) > 1 ) return NULL;
-				D = D <  0;
+				if( abs( D ) == 100 ) return NULL;
+				D = D == (1<<2);
 				break;
 			case DVM_LE:
-				if( abs( D ) > 1 ) return NULL;
-				D = D <= 0;
+				if( abs( D ) == 100 ) return NULL;
+				D = ! (D & (1<<1));
 				break;
-			case DVM_EQ: D = D == 0; break;
-			case DVM_NE: D = D != 0; break;
+			case DVM_EQ: D = D == 1; break;
+			case DVM_NE: D = D != 1; break;
 			default: break;
 			}
 			DaoProcess_PutBoolean( proc, D );
