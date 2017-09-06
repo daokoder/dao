@@ -3641,7 +3641,6 @@ SkipChecking:
 			/* allow less strict typing: */
 			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) break;
 			AssertTypeMatching( ct, types[opc], defs );
-			ct = types[opc];
 			break;
 		case DVM_NOT :
 			if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
@@ -3656,9 +3655,6 @@ SkipChecking:
 				if( ct->tid != DAO_BOOLEAN ) DaoInferencer_InsertMove2( self, inode, VMS->typeBool, ct );
 				break;
 			}
-			if( at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) break;
-			if( at->tid >= DAO_OBJECT && at->tid <= DAO_INTERFACE ) break;
-			goto InvalidOper;
 			break;
 		case DVM_MINUS :
 			if( at->core == NULL || at->core->CheckUnary == NULL ) goto InvalidOper;
@@ -3672,9 +3668,6 @@ SkipChecking:
 				inode->code = DVM_MINUS_I + (ct->tid - DAO_INTEGER);
 				break;
 			}
-			if( at->tid == DAO_ARRAY ) break;
-			if( at->tid >= DAO_OBJECT && at->tid <= DAO_INTERFACE ) break;
-			goto InvalidOper;
 			break;
 		case DVM_TILDE :
 			{
