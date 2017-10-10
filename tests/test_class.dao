@@ -613,3 +613,32 @@ class Klass
 @[test(code_01)]
 {{At line}} .* {{Invalid self access in static method}}
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class K
+{
+	routine K( ... as args ){
+		io.writeln( args )
+	}
+
+	routine M( ... as args ) {
+		io.writeln( args )
+	}
+
+	static routine SM( ... as args ) {
+		io.writeln( args )
+	}
+};
+var k = K( 1, 2, 3 );
+k.M( 1, 2, 3 );
+K::SM( 1, 2, 3 );
+@[test(code_01)]
+@[test(code_01)]
+( 1, 2, 3 )
+( 1, 2, 3 )
+( 1, 2, 3 )
+@[test(code_01)]

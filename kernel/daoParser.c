@@ -4701,7 +4701,8 @@ int DaoParser_ParseRoutine( DaoParser *self )
 
 	if( self->argName ){
 		int tokidx = self->argName->index;
-		int opa = routine->routHost != NULL && !(routine->attribs & DAO_ROUT_STATIC);
+		int mask = DAO_ROUT_INITOR | DAO_ROUT_STATIC;
+		int opa = routine->routHost != NULL && !(routine->attribs & mask);
 		int mode = DVM_ENUM_MODE1 << 14;
 		int np = routine->routType->args->size;
 		DaoType **partypes = routine->routType->args->items.pType;

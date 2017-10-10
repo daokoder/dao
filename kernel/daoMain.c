@@ -44,8 +44,11 @@
 #include"readline/history.h"
 #endif
 
+#ifndef DAO_BUILD_JS_TARGET
 #ifdef UNIX
+#define TRACE_ON
 #include <execinfo.h>
+#endif
 #endif
 
 #include"signal.h"
@@ -111,7 +114,7 @@ static void DaoSignalHandler( int sig )
 
 static void DaoStackTrace( int sig )
 {
-#ifdef UNIX
+#ifdef TRACE_ON
 	void *array[128];
 	int size = backtrace(array, 128);
 	char **strings = backtrace_symbols(array, size);
