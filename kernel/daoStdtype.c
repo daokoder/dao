@@ -4642,7 +4642,7 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, int copy, 
 
 		DMap_Insert( map->value, key, value );
 	}
-	return NULL;
+	return (DaoValue*) map;
 }
 
 DaoType* DaoMap_CheckForEach( DaoType *self, DaoRoutine *ctx )

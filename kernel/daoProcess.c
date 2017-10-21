@@ -3780,7 +3780,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 FastCasting:
 	DaoValue_Copy( va, vc2 );
 	return;
-FailConversion :
+FailConversion:
 	at = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoProcess_RaiseTypeError( self, at, ct, "casting" );
 }
