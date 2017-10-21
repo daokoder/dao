@@ -4220,14 +4220,26 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( va );
 
-	if( va == NULL || va->type == 0 ) return;
-	if( core == NULL || core->CheckForEach == NULL || core->DoForEach == NULL ) return;
+	if( va == NULL || va->type == 0 || core == NULL ) goto InvalidIteration;
+	if( core->CheckForEach == NULL || core->DoForEach == NULL ) goto InvalidIteration;
 
 	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.subtype != DAO_ITERATOR ){
-		vc = (DaoValue*) DaoProcess_PutTuple( self, 2 );
+		DaoType *tc = self->activeTypes[ vmc->c ];
+		if( tc != NULL && tc->tid == DAO_TUPLE ){
+			vc = (DaoValue*) DaoProcess_PutTuple( self, 2 );
+		}else{
+			DaoType *ta = DaoNamespace_GetType( self->activeNamespace, va );
+			tc = core->CheckForEach( ta, self->activeRoutine );
+			if( tc == NULL || tc->tid != DAO_TUPLE ) goto InvalidIteration;
+			vc = (DaoValue*) DaoProcess_GetTuple( self, tc, tc->args->size, 1 );
+		}
 	}
 	core->DoForEach( va, (DaoTuple*) vc, self );
 	if( self->status == DAO_PROCESS_STACKED ) DaoProcess_InterceptReturnValue( self );
+	return;
+
+InvalidIteration:
+	DaoProcess_RaiseError( self, "Value", "invalid items" );
 }
 static void DaoProcess_TestIter( DaoProcess *self, DaoVmCode *vmc )
 {
