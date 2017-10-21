@@ -169,6 +169,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	DList_Delete( self->exceptions );
 	DList_Delete( self->defers );
 	if( self->future ) GC_DecRC( self->future );
+	if( self->stdioStream ) GC_DecRC( self->stdioStream );
 	if( self->factory ) DList_Delete( self->factory );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	GC_DecRC( self->vmSpace );
@@ -179,9 +180,11 @@ void DaoProcess_Reset( DaoProcess *self )
 {
 	DaoStackFrame *next = self->firstFrame->next;
 
+	if( self->stdioStream ) GC_DecRC( self->stdioStream );
 	if( self->factory ) DList_Clear( self->factory );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	GC_DecRC( self->future );
+	self->stdioStream = NULL;
 	self->future = NULL;
 	self->aux = NULL;
 
