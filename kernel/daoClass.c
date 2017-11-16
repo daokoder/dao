@@ -896,7 +896,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DaoClass_Parents( self, parents, offsets );
 	if( self->parent && self->parent->type == DAO_CLASS ){
 		DaoClass *klass = (DaoClass*) self->parent;
-		/* for properly arrangement object data: */
+		/* For properly arranging instance variables in mixin classes: */
 		for( id=0; id<klass->objDataName->size; id ++ ){
 			DString *name = klass->objDataName->items.pString[id];
 			DaoVariable *var = klass->instvars->items.pVar[id];
@@ -910,16 +910,27 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 		DaoClass *klass = parents->items.pClass[i];
 		offset = offsets->items.pInt[i]; /* plus self */
 		if( klass->type == DAO_CLASS ){
-			/* For object data: */
+			/* For instance variables: */
 			for( id=0; id<klass->objDataName->size; id ++ ){
 				DString *name = klass->objDataName->items.pString[id];
-				DNode *search2, *search = MAP_Find( klass->lookupTable, name );
-				int perm = LOOKUP_PM( search->value.pInt );
-				int idx = LOOKUP_ID( search->value.pInt );
-				/* NO deriving private member: */
-				if( perm <= DAO_PERM_PRIVATE ) continue;
-				search2 = MAP_Find( self->lookupTable, name );
-				if( search2 == NULL ){ /* To not overide data and routine: */
+				DNode *search = MAP_Find( klass->lookupTable, name );
+				int idx, perm;
+
+				/*
+				// If the parent class "klass" is derived from another class with
+				// private members, "klass" may contain the instance variables of
+				// its parent class without them in the lookup table.
+				// The presence of private instance variables in derived classes
+				// is used to simplify the handling of mixin classes.
+				*/
+				if( search == NULL ) continue;
+
+				idx = LOOKUP_ID( search->value.pInt );
+				perm = LOOKUP_PM( search->value.pInt );
+				if( perm <= DAO_PERM_PRIVATE ) continue; /* NO deriving of private members; */
+
+				search = MAP_Find( self->lookupTable, name );
+				if( search == NULL ){ /* To not overide data and routine: */
 					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, i, (offset+idx) );
 					MAP_Insert( self->lookupTable, name, index );
 				}
