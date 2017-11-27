@@ -1186,7 +1186,7 @@ int DaoProcess_Start( DaoProcess *self )
 
 		&& LAB_NOT_B , && LAB_NOT_I , && LAB_NOT_F ,
 		&& LAB_MINUS_I , && LAB_MINUS_F , && LAB_MINUS_C ,
-		&& LAB_TILDE_I , && LAB_TILDE_C ,
+		&& LAB_TILDE_I , && LAB_TILDE_C , && LAB_SIZE_X ,
 
 		&& LAB_AND_BBB , && LAB_OR_BBB , && LAB_LT_BBB , 
 		&& LAB_LE_BBB , && LAB_EQ_BBB , && LAB_NE_BBB ,
@@ -1587,8 +1587,8 @@ CallEntry:
 			DaoProcess_DoUnary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SIZE ){
+			dao_integer size = -1;
 			vA = locVars[vmc->a];
-			vC = locVars[vmc->c];
 			switch( vA->type ){
 			case DAO_CSTRUCT :
 			case DAO_CDATA :
@@ -1597,20 +1597,25 @@ CallEntry:
 				self->activeCode = vmc;
 				DaoProcess_DoUnary( self, vmc );
 				goto CheckException;
-			case DAO_NONE    : vC->xInteger.value = 0; break;
-			case DAO_BOOLEAN : vC->xInteger.value = sizeof(dao_boolean); break;
-			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
-			case DAO_FLOAT   : vC->xInteger.value = sizeof(dao_float); break;
-			case DAO_COMPLEX : vC->xInteger.value = sizeof(dao_complex); break;
-			case DAO_ENUM    : vC->xInteger.value = sizeof(int) + sizeof(DaoType*); break;
-			case DAO_STRING  : vC->xInteger.value = vA->xString.value->size; break;
-			case DAO_LIST    : vC->xInteger.value = vA->xList.value->size; break;
-			case DAO_MAP     : vC->xInteger.value = vA->xMap.value->size; break;
-			case DAO_TUPLE   : vC->xInteger.value = vA->xTuple.size; break;
+			case DAO_NONE    : size = 0; break;
+			case DAO_BOOLEAN : size = sizeof(dao_boolean); break;
+			case DAO_INTEGER : size = sizeof(dao_integer); break;
+			case DAO_FLOAT   : size = sizeof(dao_float); break;
+			case DAO_COMPLEX : size = sizeof(dao_complex); break;
+			case DAO_ENUM    : size = sizeof(int) + sizeof(DaoType*); break;
+			case DAO_STRING  : size = vA->xString.value->size; break;
+			case DAO_LIST    : size = vA->xList.value->size; break;
+			case DAO_MAP     : size = vA->xMap.value->size; break;
+			case DAO_TUPLE   : size = vA->xTuple.size; break;
 #ifdef DAO_WITH_NUMARRAY
-			case DAO_ARRAY   : vC->xInteger.value = vA->xArray.size; break;
+			case DAO_ARRAY   : size = vA->xArray.size; break;
 #endif
 			default : goto RaiseErrorInvalidOperation;
+			}
+			if( size >= 0 ){
+				self->activeCode = vmc;
+				DaoProcess_PutInteger( self, size );
+				goto CheckException;
 			}
 		}OPNEXT() OPCASE( SAME ){
 			DaoProcess_DoCheckSame( self, vmc );
@@ -1946,6 +1951,25 @@ CallEntry:
 			vC = locVars[vmc->c];
 			vC->xComplex.value.real =   vA->xComplex.value.real;
 			vC->xComplex.value.imag = - vA->xComplex.value.imag;
+		}OPNEXT() OPCASE( SIZE_X ){
+			vA = locVars[vmc->a];
+			vC = locVars[vmc->c];
+			switch( vA->type ){
+			case DAO_NONE    : vC->xInteger.value = 0; break;
+			case DAO_BOOLEAN : vC->xInteger.value = sizeof(dao_boolean); break;
+			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
+			case DAO_FLOAT   : vC->xInteger.value = sizeof(dao_float); break;
+			case DAO_COMPLEX : vC->xInteger.value = sizeof(dao_complex); break;
+			case DAO_ENUM    : vC->xInteger.value = sizeof(int) + sizeof(DaoType*); break;
+			case DAO_STRING  : vC->xInteger.value = vA->xString.value->size; break;
+			case DAO_LIST    : vC->xInteger.value = vA->xList.value->size; break;
+			case DAO_MAP     : vC->xInteger.value = vA->xMap.value->size; break;
+			case DAO_TUPLE   : vC->xInteger.value = vA->xTuple.size; break;
+#ifdef DAO_WITH_NUMARRAY
+			case DAO_ARRAY   : vC->xInteger.value = vA->xArray.size; break;
+#endif
+			default : goto RaiseErrorInvalidOperation;
+			}
 		}OPNEXT() OPCASE( MOVE_FF ){
 			LocalFloat(vmc->c) = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( ADD_FFF ){

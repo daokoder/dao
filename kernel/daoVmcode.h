@@ -144,6 +144,8 @@ enum DaoOpcode
 	DVM_MINUS_C ,
 	DVM_TILDE_I ,
 	DVM_TILDE_C ,
+	DVM_SIZE_X ,  /* On operands with known types with integer results; */
+
 	/*
 	// C = A + B: will be compiled into: ADD, MOVE,
 	// and the C operand of ADD is always an intermediate data with type to be inferred,

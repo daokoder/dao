@@ -192,6 +192,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MINUS_C",    DVM_MINUS_C,    DAO_CODE_UNARY,   0 },
 	{ "TILDE_I",    DVM_TILDE_I,    DAO_CODE_UNARY,   0 },
 	{ "TILDE_C",    DVM_TILDE_C,    DAO_CODE_UNARY,   0 },
+	{ "SIZE_X",     DVM_SIZE_X,     DAO_CODE_UNARY,   0 },
 	{ "AND_BBB",    DVM_AND_BBB,    DAO_CODE_BINARY,  0 },
 	{ "OR_BBB",     DVM_OR_BBB,     DAO_CODE_BINARY,  0 },
 	{ "LT_BBB",     DVM_LT_BBB,     DAO_CODE_BINARY,  0 },

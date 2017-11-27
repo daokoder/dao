@@ -3694,15 +3694,18 @@ SkipChecking:
 				if( ct == NULL ) goto InvalidOper;
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				AssertTypeMatching( VMS->typeInt, types[opc], defs );
-				if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
+				if( at->tid >= DAO_NONE && at->tid <= DAO_COMPLEX ){
 					vmc->code = DVM_DATA_I;
 					vmc->a = DAO_INTEGER;
 					switch( at->tid ){
+					case DAO_NONE    : vmc->b = 0; break;
 					case DAO_BOOLEAN : vmc->b = sizeof(dao_integer); break;
 					case DAO_INTEGER : vmc->b = sizeof(dao_integer); break;
 					case DAO_FLOAT   : vmc->b = sizeof(dao_float); break;
 					case DAO_COMPLEX : vmc->b = sizeof(dao_complex); break;
 					}
+				}else if( at->tid <= DAO_TUPLE ){
+					vmc->code = DVM_SIZE_X;
 				}
 				break;
 			}
@@ -4217,6 +4220,11 @@ SkipChecking:
 			DaoInferencer_UpdateVarType( self, opc, at );
 			AssertTypeIdMatching( at, DAO_COMPLEX );
 			AssertTypeIdMatching( types[opc], DAO_COMPLEX );
+			break;
+		case DVM_SIZE_X :
+			DaoInferencer_UpdateVarType( self, opc, VMS->typeInt );
+			if( at->tid > DAO_TUPLE ) goto NotMatch;
+			AssertTypeIdMatching( types[opc], DAO_INTEGER );
 			break;
 		case DVM_MINUS_C :
 			DaoInferencer_UpdateVarType( self, opc, at );
