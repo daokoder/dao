@@ -2571,7 +2571,20 @@ int DaoEnum_Compare( DaoEnum *A, DaoEnum *B )
 	if( A->etype == B->etype ){
 		return A->value == B->value ? 0 : (A->value < B->value ? -1 : 1);
 	}else if( A->subtype == DAO_ENUM_SYM && B->subtype == DAO_ENUM_SYM ){
-		return DString_CompareUTF8( A->etype->name, B->etype->name );
+		DNode *na, *nb;
+		int cmp = DString_CompareUTF8( A->etype->name, B->etype->name );
+
+		if( cmp == 0 ) return 0;
+		if( A->etype->mapNames == NULL || B->etype->mapNames == NULL ) return cmp;
+		if( A->etype->mapNames->size != 1 || B->etype->mapNames->size != 1 ) return cmp;
+
+		/*
+		// For aliased symbol type such as: type E=enum<x>,
+		// comparing type names is not sufficient:
+		*/
+		na = A->etype->mapNames->root;
+		nb = B->etype->mapNames->root;
+		return DString_CompareUTF8( na->key.pString, nb->key.pString );
 	}else if( A->subtype == DAO_ENUM_SYM ){
 		E = *B;
 		if( DaoEnum_SetValue( & E, A ) == 0 ) goto CompareName;
@@ -4464,6 +4477,7 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		}
 	}else{
 		DaoValue *res = DaoMap_GetValue( self, index[0] );
+		printf( "res = %p\n", res );
 		if( res != NULL ) DaoProcess_PutValue( proc, res );
 	}
 	return NULL;
