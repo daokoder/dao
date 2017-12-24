@@ -4477,7 +4477,6 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		}
 	}else{
 		DaoValue *res = DaoMap_GetValue( self, index[0] );
-		printf( "res = %p\n", res );
 		if( res != NULL ) DaoProcess_PutValue( proc, res );
 	}
 	return NULL;
