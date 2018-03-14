@@ -2245,7 +2245,8 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 	DaoInode *it2, *aux;
 	DMap *table;
 	DNode *iter;
-	int i, min, max, count, direct = 0, casemode = 0;
+	dao_integer i, min, max, count, direct = 0, casemode = 0;
+
 	min = max = 0;
 	count = 0;
 	table = self->switchTables->items.pMap[ node->b ];

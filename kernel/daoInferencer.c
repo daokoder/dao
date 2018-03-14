@@ -2269,7 +2269,8 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 		DaoEnum denum = {DAO_ENUM,DAO_ENUM_SYM,0,0,0,0,0,NULL};
 		DMap *jumps = DMap_New( DAO_DATA_VALUE, 0 );
 		DNode *it, *find;
-		int max=0, min=0;
+		dao_integer max = 0, min = 0;
+
 		denum.etype = at;
 		denum.subtype = at->subtid;
 		for(k=1; k<=opc; k++){
