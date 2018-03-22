@@ -542,15 +542,26 @@ static DaoInode* DaoParser_PushBackCode( DaoParser *self, DaoVmCodeX *vmc )
 	return self->vmcLast;
 }
 
+static int DaoParser_GetCurrentLine( DaoParser *self )
+{
+	int line = self->curLine;  // TODO: clean up the use of DaoParser::curLine;
+	if( self->curToken < self->tokens->size ){
+		line = self->tokens->items.pToken[self->curToken]->line;
+	}
+	return line;
+}
+
 void DaoParser_Warn( DaoParser *self, int code, DString *ext )
 {
+	int line = DaoParser_GetCurrentLine( self );
 	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
-	DaoLexer_Append( self->wlexer, code, self->curLine, ext ? ext->chars : "" );
+	DaoLexer_Append( self->wlexer, code, line, ext ? ext->chars : "" );
 }
 void DaoParser_Error( DaoParser *self, int code, DString *ext )
 {
+	int line = DaoParser_GetCurrentLine( self );
 	if( code != DAO_EVAL_EXCEPTION &&  ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
-	DaoLexer_Append( self->elexer, code, self->curLine, ext ? ext->chars : "" );
+	DaoLexer_Append( self->elexer, code, line, ext ? ext->chars : "" );
 }
 void DaoParser_SumTokens( DaoParser *self, DString *sum, int m, int n, int single_line )
 {
@@ -582,16 +593,18 @@ void DaoParser_Warn2( DaoParser *self, int code, int start, int end )
 /* tokens from m to n as message */
 void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line )
 {
+	int line = DaoParser_GetCurrentLine( self );
 	DString *mbs = DaoParser_GetString( self );
 	DaoParser_SumTokens( self, mbs, m, n, single_line );
-	DaoLexer_Append( self->elexer, code, self->curLine, mbs->chars );
+	DaoLexer_Append( self->elexer, code, line, mbs->chars );
 }
 /* tokens from m until the end of the line as message */
 void DaoParser_Error3( DaoParser *self, int code, int m )
 {
+	int line = DaoParser_GetCurrentLine( self );
 	DString *mbs = DaoParser_GetString( self );
 	DaoParser_SumTokens( self, mbs, m, self->tokens->size-1, 1 );
-	DaoLexer_Append( self->elexer, code, self->curLine, mbs->chars );
+	DaoLexer_Append( self->elexer, code, line, mbs->chars );
 }
 void DaoParser_Error4( DaoParser *self, int code, int line, const char *msg )
 {
@@ -649,6 +662,16 @@ void DaoParser_PrintInfoLine( DaoParser *self, DaoToken *tok )
 	}
 	DaoStream_WriteChars( stream, ";\n" );
 }
+
+static void DaoParser_ImportMessages( DaoParser *self, DaoParser *other )
+{
+	DList_InsertList( self->warnings, 0, other->warnings, 0, other->warnings->size );
+	DList_InsertList( self->errors, 0, other->errors, 0, other->errors->size );
+
+	DList_Clear( other->warnings );
+	DList_Clear( other->errors );
+}
+
 static void DaoParser_PrintWarnings( DaoParser *self )
 {
 	int i;
@@ -660,11 +683,12 @@ static void DaoParser_PrintWarnings( DaoParser *self )
 	}
 	DList_Clear( self->warnings );
 }
-void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext )
+
+void DaoParser_PrintError( DaoParser *self )
 {
 	int i;
+
 	DaoParser_PrintWarnings( self );
-	if( code ) DaoParser_Error4( self, code, line, ext ? ext->chars : "" );
 	if( self->errors->size == 0 ) return;
 	DaoParser_PrintInfoHeader( self, "[[ERROR]]" );
 	for(i=self->errors->size-1; i>=0; i--){
@@ -896,7 +920,6 @@ int DaoParser_ParseScopedConstOrName( DaoParser *self, DaoValue **scope, DaoValu
 
 static int DaoParser_ParseInitBase( DaoParser *self, DaoParser *module, int start )
 {
-	DaoLexer *init = NULL;
 	DaoRoutine *routine = module->routine;
 	DaoClass *klass = module->hostClass;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -907,7 +930,6 @@ static int DaoParser_ParseInitBase( DaoParser *self, DaoParser *module, int star
 	int dlm = start;
 	int rb = 0;
 	if( isconstru == 0 ) return start;
-	init = DaoLexer_New();
 	if( tokens[start]->name == DTOK_COLON ){
 		do {
 			DaoEnode enode;
@@ -968,11 +990,9 @@ static int DaoParser_ParseInitBase( DaoParser *self, DaoParser *module, int star
 		DaoParser_AddDefaultInitializer( module, klass, flags );
 	}
 	DaoParser_PopTokenIndices( self, (self->tokenTriples->size - triples)/3 );
-	if( init ) DaoLexer_Delete( init );
 	return start;
 ErrorRoutine:
 	DaoParser_PopTokenIndices( self, (self->tokenTriples->size - triples)/3 );
-	if( init ) DaoLexer_Delete( init );
 	return -1;
 }
 
@@ -2150,7 +2170,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->codeCount = self->tokens->size;
 
 	if( DaoParser_ParseRoutine( self ) == 0 ){
-		DaoParser_PrintError( self, 0, 0, NULL );
+		DaoParser_PrintError( self );
 		return 0;
 	}
 	return 1;
@@ -2876,7 +2896,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 InvalidDefinition:
 	DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
 Failed:
-	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( parser ){
+		DaoParser_ImportMessages( self, parser );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	}
 	return -1;
 }
 static int DaoParser_ParseCodes( DaoParser *self, int from, int to );
@@ -2891,7 +2914,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 			parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
 		}
 		error |= DaoParser_ParseRoutine( parser ) == 0;
-		if( error ) DaoParser_PrintError( parser, 0, 0, NULL );
+		if( error ) DaoParser_PrintError( parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) break;
 	}
@@ -3039,14 +3062,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	}
 
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
-		if( DString_EQ( self->fileName, parser->fileName ) )
-			DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
-		else
-			DaoParser_PrintError( parser, 0, 0, NULL );
+		if( DString_EQ( self->fileName, parser->fileName ) == 0 )
+			DaoParser_PrintError( parser );
 		goto ErrorInterfaceDefinition;
 	}
 	if( parser->vmcLast != parser->vmcBase ){
-		DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_INTERFACE );
 		goto ErrorInterfaceDefinition;
 	}
@@ -3069,7 +3089,10 @@ ErrorInterfaceBase:
 	DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
 ErrorInterfaceDefinition:
 	if( cintype ) DaoGC_TryDelete( (DaoValue*) cintype );
-	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( parser ){
+		DaoParser_ImportMessages( self, parser );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	}
 	if( ec ) DaoParser_Error( self, ec, ename );
 	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );
 	return -1;
@@ -3244,10 +3267,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass_DeriveObjectData( klass ); /* Moved before parsing the body, for bytecode; */
 
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
-		if( DString_EQ( self->fileName, parser->fileName ) )
-			DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
-		else
-			DaoParser_PrintError( parser, 0, 0, NULL );
+		if( DString_EQ( self->fileName, parser->fileName ) == 0 )
+			DaoParser_PrintError( parser );
 		goto ErrorClassDefinition;
 	}
 	DaoList_Clear( klass->initRoutine->routConsts );
@@ -3255,7 +3276,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 #if 0
 		DaoParser_PrintCodes( parser );
 #endif
-		DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
 		goto ErrorClassDefinition;
 	}
@@ -3300,7 +3320,10 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	return right + 1;
 ErrorClassDefinition:
-	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( parser ){
+		DaoParser_ImportMessages( self, parser );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	}
 	if( ec ) DaoParser_Error( self, ec, ename );
 	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, to, 0 );
 	return -1;
@@ -4668,7 +4691,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		DString_SetChars( self->string, "too big function with too many " );
 		DString_AppendChars( self->string, buf );
 		DaoParser_Error( self, DAO_CTW_INTERNAL, self->string );
-		DaoParser_PrintError( self, 0, 0, NULL );
+		DaoParser_PrintError( self );
 		return 0;
 	}
 	/* DaoParser_PrintCodes( self ); */
@@ -4716,12 +4739,12 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	}
 
 	if( DaoParser_ParseCodes( self, offset, tokCount-1 )==0 ){
-		DaoParser_PrintError( self, 0, 0, NULL );
+		DaoParser_PrintError( self );
 		return 0;
 	}
 	if( self->scopeOpenings->size ){
 		DaoParser_Error3( self, DAO_INVALID_UNCLOSED_SCOPE, self->curToken );
-		DaoParser_PrintError( self, 0, 0, NULL );
+		DaoParser_PrintError( self );
 		return 0;
 	}
 	routine->defLine = defLine;
@@ -6043,6 +6066,7 @@ ErrorParsing:
 		DString_SetChars( mbs, "invalid anonymous function" );
 	}
 	DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, mbs );
+	DaoParser_ImportMessages( self, parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	GC_IncRC( rout );
 	GC_DecRC( rout );
@@ -7637,6 +7661,7 @@ static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int sep, DaoIno
 	result.prev = self->vmcLast;
 	self->curToken -= 1;
 	do {
+		int ecount = self->errors->size;
 		self->curToken += 1;
 		cur = self->curToken;
 		tok = DaoParser_CurrentTokenName( self );
@@ -7651,7 +7676,7 @@ static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int sep, DaoIno
 		item = DaoParser_ParseExpression2( self, sep, eltype, ASSIGNMENT_WARNING );
 		DList_PopFront( self->enumTypes );
 		if( item.reg < 0 ){
-			if( self->curToken == cur ) break;
+			if( self->curToken == cur && self->errors->size == ecount ) break;
 			goto Finalize;
 		}
 		result.konst += item.konst != 0;

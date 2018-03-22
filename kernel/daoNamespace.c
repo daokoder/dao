@@ -237,7 +237,7 @@ enum { DAO_DT_FAILED, DAO_DT_SCOPED, DAO_DT_UNSCOPED };
 
 void DaoParser_Error( DaoParser *self, int code, DString *ext );
 void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
-void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
+void DaoParser_PrintError( DaoParser *self );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *holders, DList *defaults, DString *name );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *types, int *co );
@@ -440,7 +440,7 @@ Finalize:
 	return ret;
 Error:
 	DaoParser_Error2( parser, DAO_INVALID_TYPE_FORM, 0, parser->tokens->size-1, 0 );
-	DaoParser_PrintError( parser, 0, 0, NULL );
+	DaoParser_PrintError( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( string ) DString_Delete( string );
 	if( types ) DList_Delete( types );
@@ -1674,7 +1674,7 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
 	if( DaoParser_ParseSignature( defparser, parser, optok ) < 0 ){
-		DaoParser_PrintError( defparser, 0, 0, NULL );
+		DaoParser_PrintError( defparser );
 		goto Error;
 	}
 	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
