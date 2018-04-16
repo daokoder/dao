@@ -1255,10 +1255,14 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argName
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 {
-	DString *path = DString_New();
-	DaoNamespace *ns = NULL;
+	DString *path = DString_NewChars( file );
+	DaoNamespace *ns = DaoVmSpace_FindNamespace( self, path );
 
-	DString_SetChars( path, file );
+	if( ns ){
+		DString_Delete( path );
+		return ns;
+	}
+
 	Dao_NormalizePath( path );
 	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
 	case DAO_MODULE_NONE : ns = DaoVmSpace_FindNamespace( self, path ); break;
@@ -2917,8 +2921,10 @@ void DaoParser_Warn( DaoParser *self, int code, DString *ext );
 
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser *parser )
 {
-	DaoNamespace *ns = NULL;
+	DaoNamespace *ns = DaoVmSpace_FindNamespace( self, fname );
 	DString *name;
+
+	if( ns ) return ns;
 
 	Dao_NormalizePath( fname );
 	name = DString_Copy( fname );
