@@ -70,6 +70,7 @@ static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 	case 3: DaoProcess_PutString( proc, ns->path ); break;
 	}
 }
+
 static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *value;
@@ -94,6 +95,28 @@ static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutValue( proc, value );
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, prevStream );
 }
+
+static void DaoSTD_Eval2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoValue *value;
+	DaoVmSpace *vms = proc->vmSpace;
+	DaoNamespace *ns = (DaoNamespace*) p[1];
+	DaoStream *prevStream = proc->stdioStream;
+	DaoStream *redirect = prevStream;
+	DString *source = p[0]->xString.value;
+
+	if( p[2]->type != DAO_NONE ) redirect = (DaoStream*) p[2];
+	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, redirect );
+
+	value = DaoProcess_Eval( proc, ns, source->chars );
+	if( value == NULL ){
+		DaoProcess_RaiseError( proc, NULL, "evaluation failed" );
+		return;
+	}
+	DaoProcess_PutValue( proc, value );
+	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, prevStream );
+}
+
 static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *source = p[0]->xString.value;
@@ -384,7 +407,25 @@ DaoFunctionEntry dao_std_methods[] =
 		*/
 	},
 
-	{ DaoSTD_Eval,      "eval( source: string, stream: io::Stream|none = none ) => any" },
+	{ DaoSTD_Eval,
+		"eval( source: string, stream: io::Stream|none = none ) => any"
+		/*
+		// Evaluate a given source code, and optionally redirect
+		// the printing output to a stream. If the source code
+		// contains a single expression, the expression's value
+		// will be returned as the result of the method.
+		*/
+	},
+	{ DaoSTD_Eval2,
+		"eval( source: string, nspace: namespace, stream: io::Stream|none = none ) => any"
+		/*
+		// Evaluate a given source code in a working namespace,
+		// and optionally redirect the printing output to a stream.
+		// If the source code contains a single expression,
+		// the expression's value will be returned as the result
+		// of the method.
+		*/
+	},
 	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) =>namespace"},
 	{ DaoSTD_Load,      "load( file: string, import = true, run = false ) => namespace" },
 
