@@ -336,6 +336,11 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 	FILE *fin;
 
 	DaoIO_MakePath( proc, fname );
+	if( Dao_IsDir( fname->chars ) ){
+		snprintf( buf, sizeof(buf), "is a directory: %s", DString_GetData( name ) );
+		DaoProcess_RaiseError( proc, "Stream", buf );
+		return NULL;
+	}
 	fin = Dao_OpenFile( fname->chars, mode );
 	DString_Delete( fname );
 	if( fin == NULL && silent == 0 ){
