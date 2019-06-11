@@ -1,13 +1,14 @@
+load random
 
 const N = 100;
 
-chans = { mt::Channel<int>(1), mt::Channel<string>(1) }
+var chans = { mt::Channel<int>(1), mt::Channel<string>(1) }
 
 mt.start {
-	index = 0;
+	var index = 0;
 	io.writeln( "begin producing" )
 	while( ++index <= N ){
-		if( rand(2) ){
+		if( random.rand(2) ){
 			io.writeln( "sending integer:", index );
 			chans[0].send( index )
 		}else{
@@ -20,21 +21,21 @@ mt.start {
 	chans[1].cap(0)
 }
 
-select = mt::Channel<int|string>(1)
+var select = mt::Channel<int|string>(1)
 
 mt.start {
 
-	f1 = mt.start {
+	var f1 = mt.start {
 		while(1){
-			data = chans[0].receive();
+			var data = chans[0].receive();
 			if( data.status == $finished ) break
 			select.send( (int) data.data )
 		}
 	}
 
-	f2 = mt.start {
+	var f2 = mt.start {
 		while(1){
-			data = chans[1].receive();
+			var data = chans[1].receive();
 			if( data.status == $finished ) break
 			select.send( (string) data.data )
 		}
@@ -46,7 +47,7 @@ mt.start {
 
 io.writeln( "begin consuming" )
 while(1){
-	data = select.receive()
+	var data = select.receive()
 	io.writeln( "received", data );
 	if( data.status == $finished ) break
 }

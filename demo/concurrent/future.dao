@@ -3,19 +3,19 @@ load os;
 class Test !!
 {
 	routine Meth(){
-		for( i = 1 : 5 ){
+		for(var i = 1 : 5 ){
 			io.writeln( "@Test::Meth()", i );
 			#os.sleep(0.2);
 		}
 	}
 }
 
-t = Test()
+var t = Test()
 
 mt.iterate( 4 ) { [X]
 	io.writeln( "=========", "X"+(string)X );
-	f = mt.start {
-		for( i = 1 : 5 ){
+	var f = mt.start {
+		for(var i = 1 : 5 ){
 			io.writeln( "start{}", i );
 			#os.sleep(0.01);
 		}

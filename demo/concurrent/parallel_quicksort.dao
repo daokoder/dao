@@ -1,17 +1,19 @@
+load random
 
 routine QuickSort( data: array<int>, first: int, last: int )
 {
-	lower = first + 1;
-	upper = last;
+	var lower = first + 1;
+	var upper = last;
 
 	#io.writeln( first, last );
 
 	if( first >= last ) return;
 
-	val = data[first];
+	var val = data[first];
 	data[first] = data[ (first+last)/2 ];
 	data[ (first+last)/2 ] = val;
-	pivot = data[ first ];
+
+	var pivot = data[ first ];
 
 	while( lower <= upper ){
 		while( lower < last && data[lower] < pivot ) lower += 1;
@@ -35,7 +37,7 @@ routine QuickSort( data: array<int>, first: int, last: int )
 	#}
 
 	if( first+10000 < upper and upper+10000 < last ){
-		fv1 = QuickSort( data, first, upper-1 ) !!
+		var fv1 = QuickSort( data, first, upper-1 ) !!
 		QuickSort( data, upper+1, last )
 		fv1.wait();
 	}else{
@@ -44,8 +46,8 @@ routine QuickSort( data: array<int>, first: int, last: int )
 	}
 }
 
-a = [ 1, 3, 5, 4, 2, 6, 9, 7 ]
-a = array<int>( 2000000 ){ rand( 10000000 ) }
+var a = [ 1, 3, 5, 4, 2, 6, 9, 7 ]
+a = array<int>( 2000000 ){ random.rand( 10000000 ) }
 
 QuickSort( a, 0, a.size()-1 );
 

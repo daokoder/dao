@@ -1,17 +1,18 @@
 load os
+load random
 
 const N = 10;
 const C = 1;
 
-ichan = mt::Channel<int>(C)
-schan = mt::Channel<string>(C)
+var ichan = mt::Channel<int>(C)
+var schan = mt::Channel<string>(C)
 
 
-fut = mt.start {
-	index = 0;
+var fut = mt.start {
+	var index = 0;
 	io.writeln( "begin producing" )
 	while( ++index <= N ){
-		if( rand(2) ){
+		if( random.rand(2) ){
 			io.writeln( "sending integer:", index );
 			ichan.send( index )
 		}else{
@@ -25,12 +26,12 @@ fut = mt.start {
 	schan.cap(0)
 }
 
-selects = { ichan => 0, schan => 0, fut => 0 }
+var selects = { ichan => 0, schan => 0, fut => 0 }
 
 io.writeln( "begin consuming" )
 while( 1 ){
 	io.writeln( "before selecting" );
-	data = mt::select( selects, 0.2 )
+	var data = mt::select( selects, 0.2 )
 	io.writeln( "received:", data );
 	if( data.status == $finished ) break
 }

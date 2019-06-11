@@ -1,10 +1,10 @@
 
 const N = 100000;
 
-chan = mt::Channel<int>(2)
+var chan = mt::Channel<int>(2)
 
-produce = mt.start {
-	index = 0;
+var produce = mt.start {
+	var index = 0;
 	io.writeln( "begin producing" )
 	while( ++index <= N ){
 		if( index % 100 == 0 ) io.writeln( "sending", index )
@@ -14,10 +14,10 @@ produce = mt.start {
 	chan.cap(0)  # set channel buffer size to zero to close the channel;
 }
 
-consume = mt.start {
+var consume = mt.start {
 	io.writeln( "begin consuming" )
 	while(1){
-		data = chan.receive()
+		var data = chan.receive()
 		if( (int)data.data % 100 == 0 ) io.writeln( "received", data );
 		if( data.status == $finished ) break
 	}

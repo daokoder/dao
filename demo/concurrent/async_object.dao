@@ -4,29 +4,29 @@ class Test !!
 {
 	routine Task1( chan : mt::Channel<int> ){
 		while(1){
-			data = chan.receive()
+			var data = chan.receive()
 			io.writeln( "Task1", data )
 			if( data.status == $finished ) break
 		}
 	}
 	routine Task2(){
-		for( i = 1 : 5 ){
+		for(var i = 1 : 5 ){
 			io.writeln( "Task2", i )
 			#os.sleep(0.5);
 		}
 	}
 }
 
-test = Test()
+var test = Test()
 
-chan = mt::Channel<int>(1)
+var chan = mt::Channel<int>(1)
 
 test.Task1( chan )
 test.Task2()
 
 io.writeln( "Start to send message" )
 
-for( i = 1 : 5 ){
+for(var i = 1 : 5 ){
 	io.writeln( "sending", 100*i )
 	chan.send( 100*i )
 	#os.sleep(0.5)
@@ -34,7 +34,7 @@ for( i = 1 : 5 ){
 chan.cap(0)
 
 routine main(){
-	for(i=1:10){
+	for(var i=1:10){
 		io.writeln( "main()" )
 		#os.sleep(0.5)
 	}
