@@ -209,7 +209,7 @@ static const char *const cmd_help =
 ;
 
 
-const char*const DaoVmSpace_GetCopyNotice()
+const char* DaoVmSpace_GetCopyNotice()
 {
 	return dao_copy_notice;
 }

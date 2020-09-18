@@ -42,12 +42,18 @@
 #endif
 
 
-#if defined(MACOSX) && ! defined(UNIX)
+#if defined(MACOSX) && !defined(UNIX)
 #  define UNIX
 #endif /* MACOSX */
 
 
-#ifdef WIN32
+#if defined(DAO_STATIC_BUILD) || !defined(WIN32)
+
+#  define DAO_DLL extern
+#  define DAO_DLL_EXPORT extern
+#  define DAO_DLL_IMPORT extern
+
+#else /* WIN32 */
 
 #  define DAO_DLL_EXPORT __declspec(dllexport)
 #  define DAO_DLL_IMPORT __declspec(dllimport)
@@ -57,12 +63,6 @@
 #  else
 #     define DAO_DLL DAO_DLL_IMPORT
 #  endif
-
-#else /* other system */
-
-#  define DAO_DLL extern
-#  define DAO_DLL_EXPORT extern
-#  define DAO_DLL_IMPORT extern
 
 #endif /* WIN32 */
 

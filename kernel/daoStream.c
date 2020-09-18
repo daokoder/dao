@@ -243,12 +243,13 @@ void DaoStream_WriteChars( DaoStream *self, const char *chars )
 }
 daoint DaoStream_WriteBytes( DaoStream *self, const void *bytes, daoint count )
 {
+	const uchar_t *chars = (const uchar_t*)bytes;
 	daoint sum = 0;
 	if( self->Write == NULL ) return -1;
 	while( sum < count ){
 		daoint num = count - sum;
 		if( num > 0x7fffffff ) num = 0x7fffffff;
-		num = self->Write( self, bytes + sum, num );
+		num = self->Write( self, chars + sum, num );
 		if( num < 0 ) return -1;
 		if( num == 0 ) break;
 		sum += num;
@@ -377,7 +378,7 @@ int DaoFile_ReadLine( FILE *fin, DString *line )
 	if( feof( fin ) ) return 0;
 
 	while( (ch = fgetc(fin)) != EOF ){
-		if( line->size == line->bufSize ) DString_Reserve( line, 5 + 1.2*line->size );
+		if( line->size == line->bufSize ) DString_Reserve( line, (daoint)(5 + 1.2*line->size) );
 		line->chars[ line->size ++ ] = ch;
 		line->chars[ line->size ] = '\0';
 		if( ch == '\n' ) break;
@@ -633,7 +634,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		if( F == 'c' || F == 'C' ){
 			if( value->type != DAO_INTEGER ) goto WrongParameter;
 			DString_Reset( fmt2, 0 );
-			DString_AppendWChar( fmt2, value->xInteger.value );
+			DString_AppendWChar( fmt2, (size_t)value->xInteger.value );
 			self->format = "%s";
 			if( F == 'C' ) DString_ToLocal( fmt2 );
 			DaoStream_WriteString( self, fmt2 );
@@ -713,7 +714,7 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 	if( DaoIO_CheckMode( self, proc, DAO_STREAM_READABLE ) == 0 ) return;
 	if( N > 1 ){
 		if( p[1]->type == DAO_INTEGER ){
-			amount = p[1]->xInteger.value;
+			amount = (int)p[1]->xInteger.value;
 			if( amount < 0 ){
 				DaoProcess_RaiseError( proc, NULL, "cannot read negative amount!" );
 				return;
@@ -797,8 +798,8 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *list = DaoProcess_PutList( proc );
-	int count = p[1]->xInteger.value;
-	int chop = p[2]->xBoolean.value;
+	int count = (int)p[1]->xInteger.value;
+	int chop = (int)p[2]->xBoolean.value;
 	if( DaoIO_CheckMode( (DaoStream*) p[0], proc, DAO_STREAM_READABLE ) == 0 ) return;
 	DaoStream_ReadLines( (DaoStream*) p[0], list, proc, count, chop );
 }
