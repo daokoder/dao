@@ -37,6 +37,7 @@ DAOMAKE_ARGS  = --mode $(MODE)
 DAOMAKE_ARGS += --option-INSTALL-PATH $(INSTALL)
 DAOMAKE_ARGS += --option-STATIC $(STATIC)
 DAOMAKE_ARGS += $(RESET) $(OPTIONS)
+#DAOMAKE_ARGS += --option-CODEQUOTA ON
 
 all:
 	@echo "Please choose a platform among ($(PLATS))!"

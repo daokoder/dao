@@ -141,6 +141,11 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->cinvalue.refCount = 1;
 	self->cinvalue.cycRefCount = 1;
 
+#ifdef DAO_WITH_CODEQUOTA
+	self->quota = 0;
+	self->progress = 0;
+#endif
+
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -206,6 +211,11 @@ void DaoProcess_Reset( DaoProcess *self )
 	self->debugging = 0;
 	self->active = 0;
 	self->depth = 0;
+
+#ifdef DAO_WITH_CODEQUOTA
+	self->quota = 0;
+	self->progress = 0;
+#endif
 }
 
 DaoVmSpace* DaoProcess_GetVmSpace( DaoProcess *self )
@@ -213,6 +223,13 @@ DaoVmSpace* DaoProcess_GetVmSpace( DaoProcess *self )
 	return self->vmSpace;
 }
 
+void DaoProcess_SetExecutionQuota( DaoProcess *self, uint_t quota )
+{
+#ifdef DAO_WITH_CODEQUOTA
+	self->quota = quota;
+	self->progress = 0;
+#endif
+}
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
@@ -1086,6 +1103,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoHandler *handler = self->vmSpace->handler;
 	DaoVmSpace *vmSpace = self->vmSpace;
+	DaoVmCode *vmcCursor = NULL;
 	DaoVmCode *vmcBase, *sect, *vmc = NULL;
 	DaoVmCode operands = {0};
 	DaoStackFrame *topFrame;
@@ -1119,7 +1137,7 @@ int DaoProcess_Start( DaoProcess *self )
 	dao_complex czero = {0,0};
 	dao_complex acom, bcom;
 	double AA, BB, dnum=0;
-	int active = self->active;
+	unsigned active = self->active;
 	daoint exceptCount0 = self->exceptions->size;
 	daoint exceptCount = 0;
 	daoint count = 0;
@@ -1443,6 +1461,8 @@ CallEntry:
 		}
 	}
 
+	vmcCursor = vmc;
+
 	OPBEGIN(){
 		OPCASE( DATA ){
 			if( vmc->a == DAO_NONE ){
@@ -1657,14 +1677,30 @@ CallEntry:
 			DaoProcess_DoPacking( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor + (vmc == vmcCursor); // In case of empty loop;
+#endif
 			vmc = vmcBase + vmc->b;
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+			if( self->quota && self->progress >= self->quota ) goto CheckException;
+#endif
 		}OPJUMP() OPCASE( SWITCH ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+#endif
 			vmc = DaoProcess_DoSwitch( self, vmc );
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+#endif
 		}OPJUMP() OPCASE( ITER ){
 			self->activeCode = vmc;
 			DaoProcess_DoIter( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( TEST ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+#endif
 			vA = locVars[vmc->a];
 			switch( vA->type ){
 			case DAO_NONE :
@@ -1682,6 +1718,9 @@ CallEntry:
 			default :
 				goto RaiseErrorInvalidOperation;
 			}
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+#endif
 		}OPJUMP() OPCASE( MATH ){
 			if( DaoProcess_DoMath( self, vmc, locVars[vmc->c], locVars[vmc->b] ) )
 				goto RaiseErrorInvalidOperation;
@@ -2450,11 +2489,29 @@ CallEntry:
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[vmc->b]->xComplex.value = LocalComplex(vmc->a);
 		}OPNEXT() OPCASE( TEST_B ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+#endif
 			vmc = LocalBool(vmc->a) ? vmc+1 : vmcBase+vmc->b;
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+#endif
 		}OPJUMP() OPCASE( TEST_I ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+#endif
 			vmc = LocalInt(vmc->a) ? vmc+1 : vmcBase+vmc->b;
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+#endif
 		}OPJUMP() OPCASE( TEST_F ){
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+#endif
 			vmc = LocalFloat(vmc->a) ? vmc+1 : vmcBase+vmc->b;
+#ifdef DAO_WITH_CODEQUOTA
+			vmcCursor = vmc;
+#endif
 		}OPJUMP() OPCASE( MATH_B ) OPCASE( MATH_I ){
 			dao_integer arg = vmc->code == DVM_MATH_B ? LocalBool(vmc->b) : LocalInt(vmc->b);
 			switch( vmc->a ){
@@ -2560,6 +2617,15 @@ RaiseErrorNullObject:
 			DaoProcess_RaiseError( self, NULL, "operate on none object" );
 			goto CheckException;
 CheckException:
+
+#ifdef DAO_WITH_CODEQUOTA
+			self->progress += vmc - vmcCursor;
+			vmcCursor = vmc;
+			if( self->quota && self->progress >= self->quota ){
+				self->activeCode = vmc;
+				DaoProcess_RaiseError( self, NULL, "execution has reached the process quota" );
+			}
+#endif
 
 			locVars = self->activeValues;
 			if( vmSpace->stopit ) goto FinishProcess;

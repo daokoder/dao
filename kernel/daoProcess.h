@@ -152,6 +152,11 @@ struct DaoProcess
 	DString        *string;
 	DaoComplex      number;
 	DaoCinValue     cinvalue;
+
+#ifdef DAO_WITH_CODEQUOTA
+	uint_t          quota;
+	uint_t          progress;
+#endif
 };
 
 /* Create a new virtual machine process */
@@ -194,6 +199,8 @@ DAO_DLL int DaoProcess_Start( DaoProcess *self );
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
 
 DAO_DLL int DaoProcess_ExecuteCall( DaoProcess *self );
+
+DAO_DLL void DaoProcess_SetExecutionQuota( DaoProcess *self, uint_t quota );
 
 
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );

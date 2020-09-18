@@ -32,9 +32,6 @@
 #define DAO_MAX_PARAM      32
 #define DAO_MAX_SECTDEPTH  64
 
-#define DAO_KERNEL
-
-#include"dao.h"
 #include"daoBase.h"
 
 enum DaoExtraTypes
