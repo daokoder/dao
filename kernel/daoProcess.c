@@ -589,11 +589,12 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		}
 	}
 	if( defs && defs->size ){ /* Need specialization */
+		DaoNamespace *scope = routine->nameSpace;
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		DaoRoutine *current = routine;
 		/* Do not share function body. It may be thread unsafe to share: */
 		routine = DaoRoutine_Copy( original, 0, 1, 0 );
-		DaoRoutine_Finalize( routine, original, routine->routHost, self->activeNamespace, defs );
+		DaoRoutine_Finalize( routine, original, routine->routHost, scope, defs );
 
 		if( routine->routType->attrib & DAO_TYPE_SPEC ){
 			DaoGC_TryDelete( (DaoValue*) routine );
