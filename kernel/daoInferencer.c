@@ -3092,9 +3092,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		*/
 		DMap_Assign( defs, (DMap*)DList_Front( self->typeMaps ) );
 
-#if 0
 		DaoRoutine_AnnotateCode( routine, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->chars, NULL );
+#if 0
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
@@ -3139,11 +3139,39 @@ SkipChecking:
 		case DAO_CODE_GETF :
 		case DAO_CODE_GETI :
 		case DAO_CODE_UNARY :
-		case DAO_CODE_GETM :
-		case DAO_CODE_ENUM2 :
-		case DAO_CODE_CALL :
 			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
+			break;
+		case DAO_CODE_GETM :
+		case DAO_CODE_ENUM2 :
+		case DAO_CODE_ROUTINE :
+		case DAO_CODE_CALL :
+			tt = DaoType_GetAutoCastType( at );
+			if( tt != NULL ){
+				DaoInode *untag = DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
+				daoint count = K == DAO_CODE_CALL ? opb&0xff : opb;
+				daoint j = i - 2*count - 4;
+
+				inodes = self->inodes->items.pInode;
+				types = self->types->items.pType;
+
+				if( j < 0 ) j = 0;
+				for(; j<i; ++j){
+					DaoInode *jnode = inodes[j];
+					DaoVmCode ops = DaoVmCode_CheckOperands( (DaoVmCode*) jnode );
+					if( ops.c && jnode->c == opa ){
+						DaoType *type = types[opa];
+
+						types[opa] = types[untag->c];
+						types[untag->c] = type;
+						jnode->c = untag->c;
+						untag->a = untag->c;
+						untag->c = opa;
+						inode->a = opa;
+						break;
+					}
+				}
+			}
 			break;
 		case DAO_CODE_UNARY2 :
 			tt = DaoType_GetAutoCastType( bt );
@@ -3151,9 +3179,35 @@ SkipChecking:
 			break;
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
-		case DAO_CODE_SETM :
 			tt = DaoType_GetAutoCastType( ct );
 			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->c, tt );
+			break;
+		case DAO_CODE_SETM :
+			tt = DaoType_GetAutoCastType( ct );
+			if( tt != NULL ){
+				DaoInode *untag = DaoInferencer_InsertUntag( self, inode, & inode->c, tt );
+				daoint j = i - 2*opb - 4;
+
+				inodes = self->inodes->items.pInode;
+				types = self->types->items.pType;
+
+				if( j < 0 ) j = 0;
+				for(; j<i; ++j){
+					DaoInode *jnode = inodes[j];
+					DaoVmCode ops = DaoVmCode_CheckOperands( (DaoVmCode*) jnode );
+					if( ops.c && jnode->c == opc ){
+						DaoType *type = types[opc];
+
+						types[opc] = types[untag->c];
+						types[untag->c] = type;
+						jnode->c = untag->c;
+						untag->a = untag->c;
+						untag->c = opc;
+						inode->c = opc;
+						break;
+					}
+				}
+			}
 			break;
 		case DAO_CODE_BINARY :
 			if( code == DVM_EQ || code == DVM_NE ) break;
@@ -3164,13 +3218,33 @@ SkipChecking:
 			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
 			break;
 		case DAO_CODE_BINARY2 :
-			tt = DaoType_GetAutoCastType( bt );
-			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
-			/*
-			TODO:
-			tt = DaoType_GetAutoCastType( bt );
-			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b + 1, tt );
-			*/
+			for(j=opb; j<=opb+1; ++j){
+				tt = DaoType_GetAutoCastType( types[j] );
+				if( tt != NULL ){
+					DaoInode *untag = DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
+
+					inodes = self->inodes->items.pInode;
+					types = self->types->items.pType;
+
+					k = i - 6;
+					if( k < 0 ) k = 0;
+					for(; k<i; ++k){
+						DaoInode *jnode = inodes[k];
+						DaoVmCode ops = DaoVmCode_CheckOperands( (DaoVmCode*) jnode );
+						if( ops.c && jnode->c == j ){
+							DaoType *type = types[j];
+
+							types[j] = types[untag->c];
+							types[untag->c] = type;
+							jnode->c = untag->c;
+							untag->a = untag->c;
+							untag->c = j;
+							inode->b = opb;
+							break;
+						}
+					}
+				}
+			}
 			break;
 		}
 		if( self->inodes->size != N ){
@@ -4022,7 +4096,9 @@ SkipChecking:
 				bt = opb+1 < M ? types[opb+1] : NULL;
 				ct = at->tid > bt->tid ? at : bt;
 				DaoInferencer_UpdateVarType( self, opc, ct );
-				if( ct->tid <= DAO_COMPLEX && types[opc]->tid == ct->tid ) code = K;
+				if( ct->tid <= DAO_COMPLEX && types[opc]->tid == ct->tid ){
+					if( at->tid == ct->tid && bt->tid == ct->tid ) code = K;
+				}
 			}else if( opa <= DVM_MATH_FLOOR ){
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
@@ -4045,7 +4121,7 @@ SkipChecking:
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
 			}
 			AssertTypeMatching( ct, types[opc], defs );
-			inode->code = K;
+			inode->code = code;
 			break;
 		case DVM_CALL : case DVM_MCALL :
 			if( DaoInferencer_HandleCall( self, inode, i, defs ) == 0 ) return 0;

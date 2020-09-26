@@ -3786,9 +3786,11 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 	self->activeCode = vmc;
 	memset( value, 0, sizeof(DaoValue) );
 
+	if( A->type == DAO_NONE ) return 1;
 	if( func == DVM_MATH_MIN || func == DVM_MATH_MAX ){
 		DaoValue *B = self->activeValues[ vmc->b + 1 ];
 
+		if( B->type == DAO_NONE ) return 1;
 		if( A->type <= DAO_INTEGER && B->type <= DAO_INTEGER ){
 			dao_integer a = DaoValue_GetInteger( A );
 			dao_integer b = DaoValue_GetInteger( B );
@@ -3806,6 +3808,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 				value->xInteger.value = c;
 				return DaoValue_Move( value, vc, vms->typeInt ) == 0;
 			}
+			return 0;
 		}else if( A->type <= DAO_FLOAT && B->type <= DAO_FLOAT ){
 			dao_float a = DaoValue_GetFloat( A );
 			dao_float b = DaoValue_GetFloat( B );
@@ -3823,6 +3826,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 				value->xFloat.value = c;
 				return DaoValue_Move( value, vc, vms->typeFloat ) == 0;
 			}
+			return 0;
 		}
 	}else if( A->type == DAO_COMPLEX ){
 		dao_complex par = A->xComplex.value;
