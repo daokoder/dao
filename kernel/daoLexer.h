@@ -161,6 +161,7 @@ enum DaoKeyNames
 	/* Built-in math functions; not real keywords, handle as keywords for convenience: */
 	DKEY_CEIL ,
 	DKEY_FLOOR ,
+	DKEY_SIGN ,
 	DKEY_ABS ,
 	DKEY_ARG ,
 	DKEY_IMAG ,
@@ -178,6 +179,8 @@ enum DaoKeyNames
 	DKEY_SQRT ,
 	DKEY_TAN ,
 	DKEY_TANH ,
+	DKEY_MIN ,
+	DKEY_MAX ,
 	DAO_NOKEY2
 };
 

@@ -64,6 +64,17 @@ double norm_c( const dao_complex com )
 	return com.real*com.real + com.imag*com.imag;
 }
 
+dao_complex sign_c( const dao_complex com )
+{
+	dao_complex res = { 0, 0 };
+	double norm = sqrt( com.real*com.real + com.imag*com.imag );
+	if( norm > 0.0 ){
+		res.real = com.real / norm;
+		res.imag = com.imag / norm;
+	}
+	return res;
+}
+
 dao_complex cos_c( const dao_complex com )
 {
 	dao_complex res = { 0, 0 };
@@ -71,6 +82,7 @@ dao_complex cos_c( const dao_complex com )
 	res.imag = -sin(com.real) * cosh(com.imag);
 	return res;
 }
+
 dao_complex cosh_c( const dao_complex com )
 {
 	dao_complex res = { 0, 0 };

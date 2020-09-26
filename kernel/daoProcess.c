@@ -2514,10 +2514,25 @@ CallEntry:
 			vmcCursor = vmc;
 #endif
 		}OPJUMP() OPCASE( MATH_B ) OPCASE( MATH_I ){
-			dao_integer arg = vmc->code == DVM_MATH_B ? LocalBool(vmc->b) : LocalInt(vmc->b);
+			bool boolean = vmc->code == DVM_MATH_B;
+			dao_integer arg = boolean ? LocalBool(vmc->b) : LocalInt(vmc->b);
+
 			switch( vmc->a ){
+			case DVM_MATH_MIN :
+			{
+				dao_integer arg2 = boolean ? LocalBool(vmc->b+1) : LocalInt(vmc->b+1);
+				LocalInt(vmc->c) = arg < arg2 ? arg : arg2;
+				break;
+			}
+			case DVM_MATH_MAX :
+			{
+				dao_integer arg2 = boolean ? LocalBool(vmc->b+1) : LocalInt(vmc->b+1);
+				LocalInt(vmc->c) = arg > arg2 ? arg : arg2;
+				break;
+			}
 			case DVM_MATH_CEIL : LocalInt(vmc->c) = ceil( arg ); break;
 			case DVM_MATH_FLOOR: LocalInt(vmc->c) = floor( arg ); break;
+			case DVM_MATH_SIGN : LocalInt(vmc->c) = arg == 0 ? 0 : (arg < 0 ? -1 : 1); break;
 			case DVM_MATH_ABS  : LocalInt(vmc->c) = llabs( arg );  break;
 			case DVM_MATH_ACOS : LocalFloat(vmc->c) = acos( arg ); break;
 			case DVM_MATH_ASIN : LocalFloat(vmc->c) = asin( arg ); break;
@@ -2534,22 +2549,36 @@ CallEntry:
 			default : break;
 			}
 		}OPNEXT() OPCASE( MATH_F ){
+			dao_float arg = LocalFloat( vmc->b );
 			switch( vmc->a ){
-			case DVM_MATH_CEIL : LocalFloat(vmc->c) = ceil( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_FLOOR : LocalFloat(vmc->c) = floor( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_ABS  : LocalFloat(vmc->c) = fabs( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_ACOS : LocalFloat(vmc->c) = acos( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_ASIN : LocalFloat(vmc->c) = asin( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_ATAN : LocalFloat(vmc->c) = atan( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_COS  : LocalFloat(vmc->c) = cos( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_COSH : LocalFloat(vmc->c) = cosh( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_EXP  : LocalFloat(vmc->c) = exp( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_LOG  : LocalFloat(vmc->c) = log( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_SIN  : LocalFloat(vmc->c) = sin( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_SINH : LocalFloat(vmc->c) = sinh( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_SQRT : LocalFloat(vmc->c) = sqrt( LocalFloat(vmc->b) ); break;
-			case DVM_MATH_TAN  : LocalFloat(vmc->c) = tan( LocalFloat(vmc->b) );  break;
-			case DVM_MATH_TANH : LocalFloat(vmc->c) = tanh( LocalFloat(vmc->b) ); break;
+			case DVM_MATH_MIN :
+			{
+				dao_float arg2 = LocalFloat( vmc->b + 1 );
+				LocalFloat(vmc->c) = arg < arg2 ? arg : arg2;
+				break;
+			}
+			case DVM_MATH_MAX :
+			{
+				dao_float arg2 = LocalFloat( vmc->b + 1 );
+				LocalFloat(vmc->c) = arg > arg2 ? arg : arg2;
+				break;
+			}
+			case DVM_MATH_CEIL : LocalFloat(vmc->c) = ceil( arg ); break;
+			case DVM_MATH_FLOOR : LocalFloat(vmc->c) = floor( arg ); break;
+			case DVM_MATH_SIGN : LocalFloat(vmc->c) = arg == 0 ? 0 : (arg < 0 ? -1 : 1); break;
+			case DVM_MATH_ABS  : LocalFloat(vmc->c) = fabs( arg );  break;
+			case DVM_MATH_ACOS : LocalFloat(vmc->c) = acos( arg ); break;
+			case DVM_MATH_ASIN : LocalFloat(vmc->c) = asin( arg ); break;
+			case DVM_MATH_ATAN : LocalFloat(vmc->c) = atan( arg ); break;
+			case DVM_MATH_COS  : LocalFloat(vmc->c) = cos( arg );  break;
+			case DVM_MATH_COSH : LocalFloat(vmc->c) = cosh( arg ); break;
+			case DVM_MATH_EXP  : LocalFloat(vmc->c) = exp( arg );  break;
+			case DVM_MATH_LOG  : LocalFloat(vmc->c) = log( arg );  break;
+			case DVM_MATH_SIN  : LocalFloat(vmc->c) = sin( arg );  break;
+			case DVM_MATH_SINH : LocalFloat(vmc->c) = sinh( arg ); break;
+			case DVM_MATH_SQRT : LocalFloat(vmc->c) = sqrt( arg ); break;
+			case DVM_MATH_TAN  : LocalFloat(vmc->c) = tan( arg );  break;
+			case DVM_MATH_TANH : LocalFloat(vmc->c) = tanh( arg ); break;
 			default : break;
 			}
 		}OPNEXT() OPCASE( CAST_B ) OPCASE( CAST_I ) OPCASE( CAST_F )
@@ -3751,10 +3780,51 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 	DaoVmSpace *vms = self->vmSpace;
 	DaoNamespace *ns = self->activeRoutine->nameSpace;
 	DaoType *type = self->activeTypes[vmc->c];
+	DaoValue **vc = self->activeValues + vmc->c;
+
 	int func = vmc->a;
 	self->activeCode = vmc;
 	memset( value, 0, sizeof(DaoValue) );
-	if( A->type == DAO_COMPLEX ){
+
+	if( func == DVM_MATH_MIN || func == DVM_MATH_MAX ){
+		DaoValue *B = self->activeValues[ vmc->b + 1 ];
+
+		if( A->type <= DAO_INTEGER && B->type <= DAO_INTEGER ){
+			dao_integer a = DaoValue_GetInteger( A );
+			dao_integer b = DaoValue_GetInteger( B );
+			dao_integer c = a;
+
+			if( func == DVM_MATH_MIN ){
+				if( b < a ) c = b;
+			}else{
+				if( b > a ) c = b;
+			}
+			if( C && C->type == DAO_INTEGER ){
+				C->xInteger.value = c;
+			}else{
+				value->type = DAO_INTEGER;
+				value->xInteger.value = c;
+				return DaoValue_Move( value, vc, vms->typeInt ) == 0;
+			}
+		}else if( A->type <= DAO_FLOAT && B->type <= DAO_FLOAT ){
+			dao_float a = DaoValue_GetFloat( A );
+			dao_float b = DaoValue_GetFloat( B );
+			dao_float c = a;
+
+			if( func == DVM_MATH_MIN ){
+				if( b < a ) c = b;
+			}else{
+				if( b > a ) c = b;
+			}
+			if( C && C->type == DAO_FLOAT ){
+				C->xFloat.value = c;
+			}else{
+				value->type = DAO_FLOAT;
+				value->xFloat.value = c;
+				return DaoValue_Move( value, vc, vms->typeFloat ) == 0;
+			}
+		}
+	}else if( A->type == DAO_COMPLEX ){
 		dao_complex par = A->xComplex.value;
 		dao_complex cres = {0.0,0.0};
 		double rres = 0.0;
@@ -3762,15 +3832,16 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 		switch( func ){
 		case DVM_MATH_ABS  : rres = abs_c( par ); isreal = 1; break;
 		case DVM_MATH_ARG  : rres = arg_c( par ); isreal = 1; break;
-		case DVM_MATH_NORM  : rres = norm_c( par ); isreal = 1; break;
-		case DVM_MATH_IMAG  : rres = par.imag; isreal = 1; break;
-		case DVM_MATH_REAL  : rres = par.real; isreal = 1; break;
+		case DVM_MATH_NORM : rres = norm_c( par ); isreal = 1; break;
+		case DVM_MATH_IMAG : rres = par.imag; isreal = 1; break;
+		case DVM_MATH_REAL : rres = par.real; isreal = 1; break;
 		case DVM_MATH_CEIL : cres = ceil_c( par ); break;
 		case DVM_MATH_COS  : cres = cos_c( par );  break;
 		case DVM_MATH_COSH : cres = cosh_c( par ); break;
 		case DVM_MATH_EXP  : cres = exp_c( par );  break;
 		case DVM_MATH_FLOOR : cres = floor_c( par ); break;
 		case DVM_MATH_LOG  : cres = log_c( par );  break;
+		case DVM_MATH_SIGN : cres = sign_c( par ); break;
 		case DVM_MATH_SIN  : cres = sin_c( par );  break;
 		case DVM_MATH_SINH : cres = sinh_c( par ); break;
 		case DVM_MATH_SQRT : cres = sqrt_c( par ); break;
@@ -3784,7 +3855,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 			}else{
 				value->type = DAO_FLOAT;
 				value->xFloat.value = rres;
-				return DaoValue_Move( value, self->activeValues + vmc->c, vms->typeFloat ) == 0;
+				return DaoValue_Move( value, vc, vms->typeFloat ) == 0;
 			}
 		}else{
 			if( C && C->type == DAO_COMPLEX ){
@@ -3792,7 +3863,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 			}else{
 				value->type = DAO_COMPLEX;
 				value->xComplex.value = cres;
-				return DaoValue_Move( value, self->activeValues + vmc->c, vms->typeComplex ) == 0;
+				return DaoValue_Move( value, vc, vms->typeComplex ) == 0;
 			}
 		}
 		return 0;
@@ -3804,12 +3875,13 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 		}else{
 			value->type = DAO_INTEGER;
 			value->xInteger.value = res;
-			return DaoValue_Move( value, self->activeValues + vmc->c, vms->typeInt ) == 0;
+			return DaoValue_Move( value, vc, vms->typeInt ) == 0;
 		}
 	}else if( A->type && A->type <= DAO_FLOAT ){
 		double par = DaoValue_GetFloat( A );
 		double res = 0.0;
 		switch( func ){
+		case DVM_MATH_SIGN : res = par == 0.0 ? 0.0 : (par < 0.0 ? -1.0 : 1.0); break;
 		case DVM_MATH_ABS  : res = fabs( par );  break;
 		case DVM_MATH_ACOS : res = acos( par ); break;
 		case DVM_MATH_ASIN : res = asin( par ); break;
@@ -3829,7 +3901,7 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 		}
 		value->type = DAO_FLOAT;
 		value->xFloat.value = res;
-		return DaoValue_Move( value, self->activeValues + vmc->c, vms->typeFloat ) == 0;
+		return DaoValue_Move( value, vc, vms->typeFloat ) == 0;
 	}
 	return 1;
 }

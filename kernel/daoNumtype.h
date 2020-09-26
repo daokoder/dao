@@ -70,6 +70,7 @@
 DAO_DLL double abs_c( const dao_complex com );
 DAO_DLL double arg_c( const dao_complex com );
 DAO_DLL double norm_c( const dao_complex com );
+DAO_DLL dao_complex sign_c( const dao_complex com );
 DAO_DLL dao_complex cos_c( const dao_complex com );
 DAO_DLL dao_complex cosh_c( const dao_complex com );
 DAO_DLL dao_complex exp_c( const dao_complex com );

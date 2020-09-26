@@ -2945,7 +2945,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	if( start <0 ) goto ErrorInterfaceDefinition;
 	if( value == NULL || value->type == 0 ){
 		int t = tokens[start]->name;
-		if( (t != DTOK_IDENTIFIER && t < DKEY_CEIL) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
+		if( (t != DTOK_IDENTIFIER && t < DKEY_CEIL) || t > DKEY_MAX ) goto ErrorInterfaceDefinition;
 		interName = & tokens[start]->string;
 		if( tokens[start+1]->name == DKEY_FOR ){
 			ename = interName;
@@ -6417,6 +6417,7 @@ ParsingError:
 
 static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int start, int end )
 {
+	DList *cid = DaoParser_GetArray( self );
 	DaoInode *last = self->vmcLast;
 	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoEnode error = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
@@ -6429,21 +6430,49 @@ static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int star
 		if( rb == start+2 ) DaoParser_Error( self, DAO_PARAM_INVALID, NULL );
 		return error;
 	}
-	reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
-	if( reg <0 ) return error;
-	if( cst ){
+	enode = result;
+	if( tki <= DKEY_TANH ){
+		reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
+		if( reg <0 ) return error;
+	}else{
+	DaoToken **tokens = self->tokens->items.pToken;
+		self->curToken = start + 2;
+		enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, NULL, cid, DAO_EXPRLIST_PARAM );
+		if( enode.reg < 0 || self->curToken != rb || enode.count != 2 ){
+			DaoParser_Error2( self, DAO_INVALID_EXPRESSION, self->curToken, end, 0 );
+			return error;
+		}
+	}
+	if( cst || (enode.count && enode.konst == enode.count) ){
 		DaoProcess *proc;
 		DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };
 		DaoValue *value;
 
 		vmc.a = tki - DKEY_CEIL;
-		proc = DaoParser_ReserveFoldingOperands( self, 2 );
-		DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
-		proc->activeCode = & vmc;
-		value = DaoParser_EvalConst( self, proc, 2 );
+		if( enode.konst ){
+			int i;
+
+			proc = DaoParser_ReserveFoldingOperands( self, enode.count + 1 );
+			/* Prepare registers for the instruction. */
+			for(i=0; i<enode.count; ++i){
+				/* No need GC here: */
+				DaoValue *v = DaoParser_GetVariable( self, cid->items.pInt[i] );
+				DaoValue_Copy( v, & proc->activeValues[i+1] );
+			}
+			proc->activeCode = & vmc;
+			value = DaoParser_EvalConst( self, proc, enode.count + 1 );
+		}else{
+			proc = DaoParser_ReserveFoldingOperands( self, 2 );
+			DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
+			proc->activeCode = & vmc;
+			value = DaoParser_EvalConst( self, proc, 2 );
+		}
 		if( value == NULL ) return error;
 		result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 		regLast = DaoParser_GetNormRegister( self, result.konst, 0, start, 0, rb );
+	}else if( enode.reg >= 0 ){
+		regLast = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_MATH, tki - DKEY_CEIL, enode.reg, regLast );
 	}else{
 		regLast = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_MATH, tki - DKEY_CEIL, reg, regLast );
@@ -6722,7 +6751,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			}
 			tki = tokens[cur]->name;
 			tki2 = cur + 1 < self->tokens->size ? tokens[cur+1]->name : 0;
-			if( tki2 == DTOK_LB && (tki >= DKEY_CEIL && tki <= DKEY_TANH) ){
+			if( tki2 == DTOK_LB && (tki >= DKEY_CEIL && tki <= DKEY_MAX) ){
 				DList_Erase( self->errors, count, -1 );
 				result = DaoParser_ParseIntrinsicMath( self, tki, cur, end );
 				result.lvalue = 0;

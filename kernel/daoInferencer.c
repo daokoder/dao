@@ -3163,6 +3163,15 @@ SkipChecking:
 			tt = DaoType_GetAutoCastType( bt );
 			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
 			break;
+		case DAO_CODE_BINARY2 :
+			tt = DaoType_GetAutoCastType( bt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
+			/*
+			TODO:
+			tt = DaoType_GetAutoCastType( bt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b + 1, tt );
+			*/
+			break;
 		}
 		if( self->inodes->size != N ){
 			i--;
@@ -4008,7 +4017,13 @@ SkipChecking:
 			if( bt->tid > DAO_COMPLEX && !(bt->tid & DAO_ANY) ) goto InvalidParam;
 			ct = bt; /* return the same type as the argument by default; */
 			K = bt->realnum ? DVM_MATH_B + (bt->tid - DAO_BOOLEAN) : DVM_MATH;
-			if( opa <= DVM_MATH_FLOOR ){
+			if( opa >= DVM_MATH_MIN ){
+				at = bt;
+				bt = opb+1 < M ? types[opb+1] : NULL;
+				ct = at->tid > bt->tid ? at : bt;
+				DaoInferencer_UpdateVarType( self, opc, ct );
+				if( ct->tid <= DAO_COMPLEX && types[opc]->tid == ct->tid ) code = K;
+			}else if( opa <= DVM_MATH_FLOOR ){
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
 			}else if( opa == DVM_MATH_ABS ){
@@ -4749,6 +4764,10 @@ static int DaoInferencer_CheckInitialization( DaoInferencer *self, DaoOptimizer 
 		case DAO_CODE_BINARY :
 			AssertInitialized( vmc->a, 0, first, first );
 			AssertInitialized( vmc->b, 0, middle, middle );
+			break;
+		case DAO_CODE_BINARY2 :
+			AssertInitialized( vmc->b, 0, first, first );
+			AssertInitialized( vmc->b + 1, 0, middle, middle );
 			break;
 		case DAO_CODE_SETI :
 			AssertInitialized( vmc->c, DTE_ITEM_WRONG_ACCESS, first, first );

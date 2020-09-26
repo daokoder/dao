@@ -365,6 +365,7 @@ enum DaoMathFunct
 {
 	DVM_MATH_CEIL ,
 	DVM_MATH_FLOOR ,
+	DVM_MATH_SIGN ,
 	DVM_MATH_ABS ,
 	DVM_MATH_ARG ,
 	DVM_MATH_IMAG ,
@@ -381,7 +382,9 @@ enum DaoMathFunct
 	DVM_MATH_SINH ,
 	DVM_MATH_SQRT ,
 	DVM_MATH_TAN ,
-	DVM_MATH_TANH
+	DVM_MATH_TANH ,
+	DVM_MATH_MIN ,
+	DVM_MATH_MAX
 };
 
 enum DaoFunctMeth
@@ -421,6 +424,7 @@ enum DaoCodeType
 	DAO_CODE_UNARY ,    /*  A,C;   */
 	DAO_CODE_BINARY ,   /*  A,B,C; */
 	DAO_CODE_UNARY2 ,   /*  B,C;   */
+	DAO_CODE_BINARY2 ,  /*  B,B+1,C; */
 	DAO_CODE_MATRIX ,   /*  C,A,A+1,...,A+N-1; where N=(B>>8)*(B&0xff); */
 	DAO_CODE_ENUM ,     /*  C,A,A+1,...,A+B-1; */
 	DAO_CODE_ENUM2 ,    /*  C,A,A+1,...,A+B; */

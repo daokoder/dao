@@ -128,6 +128,12 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->second = vmc->b;
 		self->lvalue = vmc->c;
 		break;
+	case DAO_CODE_BINARY2 :
+		self->type = DAO_OP_PAIR;
+		self->first = vmc->b;
+		self->second = vmc->b + 1;
+		self->lvalue = vmc->c;
+		break;
 	case DAO_CODE_GETU :
 		if( vmc->a != 0 ){
 			self->type = DAO_OP_SINGLE;
@@ -1311,6 +1317,11 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 				node->lvalue = vmc->c;
 			}
 			break;
+		case DAO_CODE_BINARY2 :
+			node->first = vmc->b;
+			node->second = vmc->b + 1;
+			node->lvalue = vmc->c;
+			break;
 		case DAO_CODE_GETU :
 			node->lvalue = vmc->c;
 			if( vmc->a != 0 ) node->second = vmc->b;
@@ -1798,6 +1809,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		case DAO_CODE_UNARY :
 		case DAO_CODE_UNARY2 :
 		case DAO_CODE_BINARY :
+		case DAO_CODE_BINARY2 :
 		case DAO_CODE_MATRIX :
 		case DAO_CODE_ENUM :
 		case DAO_CODE_ENUM2 :
@@ -1854,6 +1866,11 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	case DAO_CODE_UNARY2 :
 		/* Exclude expressions that may have side effects: */
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
+		break;
+	case DAO_CODE_BINARY2 :
+		/* Exclude expressions that may have side effects: */
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
+		if( DaoRoutine_IsVolatileParameter( routine, vmc->b + 1 ) ) return;
 		break;
 	case DAO_CODE_GETF :
 	case DAO_CODE_UNARY :

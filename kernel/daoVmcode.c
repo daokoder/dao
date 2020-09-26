@@ -374,6 +374,9 @@ uchar_t DaoVmCode_CheckPermutable( int code )
 uchar_t DaoVmCode_GetOpcodeType( DaoVmCode *self )
 {
 	int code = self->code;
+	if( code == DVM_MATH || (code >= DVM_MATH_B && code <= DVM_MATH_F) ){
+		if( self->a == DVM_MATH_MIN || self->a == DVM_MATH_MAX ) return DAO_CODE_BINARY2;
+	}
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
 	return DAO_CODE_NOP;
 }
