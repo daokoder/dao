@@ -129,9 +129,9 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_BINARY2 :
-		self->type = DAO_OP_PAIR;
+		self->type = DAO_OP_RANGE;
 		self->first = vmc->b;
-		self->second = vmc->b + 1;
+		self->second = vmc->b + 2;
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_GETU :
@@ -1319,7 +1319,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			break;
 		case DAO_CODE_BINARY2 :
 			node->first = vmc->b;
-			node->second = vmc->b + 1;
+			node->second = vmc->b + 2;
 			node->lvalue = vmc->c;
 			break;
 		case DAO_CODE_GETU :

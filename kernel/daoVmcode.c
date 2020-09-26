@@ -445,6 +445,7 @@ DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 		if( self->a ) vmc.b = 1;
 		break;
 	case DAO_CODE_UNARY2 :
+	case DAO_CODE_BINARY2 :
 		vmc.b = 1;
 		vmc.c = 1;
 		break;
