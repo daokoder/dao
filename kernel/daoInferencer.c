@@ -3092,9 +3092,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		*/
 		DMap_Assign( defs, (DMap*)DList_Front( self->typeMaps ) );
 
+#if 0
 		DaoRoutine_AnnotateCode( routine, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->chars, NULL );
-#if 0
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
