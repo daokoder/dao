@@ -2514,7 +2514,7 @@ CallEntry:
 			vmcCursor = vmc;
 #endif
 		}OPJUMP() OPCASE( MATH_B ) OPCASE( MATH_I ){
-			bool boolean = vmc->code == DVM_MATH_B;
+			dao_boolean boolean = vmc->code == DVM_MATH_B;
 			dao_integer arg = boolean ? LocalBool(vmc->b) : LocalInt(vmc->b);
 
 			switch( vmc->a ){
