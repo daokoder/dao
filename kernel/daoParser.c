@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://daoscript.org
 //
-// Copyright (c) 2006-2017, Limin Fu
+// Copyright (c) 2006-2021, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -5108,6 +5108,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		DString_SubString( & tokens[i]->string, modpath, 1, tokens[i]->string.size-2 );
 		DList_Append( modpaths, modpath );
+		DList_Append( modlist, NULL );
 		i ++;
 	}else if( tki == DKEY_AS ){
 		code = DAO_CTW_LOAD_INVALID;
@@ -5122,6 +5123,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		i = self->curToken;
 		mod = (DaoNamespace*) DaoParser_GetVariable( self, enode.konst );
 		if( mod == NULL || mod->type != DAO_NAMESPACE ) goto ErrorLoad;
+		DString_Clear( self->string );
+		DList_Append( modpaths, self->string );
 		DList_Append( modlist, mod );
 		if( self->byteBlock ){
 			DaoByteBlock_EncodeImport( self->byteBlock, (DaoValue*) mod, NULL, 0, 0 );
@@ -5141,6 +5144,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			while( i <= end && tokens[i]->type == DTOK_IDENTIFIER ){
 				DString *path = (DString*) DList_Append( modpaths, modpath );
 				DString_Append( path, & tokens[i]->string );
+				DList_Append( modlist, NULL );
 				i += 1;
 				if( i > end ) goto ErrorLoad;
 				if( tokens[i]->type == DTOK_RCB ) break;
@@ -5151,6 +5155,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			i += 1;
 		}else{
 			DList_Append( modpaths, modpath );
+			DList_Append( modlist, NULL );
 		}
 	}
 	if( i <= end && tokens[i]->name == DKEY_AS ){
@@ -5165,10 +5170,12 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 
 	if( mod == NULL ){
 		for(j=0; j<modpaths->size; ++j){
-			DString_Assign( self->string, modpaths->items.pString[j] );
+			DString *path = modpaths->items.pString[j];
+			if( path == NULL ) continue;
+			DString_Assign( self->string, path );
 			mod = DaoVmSpace_LoadModule( vmSpace, self->string, self );
 			if( mod == NULL ) break;
-			DList_Append( modlist, mod );
+			modlist->items.pNS[j] = mod;
 		}
 	}
 
@@ -5178,12 +5185,15 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		goto ErrorLoad;
 	}
 	for(j=0; j<modpaths->size; ++j){
+		DString *path = modpaths->items.pString[j];
 		DaoConstant *konst;
 
 		mod = modlist->items.pNS[j];
-		DString_Assign( self->string, modpaths->items.pString[j] );
-		if( self->byteBlock ){
-			DaoByteBlock_EncodeLoad( self->byteBlock, mod, self->string, modname );
+		if( path != NULL ){
+			DString_Assign( self->string, modpaths->items.pString[j] );
+			if( self->byteBlock ){
+				DaoByteBlock_EncodeLoad( self->byteBlock, mod, self->string, modname );
+			}
 		}
 		if( modname == NULL ){
 			cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
