@@ -5105,7 +5105,22 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	if( (self->levelBase + self->lexLevel) != 0 ) goto ErrorLoad;
 
 	tki = tokens[i]->name;
-	if( tki == DTOK_MBS || tki == DTOK_WCS ){
+
+	if( tki == DTOK_IDENTIFIER ){
+		DaoValue *scope = NULL;
+		DaoValue *value = NULL;
+		int pos = DaoParser_ParseScopedConstOrName( self, & scope, & value, i, 0 );
+		if( pos >= i && value != NULL && value->type == DAO_NAMESPACE ){
+			mod = (DaoNamespace*) value;
+			i = pos + 1;
+		}
+	}
+
+	if( mod ){
+		DString_Clear( self->string );
+		DList_Append( modpaths, self->string );
+		DList_Append( modlist, mod );
+	}else if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		DString_SubString( & tokens[i]->string, modpath, 1, tokens[i]->string.size-2 );
 		DList_Append( modpaths, modpath );
 		DList_Append( modlist, NULL );
