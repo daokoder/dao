@@ -2902,8 +2902,10 @@ Failed:
 	}
 	return -1;
 }
-static int DaoParser_ParseCodes( DaoParser *self, int from, int to );
-static int DaoParser_CompileRoutines( DaoParser *self )
+
+int DaoParser_ParseCodes( DaoParser *self, int from, int to );
+
+int DaoParser_CompileRoutines( DaoParser *self )
 {
 	daoint i, error = 0;
 	for(i=0; i<self->routCompilable->size; i++){
@@ -3482,7 +3484,8 @@ static int DaoParser_GetEnumTokenType( DaoType *type )
 	}
 	return tok;
 }
-static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
+
+int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoVmSpace *vmSpace = self->vmSpace;

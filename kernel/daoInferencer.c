@@ -3988,7 +3988,41 @@ SkipChecking:
 			{
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->args->items.pType[0];
-				if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+				if( at->tid >= DAO_BOOLEAN && at->tid <= DAO_FLOAT ){
+					ct = at;
+					if( opb > 1 ) goto InvalidOper;
+					if( opb == 1 ){
+						DaoType *it = types[opa+1];
+
+						if( DaoType_MatchTo( it, at, NULL ) == 0 ) goto InvalidOper;
+					}
+				}else if( at->tid == DAO_COMPLEX ){
+					ct = at;
+					if( opb > 2 ) goto InvalidOper;
+
+					if( opb == 1 ){
+						DaoType *it = types[opa+1];
+
+						if( it->tid != DAO_COMPLEX ){
+							if( DaoType_MatchTo( it, VMS->typeFloat, NULL ) == 0 ) goto InvalidOper;
+						}
+					}else{
+						for(j=0; j<opb; ++j){
+							DaoType *it = types[opa+1+j];
+
+							if( DaoType_MatchTo( it, VMS->typeFloat, NULL ) == 0 ) goto InvalidOper;
+						}
+					}
+				}else if( at->tid == DAO_STRING ){
+					ct = at;
+					for(j=0; j<opb; ++j){
+						DaoType *it = types[opa+1+j];
+
+						if( it->tid != DAO_STRING ){
+							if( DaoType_MatchTo( it, VMS->typeInt, NULL ) == 0 ) goto InvalidOper;
+						}
+					}
+				}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
 					ct = VMS->typeAny;
 				}else if( at->tid == DAO_CLASS ){
 					klass = & at->aux->xClass;
@@ -4032,6 +4066,14 @@ SkipChecking:
 						if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) tt = & tt->aux->xType;
 						AssertTypeMatching( bt, tt, defs );
 					}
+				}else if( at->tid == DAO_CTYPE ){
+					rout = DaoType_GetInitor( at );
+					if( rout == NULL ) goto InvalidEnum;
+
+					rout = DaoRoutine_MatchByType( rout, at, types + opa + 1, opb, DVM_CALL );
+					if( rout == NULL ) goto InvalidEnum;
+
+					ct = (DaoType*) rout->routType->aux;
 				}else{
 					ct = VMS->typeUdf;
 				}

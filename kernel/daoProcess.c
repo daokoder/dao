@@ -4820,6 +4820,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 	int opa = vmc->a;
 	int opb = vmc->b;
 	DaoObject *object;
+	DaoRoutine *routine;
 	DaoVariable **mtype;
 	DaoValue **values = self->activeValues + opa + 1;
 	DaoValue *p = self->activeValues[opa];
@@ -4872,13 +4873,50 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			DaoArray *vec;
 			DaoList *list;
 			DaoTuple *tuple;
-			if( retype != type && DaoType_MatchTo( type, retype, NULL ) == 0 ){
+			int maxEnumCount = opb;
+			int needNumbers = 0;
+
+			if( retype && retype != type && DaoType_MatchTo( type, retype, NULL ) == 0 ){
 				DaoProcess_RaiseError( self, NULL, "invalid enumeration" );
 				break;
 			}
+
 			switch( type->tid ){
-			case DAO_COMPLEX :
+			case DAO_BOOLEAN:
+			case DAO_INTEGER:
+			case DAO_FLOAT:
+				maxEnumCount = 1;
+				needNumbers = 1;
+				break;
+			case DAO_COMPLEX:
+				maxEnumCount = 2;
+				if( opb == 1 ){
+					int tid = values[0]->type;
+					if( tid == 0 || tid > DAO_COMPLEX ){
+						DaoProcess_RaiseError( self, NULL, "need numbers in enumeration" );
+						return;
+					}
+				}else{
+					needNumbers = 1;
+				}
+				break;
 			case DAO_STRING :
+				for(i=0; i<opb; ++i){
+					int tid = values[i]->type;
+					if( (tid == 0 || tid > DAO_FLOAT) && tid != DAO_STRING ){
+						DaoProcess_RaiseError( self, NULL, "need numbers/strings in enumeration" );
+						return;
+					}
+				}
+				break;
+			}
+
+			if( opb > maxEnumCount ){
+				DaoProcess_RaiseError( self, NULL, "too many values" );
+				break;
+			}
+
+			if( needNumbers ){
 				for(i=0; i<opb; ++i){
 					int tid = values[i]->type;
 					if( tid == 0 || tid > DAO_FLOAT ){
@@ -4886,25 +4924,43 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 						return;
 					}
 				}
-				break;
 			}
+
 			switch( type->tid ){
+			case DAO_BOOLEAN:
+				DaoProcess_PutBoolean( self, opb ? DaoValue_GetInteger( values[0] ) : 0 );
+				break;
+			case DAO_INTEGER:
+				DaoProcess_PutInteger( self, opb ? DaoValue_GetInteger( values[0] ) : 0 );
+				break;
+			case DAO_FLOAT:
+				DaoProcess_PutFloat( self, opb ? DaoValue_GetFloat( values[0] ) : 0.0 );
+				break;
 			case DAO_COMPLEX :
-				cplx = DaoProcess_PutComplex( self, c );
-				if( opb > 0 ) cplx->real = DaoValue_GetFloat( values[0] );
-				if( opb > 1 ) cplx->imag = DaoValue_GetFloat( values[1] );
-				if( opb > 2 ) DaoProcess_RaiseError( self, NULL, "too many values" );
+				if( opb == 1 && values[0]->type == DAO_COMPLEX ){
+					DaoProcess_PutComplex( self, values[0]->xComplex.value );
+				}else{
+					cplx = DaoProcess_PutComplex( self, c );
+
+					if( opb > 0 ) cplx->real = DaoValue_GetFloat( values[0] );
+					if( opb > 1 ) cplx->imag = DaoValue_GetFloat( values[1] );
+					if( opb > 2 ) DaoProcess_RaiseError( self, NULL, "too many values" );
+				}
 				break;
 			case DAO_STRING :
 				str = DaoProcess_PutChars( self, "" );
 				DString_Reserve( str, opb );
 				for(i=0; i<opb; ++i){
-					daoint ch = DaoValue_GetInteger( values[i] );
-					if( ch < 0 ){
-						DaoProcess_RaiseError( self, NULL, "invalid character" );
-						return;
+					if( values[i]->type == DAO_STRING ){
+						DString_Append( str, values[i]->xString.value );
+					}else{
+						daoint ch = DaoValue_GetInteger( values[i] );
+						if( ch < 0 ){
+							DaoProcess_RaiseError( self, NULL, "invalid character" );
+							return;
+						}
+						DString_AppendWChar( str, ch );
 					}
-					DString_AppendWChar( str, ch );
 				}
 				break;
 #ifdef DAO_WITH_NUMARRAY
@@ -4930,6 +4986,18 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			default :
 				DaoProcess_RaiseError( self, NULL, "invalid enumeration" );
 				break;
+			}
+			break;
+		}
+	case DAO_CTYPE :
+		{
+			DaoCtype *ctype = (DaoCtype*) p;
+
+			routine = DaoType_GetInitor( ctype->valueType );
+			if( routine == NULL ){
+				DaoProcess_RaiseError( self, NULL, "invalid enumeration" );
+			}else{
+				DaoProcess_PushCall( self, routine, NULL, values, opb );
 			}
 			break;
 		}
