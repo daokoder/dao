@@ -3130,15 +3130,22 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int t = tokens[start]->name;
+
 		if( t != DTOK_IDENTIFIER && t < DKEY_CEIL ) goto ErrorClassDefinition;
+
 		klass = DaoClass_New( NS );
-		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 
 		className = klass->className;
 		DString_Assign( className, name );
 		DaoClass_SetName( klass, className, NS );
 
+		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 		if( routine != NS->mainRoutine ) ns = NULL;
+
+		if( self->outerParser && self->outerParser->hostClass ){
+			DaoClass_SetOuterClass( klass, self->outerParser->hostClass );
+		}
+
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, className, value, klass->objType, storeType );
 

@@ -428,6 +428,7 @@ void DaoObjectLogger_Quit()
 			{
 				DaoClass *klass = (DaoClass*)value;
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->nameSpace );
+				DaoObjectLogger_ScanValue( (DaoValue*) klass->outerClass );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->clsType );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->initRoutine );
 				DaoObjectLogger_ScanArray( klass->constants );
@@ -1922,6 +1923,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoClass *klass = (DaoClass*)value;
 			cycRefCountDecrement( (DaoValue*) klass->nameSpace );
+			cycRefCountDecrement( (DaoValue*) klass->outerClass );
 			cycRefCountDecrement( (DaoValue*) klass->clsType );
 			cycRefCountDecrement( (DaoValue*) klass->initRoutine );
 			cycRefCountDecrements( klass->constants );
@@ -2144,6 +2146,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoClass *klass = (DaoClass*) value;
 			cycRefCountIncrement( (DaoValue*) klass->nameSpace );
+			cycRefCountIncrement( (DaoValue*) klass->outerClass );
 			cycRefCountIncrement( (DaoValue*) klass->clsType );
 			cycRefCountIncrement( (DaoValue*) klass->initRoutine );
 			cycRefCountIncrements( klass->constants );
@@ -2402,6 +2405,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			count += klass->constants->size + klass->variables->size + klass->instvars->size;
 			count += klass->allBases->size + klass->references->size;
 			directRefCountDecrement( (DaoValue**) & klass->nameSpace );
+			directRefCountDecrement( (DaoValue**) & klass->outerClass );
 			directRefCountDecrement( (DaoValue**) & klass->clsType );
 			directRefCountDecrement( (DaoValue**) & klass->initRoutine );
 			directRefCountDecrements( klass->constants );

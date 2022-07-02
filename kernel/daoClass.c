@@ -49,6 +49,7 @@ DaoClass* DaoClass_New( DaoNamespace *nspace )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->className = DString_New();
 
+	self->outerClass = NULL;
 	self->nameSpace = nspace;
 	GC_IncRC( self->nameSpace );
 
@@ -85,6 +86,7 @@ void DaoClass_Delete( DaoClass *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->nameSpace );
+	GC_DecRC( self->outerClass );
 	GC_DecRC( self->clsType );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->methSignatures );
@@ -116,6 +118,11 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
 DaoNamespace* DaoClass_GetNamespace( DaoClass *self )
 {
 	return self->nameSpace;
+}
+
+void DaoClass_SetOuterClass( DaoClass *self, DaoClass *outer )
+{
+	GC_Assign( & self->outerClass, outer );
 }
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )

@@ -129,6 +129,7 @@ DAO_DLL void DaoType_InitDefault( DaoType *self );
 DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 
 DAO_DLL void DaoType_SetNamespace( DaoType *self, DaoNamespace *nspace );
+DAO_DLL void DaoType_QualifyName( DString *name, DaoValue *aux );
 
 DAO_DLL DaoType* DaoType_GetBaseType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetConstType( DaoType *self );

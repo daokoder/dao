@@ -1367,7 +1367,8 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	DaoClass *klass;
 	DaoType *any = NULL;
 	DaoType *type = NULL;
-	DString *mbs = NULL;
+	DString *fullName = NULL;
+	DString *qualName = NULL;
 	DList  *tylist = NULL;
 	int i, n = strlen( name );
 	int attrib = tid >> 16;
@@ -1474,40 +1475,40 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		/* Then use the original "itypes" and "N" arguments: */
 	}
 
-	mbs = DString_New();
-	DString_Reserve( mbs, 128 );
-	DString_SetChars( mbs, name );
-	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
+	fullName = DString_New();
+	DString_Reserve( fullName, 128 );
+	DString_SetChars( fullName, name );
+	if( tid == DAO_CODEBLOCK ) DString_Clear( fullName );
 	if( N > 0 || tid == DAO_CODEBLOCK ){
 		tylist = DList_New(0);
-		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
+		if( n || tid != DAO_VARIANT ) DString_AppendChar( fullName, '<' );
 		for(i=0; i<N; i++){
 			DaoType *it = itypes[i];
 			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT ){
 				it = DaoNamespace_MakeType( self, it->fname->chars, DAO_PAR_NAMED, it->aux, NULL, 0 );
 			}
 
-			if( i ) DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );
-			DString_Append( mbs, it->name );
+			if( i ) DString_AppendChar( fullName, tid == DAO_VARIANT ? '|' : ',' );
+			DString_Append( fullName, it->name );
 			DList_Append( tylist, it );
 		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && aux && aux->type == DAO_TYPE ){
-			DString_AppendChars( mbs, "=>" );
-			DString_Append( mbs, ((DaoType*)aux)->name );
+			DString_AppendChars( fullName, "=>" );
+			DString_Append( fullName, ((DaoType*)aux)->name );
 		}
-		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
+		if( n || tid != DAO_VARIANT ) DString_AppendChar( fullName, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		tylist = DList_New(0);
-		DString_AppendChars( mbs, "<any>" );
+		DString_AppendChars( fullName, "<any>" );
 		DList_Append( tylist, any );
 	}else if( tid == DAO_MAP ){
 		tylist = DList_New(0);
-		DString_AppendChars( mbs, "<any,any>" );
+		DString_AppendChars( fullName, "<any,any>" );
 		DList_Append( tylist, any );
 		DList_Append( tylist, any );
 	}else if( tid == DAO_TUPLE ){
-		if( DString_FindChar( mbs, '<', 0 ) == DAO_NULLPOS ){
-			DString_AppendChars( mbs, "<...>" );
+		if( DString_FindChar( fullName, '<', 0 ) == DAO_NULLPOS ){
+			DString_AppendChars( fullName, "<...>" );
 			attrib |= DAO_TYPE_VARIADIC;
 		}
 	}else if( tid == DAO_CLASS && aux ){
@@ -1525,27 +1526,31 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		type = klass->objType;
 		goto Finalizing;
 	}else if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && aux && aux->type == DAO_TYPE ){
-		DString_AppendChar( mbs, '<' );
-		DString_AppendChars( mbs, "=>" );
-		DString_Append( mbs, aux->xType.name );
-		DString_AppendChar( mbs, '>' );
+		DString_AppendChar( fullName, '<' );
+		DString_AppendChars( fullName, "=>" );
+		DString_Append( fullName, aux->xType.name );
+		DString_AppendChar( fullName, '>' );
 	}else if( tid >= DAO_PAR_NAMED && tid <= DAO_PAR_VALIST ){
 		if( aux == NULL ) aux = (DaoValue*) any;
 		if( aux->type != DAO_TYPE ) goto Finalizing;
 		switch( tid ){
-		case DAO_PAR_NAMED   : DString_AppendChar( mbs, ':' ); break;
-		case DAO_PAR_DEFAULT : DString_AppendChar( mbs, '=' ); break;
-		case DAO_PAR_VALIST  : DString_AppendChar( mbs, ':' ); break;
+		case DAO_PAR_NAMED   : DString_AppendChar( fullName, ':' ); break;
+		case DAO_PAR_DEFAULT : DString_AppendChar( fullName, '=' ); break;
+		case DAO_PAR_VALIST  : DString_AppendChar( fullName, ':' ); break;
 		}
-		DString_Append( mbs, aux->xType.name );
+		DString_Append( fullName, aux->xType.name );
 	}
 	if( tid == DAO_CODEBLOCK ){
-		mbs->chars[0] = '[';
-		mbs->chars[mbs->size-1] = ']';
+		fullName->chars[0] = '[';
+		fullName->chars[fullName->size-1] = ']';
 	}
-	type = DaoNamespace_FindType( self, mbs );
+
+	qualName = DString_Copy( fullName );
+	DaoType_QualifyName( qualName, aux );
+
+	type = DaoNamespace_FindType( self, qualName );
 	if( type == NULL ){
-		type = DaoType_New( self, mbs->chars, tid, aux, tylist );
+		type = DaoType_New( self, fullName->chars, tid, aux, tylist );
 		type->attrib |= attrib;
 		if( attrib & DAO_TYPE_VARIADIC ) type->variadic = 1;
 		if( tid == DAO_PAR_NAMED && N > 0 ){
@@ -1565,7 +1570,8 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		type = DaoNamespace_AddType( self, type->name, type );
 	}
 Finalizing:
-	DString_Delete( mbs );
+	DString_Delete( fullName );
+	DString_Delete( qualName );
 	if( tylist ) DList_Delete( tylist );
 	return type;
 }

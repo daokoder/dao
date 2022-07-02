@@ -55,6 +55,7 @@ void DaoType_CheckAttributes( DaoType *self );
 DaoType* DaoType_New( DaoNamespace *ns, const char *name, int tid, DaoValue *aux, DList *args )
 {
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
+
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
@@ -63,14 +64,17 @@ DaoType* DaoType_New( DaoNamespace *ns, const char *name, int tid, DaoValue *aux
 	self->nameSpace = ns;
 	GC_IncRC( ns );
 
+	DString_SetChars( self->name, name );
+
 	//assert( tid != DAO_PAR_VALIST || aux != NULL );
 	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) ns->vmSpace->typeAny;
 
 	if( aux ){
 		self->aux = aux;
 		GC_IncRC( aux );
+		DaoType_QualifyName( self->name, aux );
 	}
-	DString_SetChars( self->name, name );
+
 	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
 		self->fname = DString_New();
 	}
@@ -146,6 +150,18 @@ void DaoType_Delete( DaoType *self )
 void DaoType_SetNamespace( DaoType *self, DaoNamespace *nspace )
 {
 	DaoValue_Move( (DaoValue*) nspace, (DaoValue**) & self->nameSpace, NULL );
+}
+
+void DaoType_QualifyName( DString *name, DaoValue *aux )
+{
+	if( aux && (aux->type == DAO_CLASS || aux->type == DAO_OBJECT) && aux->xClass.outerClass ){
+		DaoClass *klass = aux->xClass.outerClass;
+
+		DString_InsertChar( name, '.', 0 );
+		DString_Insert( name, klass->className, 0, 0, -1 );
+
+		if( klass->outerClass ) DaoType_QualifyName( name, (DaoValue*) klass->outerClass );
+	}
 }
 
 void DaoType_CheckAttributes( DaoType *self )

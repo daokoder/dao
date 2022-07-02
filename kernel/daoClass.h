@@ -105,10 +105,11 @@ struct DaoClass
 
 	DString  *className;
 
-	DaoNamespace  *nameSpace;  /* Definition namespace; */
+	DaoNamespace  *nameSpace;   /* Definition namespace; */
+	DaoClass      *outerClass;  /* Outer class for nested class; */
 
-	DaoType  *clsType;
-	DaoType  *objType; /* GC handled in constants; */
+	DaoType  *clsType; /* Type for the class; */
+	DaoType  *objType; /* Type for instances of the class; GC handled in constants; */
 
 	DHash_(DString*,size_t)  *lookupTable;  /* member lookup table; */
 
@@ -159,6 +160,7 @@ DAO_DLL void DaoClass_Delete( DaoClass *self );
 DAO_DLL void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 DAO_DLL void DaoClass_AddReference( DaoClass *self, void *reference );
 
+DAO_DLL void DaoClass_SetOuterClass( DaoClass *self, DaoClass *outer );
 DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
 
 DAO_DLL int DaoClass_BaseConstructorOffset( DaoClass *self, DaoClass *base, int idx );
