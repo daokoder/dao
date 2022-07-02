@@ -4067,8 +4067,11 @@ SkipChecking:
 						AssertTypeMatching( bt, tt, defs );
 					}
 				}else if( at->tid == DAO_CTYPE ){
-					rout = DaoType_GetInitor( at );
-					if( rout == NULL ) goto InvalidEnum;
+					rout = DaoType_FindFunctionChars( at, "{}" );
+					if( rout == NULL ){
+						rout = DaoType_GetInitor( at );
+						if( rout == NULL ) goto InvalidEnum;
+					}
 
 					rout = DaoRoutine_MatchByType( rout, at, types + opa + 1, opb, DVM_CALL );
 					if( rout == NULL ) goto InvalidEnum;

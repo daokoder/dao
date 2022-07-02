@@ -4993,7 +4993,11 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 		{
 			DaoCtype *ctype = (DaoCtype*) p;
 
-			routine = DaoType_GetInitor( ctype->valueType );
+			routine = DaoType_FindFunctionChars( ctype->valueType, "{}" );
+			if( routine == NULL ){
+				routine = DaoType_GetInitor( ctype->valueType );
+			}
+
 			if( routine == NULL ){
 				DaoProcess_RaiseError( self, NULL, "invalid enumeration" );
 			}else{

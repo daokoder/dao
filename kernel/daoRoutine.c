@@ -367,7 +367,8 @@ void DaoRoutine_AnnotateCode( DaoRoutine *self, DaoVmCodeX vmc, DString *annot, 
 	if( source == NULL ) return; /* DaoRoutine::source could be null */
 	if( vmc.middle > vmc.last ) return;
 
-	offset = self->body->codeStart - 1;
+	offset = self->body->codeStart;
+
 	tokens = source->items.pToken;
 	for(i=0; i<vmc.middle; i++){
 		k = i + vmc.first + offset;

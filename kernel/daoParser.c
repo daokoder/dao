@@ -1124,6 +1124,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
 		if( tokens[start]->name != DTOK_RSB ) goto ErrorInvalidOperator;
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
+	}else if( tokens[start-1]->name == DTOK_LCB ){ /* operator {} */
+		if( tokens[start]->name != DTOK_RCB ) goto ErrorInvalidOperator;
+		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
 	}else if( tokens[start-1]->type != DTOK_IDENTIFIER ){
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
 	}else if( tokens[start]->name == DTOK_LT ){ /* constructor of template types */
@@ -2166,7 +2169,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	self->routine = routMain;
 	self->vmSpace = vmSpace;
 	self->nameSpace = ns;
-	self->codeStart = 1;
+	self->codeStart = 0;
 	self->codeCount = self->tokens->size;
 
 	if( DaoParser_ParseRoutine( self ) == 0 ){
