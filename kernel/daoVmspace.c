@@ -577,9 +577,10 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
-	self->cdataWrappers = DHash_New(0,0);
+	self->userValues = DHash_New( 0, DAO_DATA_VALUE );
+	self->userData = DHash_New(0,0);
 	self->typeKernels = DHash_New(0,0);
-	self->spaceData = DHash_New(0,0);
+	self->cdataWrappers = DHash_New(0,0);
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -699,7 +700,7 @@ static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->vfiles); it; it=DMap_Next(self->vfiles,it)){
 		DaoVirtualFile_Delete( (DaoVirtualFile*) it->value.pVoid );
 	}
-	DaoAux_Delete( self->spaceData );
+	DaoAux_Delete( self->userData );
 	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -721,6 +722,7 @@ static void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
+	DMap_Delete( self->userValues );
 	DMap_Delete( self->typeKernels );
 	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
@@ -3101,24 +3103,44 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 }
 
 
-void* DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value )
+void DaoVmSpace_SetUserValue( DaoVmSpace *self, void *key, DaoValue *value )
 {
-	void *prev = DaoVmSpace_GetSpaceData( self, key );
+	DMap_Insert( self->userValues, key, value );
+}
+
+DaoValue* DaoVmSpace_GetUserValue( DaoVmSpace *self, void *key )
+{
+	DNode *it = DMap_Find( self->userValues, key );
+	if( it ) return it->value.pValue;
+	return NULL;
+}
+
+void DaoVmSpace_SetUserData( DaoVmSpace *self, void *key, void *value )
+{
+	void *prev = DaoVmSpace_GetUserData( self, key );
 	if( prev != NULL ){
 		typedef void (*data_delete)(void*);
 		data_delete del = (data_delete) key;
 		(*del)( prev );
 	}
-	DMap_Insert( self->spaceData, key, value );
-	return value;
+	DMap_Insert( self->userData, key, value );
+}
+
+void* DaoVmSpace_GetUserData( DaoVmSpace *self, void *key )
+{
+	DNode *node = DMap_Find( self->userData, key );
+	if( node ) return node->value.pVoid;
+	return NULL;
+}
+
+void DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value )
+{
+	DaoVmSpace_SetUserData( self, key, value );
 }
 
 void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key )
 {
-	DNode *node;
-	node = DMap_Find( self->spaceData, key );
-	if( node ) return node->value.pVoid;
-	return NULL;
+	return DaoVmSpace_GetUserData( self, key );
 }
 
 

@@ -47,6 +47,7 @@ DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name )
 	DaoValue_Init( self, DAO_INTERFACE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->derived = 0;
+	self->outerClass = NULL;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abtype = DaoType_New( nspace, name, DAO_INTERFACE, (DaoValue*)self, NULL );
@@ -69,10 +70,16 @@ void DaoInterface_Delete( DaoInterface *self )
 #endif
 	if( self->concretes ) DMap_Delete( self->concretes );
 	GC_DecRC( self->nameSpace );
+	GC_DecRC( self->outerClass );
 	GC_DecRC( self->abtype );
 	DList_Delete( self->bases );
 	DMap_Delete( self->methods );
 	dao_free( self );
+}
+
+void DaoInterface_SetOuterClass( DaoInterface *self, DaoClass *outer )
+{
+	GC_Assign( & self->outerClass, outer );
 }
 
 void DaoInterface_DeriveMethods( DaoInterface *self )
@@ -460,6 +467,7 @@ DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 	DaoValue_Init( self, DAO_CINTYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->derived = 0;
+	self->outerClass = NULL;
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->citype = DaoType_New( ns, "interface<", DAO_CINTYPE, (DaoValue*)self, NULL );
@@ -500,6 +508,7 @@ void DaoCinType_Delete( DaoCinType *self )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
+	GC_DecRC( self->outerClass );
 	GC_DecRC( self->abstract );
 	GC_DecRC( self->target );
 	GC_DecRC( self->citype );
@@ -507,6 +516,11 @@ void DaoCinType_Delete( DaoCinType *self )
 	DList_Delete( self->bases );
 	DMap_Delete( self->methods );
 	dao_free( self );
+}
+
+void DaoCinType_SetOuterClass( DaoCinType *self, DaoClass *outer )
+{
+	GC_Assign( & self->outerClass, outer );
 }
 
 void DaoCinType_DeriveMethods( DaoCinType *self )

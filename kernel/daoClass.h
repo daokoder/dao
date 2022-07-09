@@ -147,7 +147,7 @@ struct DaoClass
 	DaoRoutine  *initRoutine;   /* Default class constructor. */
 	DaoRoutine  *initRoutines;  /* All explicit constructors; GC handled in constants; */
 
-	DList_(DaoValue*) *references; /* for GC */
+	DList_(DaoValue*) *auxData; /* Auxiliary data; */
 
 	uint_t    attribs;
 	ushort_t  objDefCount;
@@ -158,7 +158,6 @@ DAO_DLL DaoClass* DaoClass_New( DaoNamespace *nspace );
 DAO_DLL void DaoClass_Delete( DaoClass *self );
 
 DAO_DLL void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
-DAO_DLL void DaoClass_AddReference( DaoClass *self, void *reference );
 
 DAO_DLL void DaoClass_SetOuterClass( DaoClass *self, DaoClass *outer );
 DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
@@ -188,6 +187,9 @@ DAO_DLL int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int pm );
 DAO_DLL int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
 DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
+
+DAO_DLL unsigned DaoClass_AddAuxData( DaoClass *self, DaoValue *value );
+DAO_DLL DaoValue* DaoClass_GetAuxData( DaoClass *self, unsigned key );
 
 DAO_DLL void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
 DAO_DLL DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature );

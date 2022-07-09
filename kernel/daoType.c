@@ -154,9 +154,19 @@ void DaoType_SetNamespace( DaoType *self, DaoNamespace *nspace )
 
 void DaoType_QualifyName( DString *name, DaoValue *aux )
 {
-	if( aux && (aux->type == DAO_CLASS || aux->type == DAO_OBJECT) && aux->xClass.outerClass ){
-		DaoClass *klass = aux->xClass.outerClass;
+	DaoClass *klass = NULL;
 
+	if( aux ){
+		switch( aux->type ){
+		case DAO_OBJECT:    klass = aux->xClass.outerClass; break;
+		case DAO_CLASS:     klass = aux->xClass.outerClass; break;
+		case DAO_CINTYPE:   klass = aux->xCinType.outerClass; break;
+		case DAO_INTERFACE: klass = aux->xInterface.outerClass; break;
+		default: break;
+		}
+	}
+
+	if( klass ){
 		DString_InsertChar( name, '.', 0 );
 		DString_Insert( name, klass->className, 0, 0, -1 );
 

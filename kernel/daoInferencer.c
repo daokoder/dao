@@ -2507,7 +2507,29 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	}else if( at->tid != DAO_ROUTINE ){
 		goto NotCallable;
 	}
+
+	/*
+	// class Outer {
+	//     class Inner {
+	//         routine ()( param: int ){ io.writeln( param ) }
+	//     }
+	//     var object: Inner;
+	//
+	//     routine Outer() { object = Inner(); }
+	// }
+	// var instance = Outer();
+	// instance.object( 123 ); // Calling overloaded operator () of class Inner;
+	 */
+	if( callOper && code == DVM_MCALL ){
+		codemode = codemode & ~0xffff;
+		codemode |= DVM_CALL;
+		code = DVM_CALL;
+		argc -= 1;
+		tp += 1;
+	}
+
 	if( at->tid == DAO_ROUTINE && at->subtid == DAO_ROUTINES ) rout = (DaoRoutine*)at->aux;
+
 	if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
 		/* DAO_CALL_INIT: mandatory passing the implicit self parameter. */
 		if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
@@ -2586,7 +2608,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				// will be resolved as test(x:int), which return an integer.
 				// Such discrepancy need to be solved here:
 				 */
-				DList_Clear( self->array );
+				self->array->size = 0;
 				for(k=0,K=routines->size; k<K; k++){
 					DaoType *type = routines->items.pRoutine[k]->routType;
 					m = DaoRoutine_CheckType( type, NS, bt, tp, argc, codemode, 1 );
@@ -4067,7 +4089,7 @@ SkipChecking:
 						AssertTypeMatching( bt, tt, defs );
 					}
 				}else if( at->tid == DAO_CTYPE ){
-					rout = DaoType_FindFunctionChars( at, "{}" );
+					rout = DaoType_FindFunctionChars( at, ".{}" );
 					if( rout == NULL ){
 						rout = DaoType_GetInitor( at );
 						if( rout == NULL ) goto InvalidEnum;

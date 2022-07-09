@@ -40,6 +40,7 @@ struct DaoInterface
 	DAO_VALUE_COMMON;
 
 	DaoNamespace  *nameSpace;  /* Definition namespace; */
+	DaoClass      *outerClass; /* Outer class for nested interface; */
 	DaoType       *abtype;     /* Type object for this interface; */
 	DList         *bases;      /* Base interfaces; */
 	DMap          *methods;    /* DHash<DString*,DaoRoutine*>; */
@@ -49,6 +50,8 @@ struct DaoInterface
 
 DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name );
 void DaoInterface_Delete( DaoInterface *self );
+
+void DaoInterface_SetOuterClass( DaoInterface *self, DaoClass *outer );
 
 void DaoInterface_DeriveMethods( DaoInterface *self );
 
@@ -104,18 +107,20 @@ struct DaoCinType
 {
 	DAO_VALUE_COMMON;
 
-	int       derived;
-	DaoType  *citype;  /* Concrete interface type type; */
-	DaoType  *vatype;  /* Concrete interface value type; */
-	DList    *bases;   /* Parent interface classes; */
-	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
-
-	DaoType       *target;    /* target type; */
-	DaoInterface  *abstract;  /* abstract interface; */
+	DaoClass      *outerClass;  /* Outer class for nested interface; */
+	DaoInterface  *abstract;    /* Abstract interface; */
+	DaoType       *target;      /* Target type; */
+	DaoType       *citype;      /* Concrete interface type type; */
+	DaoType       *vatype;      /* Concrete interface value type; */
+	DList         *bases;       /* Parent interface classes; */
+	DMap          *methods;     /* DHash<DString*,DaoRoutine*>; */
+	int            derived;
 };
 
 DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target );
 void DaoCinType_Delete( DaoCinType *self );
+
+void DaoCinType_SetOuterClass( DaoCinType *self, DaoClass *outer );
 
 void DaoCinType_DeriveMethods( DaoCinType *self );
 

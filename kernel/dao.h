@@ -1213,12 +1213,20 @@ DAO_DLL const char* DaoVmSpace_CurrentWorkingPath( DaoVmSpace *self );
 DAO_DLL const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self );
 
 /*
-// Set and get space specific data:
+// Set and get space specific user value:
+*/
+DAO_DLL void DaoVmSpace_SetUserValue( DaoVmSpace *self, void *key, DaoValue *value );
+DAO_DLL DaoValue* DaoVmSpace_GetUserValue( DaoVmSpace *self, void *key );
+
+/*
+// Set and get space specific user data:
 // The key parameter should be a function pointer that can be called on the value
 // parameter to free the data;
 */
-DAO_DLL void* DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value );
-DAO_DLL void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key );
+DAO_DLL void DaoVmSpace_SetUserData( DaoVmSpace *self, void *key, void *value );
+DAO_DLL void DaoVmSpace_SetSpaceData( DaoVmSpace *self, void *key, void *value ); /* Obsolete; */
+DAO_DLL void* DaoVmSpace_GetUserData( DaoVmSpace *self, void *key );
+DAO_DLL void* DaoVmSpace_GetSpaceData( DaoVmSpace *self, void *key ); /* Obsolete; */
 
 DAO_DLL void DaoVmSpace_Stop( DaoVmSpace *self, int bl );
 

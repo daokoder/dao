@@ -1124,9 +1124,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
 		if( tokens[start]->name != DTOK_RSB ) goto ErrorInvalidOperator;
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
-	}else if( tokens[start-1]->name == DTOK_LCB ){ /* operator {} */
-		if( tokens[start]->name != DTOK_RCB ) goto ErrorInvalidOperator;
-		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
+	}else if( tokens[start-1]->name == DTOK_DOT && tokens[start]->name == DTOK_LCB ){ /* .{} */
+		if( tokens[start+1]->name != DTOK_RCB ) goto ErrorInvalidOperator;
+		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+2, -1, 1 );
 	}else if( tokens[start-1]->type != DTOK_IDENTIFIER ){
 		lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
 	}else if( tokens[start]->name == DTOK_LT ){ /* constructor of template types */
@@ -1147,7 +1147,18 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 	if( right < 0 ) return -1;
 
-	if( module->hostType ) hostname = module->hostType->name;
+	/* Use base name whenever possible: */
+	if( module->hostCtype ){
+		hostname = module->hostCtype->name;
+	}else if( module->hostClass ){
+		hostname = module->hostClass->className;
+	}else if( module->hostInter ){
+		hostname = module->hostInter->abtype->name;
+	}else if( module->hostCinType && module->hostCinType->abstract ){
+		hostname = module->hostCinType->abstract->abtype->name;
+	}else if( module->hostType ){
+		hostname = module->hostType->name;
+	}
 
 	mbs = DaoParser_GetString( self );
 	pname = DaoParser_GetString( self );
@@ -2958,6 +2969,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		}
 		inter = DaoInterface_New( NS, interName->chars );
 		if( routine != NS->mainRoutine ) ns = NULL;
+
+		if( self->outerParser && self->outerParser->hostClass ){
+			DaoInterface_SetOuterClass( inter, self->outerParser->hostClass );
+		}
+
 		value = (DaoValue*) inter;
 		DaoParser_AddToScope( self, interName, value, inter->abtype, storeType );
 
@@ -2984,6 +3000,10 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 
 			cintype = DaoCinType_New( inter, target );
 			abtype = cintype->vatype;
+
+			if( self->outerParser && self->outerParser->hostClass ){
+				DaoCinType_SetOuterClass( cintype, self->outerParser->hostClass );
+			}
 			DaoParser_AddToScope( self, abtype->name, (DaoValue*)cintype, abtype, storeType );
 		}else if( value->xInterface.derived ){
 			ec = DAO_SYMBOL_WAS_DEFINED;
@@ -4990,6 +5010,12 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 			if( st == DAO_LOCAL_CONSTANT ){
 				int id = LOOKUP_ID( i );
 				DaoValue *cst = self->outerParser->routine->routConsts->value->items.pValue[id];
+				i = LOOKUP_BIND_LC( routine->routConsts->value->size );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
+				DaoRoutine_AddConstant( routine, cst );
+			}else if( st == DAO_CLASS_CONSTANT ){
+				int id = LOOKUP_ID( i );
+				DaoValue *cst = self->outerParser->hostClass->constants->items.pConst[id]->value;
 				i = LOOKUP_BIND_LC( routine->routConsts->value->size );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
 				DaoRoutine_AddConstant( routine, cst );

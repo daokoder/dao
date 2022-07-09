@@ -66,7 +66,7 @@ DaoClass* DaoClass_New( DaoNamespace *nspace )
 	self->allBases   = DList_New( DAO_DATA_VALUE );
 	self->mixins  = DList_New(0);
 	self->ranges  = DArray_New(sizeof(ushort_t));
-	self->references  = DList_New( DAO_DATA_VALUE );
+	self->auxData = DList_New( DAO_DATA_VALUE );
 
 	self->cstMixinStart = self->cstMixinEnd = self->cstMixinEnd2 = 0;
 	self->glbMixinStart = self->glbMixinEnd = 0;
@@ -100,17 +100,11 @@ void DaoClass_Delete( DaoClass *self )
 	DList_Delete( self->mixinBases );
 	DList_Delete( self->mixins );
 	DArray_Delete( self->ranges );
-	DList_Delete( self->references );
+	DList_Delete( self->auxData );
 	if( self->interMethods ) DMap_Delete( self->interMethods );
 
 	DString_Delete( self->className );
 	dao_free( self );
-}
-
-void DaoClass_AddReference( DaoClass *self, void *reference )
-{
-	if( reference == NULL ) return;
-	DList_Append( self->references, reference );
 }
 
 void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
@@ -1075,6 +1069,7 @@ static void DaoClass_AddConst3( DaoClass *self, DString *name, DaoValue *data )
 	DList_Append( self->constants, cst );
 	DaoValue_MarkConst( cst->value );
 }
+
 static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, int s )
 {
 	int id = LOOKUP_BIND( DAO_CLASS_CONSTANT, s, 0, self->constants->size );
@@ -1089,6 +1084,7 @@ static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, in
 	DaoClass_AddConst3( self, name, data );
 	return id;
 }
+
 int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 {
 	int fromMixin = 0;
@@ -1174,6 +1170,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 	if( node && LOOKUP_UP( node->value.pInt ) ) return -DAO_CTW_WAS_DEFINED;
 	return DaoClass_AddConst2( self, name, data, s );
 }
+
 int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoType *t, int s )
 {
 	int size = self->variables->size;
@@ -1188,10 +1185,25 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 		return -DAO_TYPE_NOT_MATCHING;
 	return id;
 }
+
+unsigned DaoClass_AddAuxData( DaoClass *self, DaoValue *value )
+{
+	if( value == NULL ) return -1;
+	DList_Append( self->auxData, value );
+	return self->auxData->size - 1;
+}
+
+DaoValue* DaoClass_GetAuxData( DaoClass *self, unsigned key )
+{
+	if( key < self->auxData->size ) return self->auxData->items.pValue[key];
+	return NULL;
+}
+
 void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout )
 {
 	MAP_Insert( self->methSignatures, signature, rout );
 }
+
 DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 {
 	DNode *node = MAP_Find( self->methSignatures, signature );

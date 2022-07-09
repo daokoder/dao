@@ -132,7 +132,8 @@ struct DaoVmSpace
 	DMap   *nsRefs;
 
 	DMap   *typeKernels;
-	DMap   *spaceData;
+	DMap   *userData;
+	DMap   *userValues;
 
 	DMap   *cdataWrappers;  /* VM space unique wrappers for Cdata objects; */
 

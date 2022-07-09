@@ -4131,16 +4131,45 @@ InvalidParameter:
 DeleteObject:
 	if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 }
-void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, DaoValue *selfpar, DaoValue *params[], DaoType *types[], int npar )
+void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, DaoValue *selfpar, DaoValue *pms[], DaoType *tps[], int npar )
 {
 	int i, sup = 0;
 	int code = vmc->code;
 	int callmode = code | (vmc->b<<16);
+	char callerType = caller->type;
+	DaoType **types = tps;
+	DaoValue **params = pms;
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoRoutine *rout, *rout2;
 	DList *array, *bindings;
+	DaoVmCode newCode;
 
-	if( caller->type == DAO_ROUTINE ){
+	if( code == DVM_MCALL ){
+		/*
+		// class Outer {
+		//     class Inner {
+		//         routine ()( param: int ){ io.writeln( param ) }
+		//     }
+		//     var object: Inner;
+		//
+		//     routine Outer() { object = Inner(); }
+		// }
+		// var instance = Outer();
+		// instance.object( 123 ); // Calling overloaded operator () of class Inner;
+		*/
+		if( callerType == DAO_OBJECT || (callerType >= DAO_CSTRUCT && callerType <= DAO_CDATA) ){
+			npar -= 1;
+			types = tps + 1;
+			params = pms + 1;
+			callmode = callmode & ~0xffff;
+			callmode |= DVM_CALL;
+			newCode = *vmc;
+			newCode.code = DVM_CALL;
+			vmc = & newCode;
+		}
+	}
+
+	if( callerType == DAO_ROUTINE ){
 		rout = (DaoRoutine*) caller;
 		if( rout->pFunc ){
 			DaoProcess_DoNativeCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
@@ -4157,18 +4186,19 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}else{
 			DaoProcess_PrepareCall( self, rout, selfpar, params, types, npar, vmc, 0 );
 		}
-	}else if( caller->type == DAO_CLASS ){
+	}else if( callerType == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, types, npar );
 		if( self->topFrame != topFrame ){
 			GC_Assign( & self->topFrame->retype, caller->xClass.objType );
 		}
-	}else if( caller->type == DAO_OBJECT ){
+	}else if( callerType == DAO_OBJECT ){
 		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
 		rout = rout2 = DaoClass_FindMethod( caller->xObject.defClass, "()", host );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "class instance not callable" );
 			return;
 		}
+
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL ) goto InvalidParameter;
 		if( rout->pFunc ){
@@ -4176,7 +4206,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
 		}
-	}else if( caller->type == DAO_CTYPE ){
+	}else if( callerType == DAO_CTYPE ){
 		DaoType *type = caller->xCtype.valueType;
 		rout = rout2 = DaoType_GetInitor( type );
 		if( rout == NULL ){
@@ -4190,7 +4220,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
 		//printf( "sup = %i\n", sup );
-		if( caller->type == DAO_CTYPE && sup ){
+		if( callerType == DAO_CTYPE && sup ){
 			DaoCstruct *cdata = (DaoCstruct*) self->activeValues[ vmc->c ];
 			if( cdata && (cdata->type >= DAO_CSTRUCT && cdata->type <= DAO_CDATA) ){
 				//printf( "%p %p %p\n", cdata, cdata->object, self->activeObject->rootObject );
@@ -4198,21 +4228,23 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 				GC_Assign( & cdata->object, self->activeObject->rootObject );
 			}
 		}
-	}else if( caller->type >= DAO_CSTRUCT && caller->type <= DAO_CDATA ){
+	}else if( callerType >= DAO_CSTRUCT && callerType <= DAO_CDATA ){
 		rout = rout2 = DaoType_FindFunctionChars( caller->xCstruct.ctype, "()" );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "C object not callable" );
 			return;
 		}
+
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoNativeCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
-	}else if( caller->type == DAO_CINVALUE ){
+	}else if( callerType == DAO_CINVALUE ){
 		rout = rout2 = DaoType_FindFunctionChars( caller->xCinValue.cintype->vatype, "()" );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "C object not callable" );
 			return;
 		}
+
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		if( rout->pFunc ){
@@ -4220,7 +4252,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}else if( rout->type == DAO_ROUTINE ){
 			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
 		}
-	}else if( caller->type == DAO_TYPE ){
+	}else if( callerType == DAO_TYPE ){
 		DaoType *type = (DaoType*) caller;
 		rout = rout2 = DaoType_GetInitor( type );
 		if( rout == NULL ){
@@ -4993,7 +5025,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 		{
 			DaoCtype *ctype = (DaoCtype*) p;
 
-			routine = DaoType_FindFunctionChars( ctype->valueType, "{}" );
+			routine = DaoType_FindFunctionChars( ctype->valueType, ".{}" );
 			if( routine == NULL ){
 				routine = DaoType_GetInitor( ctype->valueType );
 			}

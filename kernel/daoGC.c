@@ -435,13 +435,14 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanArray( klass->variables );
 				DaoObjectLogger_ScanArray( klass->instvars );
 				DaoObjectLogger_ScanArray( klass->allBases );
-				DaoObjectLogger_ScanArray( klass->references );
+				DaoObjectLogger_ScanArray( klass->auxData );
 				break;
 			}
 		case DAO_INTERFACE :
 			{
 				DaoInterface *inter = (DaoInterface*)value;
 				DaoObjectLogger_ScanArray( inter->bases );
+				DaoObjectLogger_ScanValue( (DaoValue*) inter->outerClass );
 				DaoObjectLogger_ScanValue( (DaoValue*) inter->nameSpace );
 				DaoObjectLogger_ScanValue( (DaoValue*) inter->abtype );
 				DaoObjectLogger_ScanMap( inter->concretes, 0, 1 );
@@ -452,6 +453,7 @@ void DaoObjectLogger_Quit()
 			{
 				DaoCinType *cintype = (DaoCinType*)value;
 				DaoObjectLogger_ScanArray( cintype->bases );
+				DaoObjectLogger_ScanValue( (DaoValue*) cintype->outerClass );
 				DaoObjectLogger_ScanValue( (DaoValue*) cintype->citype );
 				DaoObjectLogger_ScanValue( (DaoValue*) cintype->vatype );
 				DaoObjectLogger_ScanValue( (DaoValue*) cintype->target );
@@ -1930,15 +1932,16 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrements( klass->variables );
 			cycRefCountDecrements( klass->instvars );
 			cycRefCountDecrements( klass->allBases );
-			cycRefCountDecrements( klass->references );
+			cycRefCountDecrements( klass->auxData );
 			count += klass->constants->size + klass->variables->size + klass->instvars->size;
-			count += klass->allBases->size + klass->references->size;
+			count += klass->allBases->size + klass->auxData->size;
 			break;
 		}
 	case DAO_INTERFACE :
 		{
 			DaoInterface *inter = (DaoInterface*)value;
 			cycRefCountDecrements( inter->bases );
+			cycRefCountDecrement( (DaoValue*) inter->outerClass );
 			cycRefCountDecrement( (DaoValue*) inter->nameSpace );
 			cycRefCountDecrement( (DaoValue*) inter->abtype );
 			count += DaoGC_ScanMap( inter->concretes, DAO_GC_DEC, 0, 1 );
@@ -1950,6 +1953,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoCinType *cintype = (DaoCinType*)value;
 			cycRefCountDecrements( cintype->bases );
+			cycRefCountDecrement( (DaoValue*) cintype->outerClass );
 			cycRefCountDecrement( (DaoValue*) cintype->citype );
 			cycRefCountDecrement( (DaoValue*) cintype->vatype );
 			cycRefCountDecrement( (DaoValue*) cintype->target );
@@ -2153,9 +2157,9 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrements( klass->variables );
 			cycRefCountIncrements( klass->instvars );
 			cycRefCountIncrements( klass->allBases );
-			cycRefCountIncrements( klass->references );
+			cycRefCountIncrements( klass->auxData );
 			count += klass->constants->size + klass->variables->size + klass->instvars->size;
-			count += klass->allBases->size + klass->references->size;
+			count += klass->allBases->size + klass->auxData->size;
 			break;
 		}
 	case DAO_INTERFACE :
@@ -2163,6 +2167,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoInterface *inter = (DaoInterface*)value;
 			cycRefCountIncrements( inter->bases );
 			cycRefCountIncrement( (DaoValue*) inter->nameSpace );
+			cycRefCountIncrement( (DaoValue*) inter->outerClass );
 			cycRefCountIncrement( (DaoValue*) inter->abtype );
 			count += DaoGC_ScanMap( inter->concretes, DAO_GC_INC, 0, 1 );
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_INC, 0, 1 );
@@ -2173,6 +2178,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoCinType *cintype = (DaoCinType*)value;
 			cycRefCountIncrements( cintype->bases );
+			cycRefCountIncrement( (DaoValue*) cintype->outerClass );
 			cycRefCountIncrement( (DaoValue*) cintype->citype );
 			cycRefCountIncrement( (DaoValue*) cintype->vatype );
 			cycRefCountIncrement( (DaoValue*) cintype->target );
@@ -2403,7 +2409,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoClass *klass = (DaoClass*)value;
 			count += klass->constants->size + klass->variables->size + klass->instvars->size;
-			count += klass->allBases->size + klass->references->size;
+			count += klass->allBases->size + klass->auxData->size;
 			directRefCountDecrement( (DaoValue**) & klass->nameSpace );
 			directRefCountDecrement( (DaoValue**) & klass->outerClass );
 			directRefCountDecrement( (DaoValue**) & klass->clsType );
@@ -2412,7 +2418,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrements( klass->variables );
 			directRefCountDecrements( klass->instvars );
 			directRefCountDecrements( klass->allBases );
-			directRefCountDecrements( klass->references );
+			directRefCountDecrements( klass->auxData );
 			break;
 		}
 	case DAO_INTERFACE :
@@ -2420,6 +2426,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoInterface *inter = (DaoInterface*)value;
 			directRefCountDecrements( inter->bases );
 			directRefCountDecrement( (DaoValue**) & inter->nameSpace );
+			directRefCountDecrement( (DaoValue**) & inter->outerClass );
 			directRefCountDecrement( (DaoValue**) & inter->abtype );
 			count += DaoGC_ScanMap( inter->concretes, DAO_GC_BREAK, 0, 1 );
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_BREAK, 0, 1 );
@@ -2430,6 +2437,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoCinType *cintype = (DaoCinType*)value;
 			directRefCountDecrements( cintype->bases );
+			directRefCountDecrement( (DaoValue**) & cintype->outerClass );
 			directRefCountDecrement( (DaoValue**) & cintype->citype );
 			directRefCountDecrement( (DaoValue**) & cintype->vatype );
 			directRefCountDecrement( (DaoValue**) & cintype->target );

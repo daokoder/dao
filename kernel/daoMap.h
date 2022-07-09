@@ -57,6 +57,7 @@ typedef union
 	DaoCstruct  *pCstruct;
 	DaoClass    *pClass;
 	DaoRoutine  *pRoutine;
+	DaoProcess  *pProcess;
 	DaoType     *pType;
 	DaoInode    *pInode;
 	DaoCnode    *pCnode;
