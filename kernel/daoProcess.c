@@ -306,36 +306,46 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 void DaoProcess_PopFrame( DaoProcess *self )
 {
 	int att = 0;
+	DaoStackFrame *topFrame = self->topFrame;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 
 	if( self->debugging ) return;
-	if( self->topFrame == NULL ) return;
+	if( topFrame == NULL ) return;
 	if( profiler ){
-		profiler->LeaveFrame( profiler, self, self->topFrame, 1 );
-		if( self->topFrame->prev ) profiler->EnterFrame( profiler, self, self->topFrame->prev, 0 );
+		profiler->LeaveFrame( profiler, self, topFrame, 1 );
+		if( topFrame->prev ) profiler->EnterFrame( profiler, self, topFrame->prev, 0 );
 	}
 
-	if( self->topFrame->routine ){
-		att = self->topFrame->routine->attribs;
-		if( !(self->topFrame->routine->attribs & DAO_ROUT_REUSABLE) ){
-			GC_DecRC( self->topFrame->routine );
-			self->topFrame->routine = NULL;
+	if( topFrame->routine ){
+		att = topFrame->routine->attribs;
+		if( topFrame->parCount && (att & DAO_ROUT_PARSELF) ){
+			DaoValue **value2 = self->stackValues + topFrame->stackBase;
+			DaoValue *value = *value2;
+
+			if( value && value->xBase.refCount > 1 ){
+				/* Remove unused reference so that the value could be reused: */
+				DaoValue_Clear( value2 );
+			}
+		}
+		if( !(att & DAO_ROUT_REUSABLE) ){
+			GC_DecRC( topFrame->routine );
+			topFrame->routine = NULL;
 		}
 	}
-	self->topFrame->outer = NULL;
-	GC_DecRC( self->topFrame->retype );
-	GC_DecRC( self->topFrame->object );
-	self->topFrame->retype = NULL;
-	self->topFrame->object = NULL;
-	if( self->topFrame->state & DVM_FRAME_SECT ){
-		self->topFrame = self->topFrame->prev;
+	topFrame->outer = NULL;
+	GC_DecRC( topFrame->retype );
+	GC_DecRC( topFrame->object );
+	topFrame->retype = NULL;
+	topFrame->object = NULL;
+	if( topFrame->state & DVM_FRAME_SECT ){
+		self->topFrame = topFrame->prev;
 		if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
 		return;
 	}
 	if( att & DAO_ROUT_DEFER ) DList_PopBack( self->defers );
 	self->status = DAO_PROCESS_RUNNING;
-	self->stackTop = self->topFrame->stackBase;
-	self->topFrame = self->topFrame->prev;
+	self->stackTop = topFrame->stackBase;
+	self->topFrame = topFrame->prev;
 	if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
 }
 void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback )
@@ -406,6 +416,9 @@ static void DaoProcess_CopyStackParams( DaoProcess *self )
 		// to self->paramValues may allow it to be modified!
 		*/
 		GC_Assign( & frameValues[i], value );
+
+		/* Remove unused reference so that the value could be reused: */
+		DaoValue_Clear( & self->paramValues[i] );
 	}
 }
 
@@ -994,7 +1007,58 @@ static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int co
 #define LocalComplex( i ) locVars[i]->xComplex.value
 
 
+extern void DaoValue_MoveCinValue( DaoCinValue *S, DaoValue **D );
 static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
+
+static void DaoProcess_CopyMove( DaoValue *S, DaoValue **D )
+{
+	DaoValue *D2 = *D;
+
+	if( D2 == NULL || D2->xBase.refCount != 1 ){
+		switch( S->type ){
+		case DAO_NONE: break;
+		case DAO_BOOLEAN : S = (DaoValue*) DaoBoolean_New( S->xBoolean.value ); break;
+		case DAO_INTEGER : S = (DaoValue*) DaoInteger_New( S->xInteger.value ); break;
+		case DAO_FLOAT   : S = (DaoValue*) DaoFloat_New( S->xFloat.value ); break;
+		case DAO_COMPLEX : S = (DaoValue*) DaoComplex_New( S->xComplex.value ); break;
+		case DAO_STRING  : S = (DaoValue*) DaoString_Copy( & S->xString ); break;
+		case DAO_ENUM:     S = (DaoValue*) DaoEnum_Copy( & S->xEnum, S->xEnum.etype ); break;
+		case DAO_CINVALUE: S = (DaoValue*) DaoCinValue_Copy( (DaoCinValue*) S ); break;
+		default: break;
+		}
+
+		DaoGC_Assign( D, (DaoValue*) S );
+		return;
+	}
+
+	switch( S->type | (D2->type<<8) ){
+	case DAO_STRING|(DAO_STRING<<8): 
+		DString_Assign( D2->xString.value, S->xString.value );
+		break;
+	case DAO_ENUM|(DAO_ENUM<<8): 
+		DaoEnum_SetType( & D2->xEnum, S->xEnum.etype );
+		DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
+		break;
+	case DAO_CINVALUE|(DAO_CINVALUE<<8): 
+		if( S->xCinValue.cintype->vatype == D2->xCinValue.cintype->vatype ){
+			DaoValue_MoveCinValue( (DaoCinValue*) S, D );
+		}else{
+			DaoValue_Move( S, D, NULL );
+		}
+		break;
+	case DAO_BOOLEAN|(DAO_BOOLEAN<<8):  D2->xBoolean.value = S->xBoolean.value; break;
+	case DAO_INTEGER|(DAO_BOOLEAN<<8):  D2->xBoolean.value = S->xInteger.value; break;
+	case DAO_FLOAT  |(DAO_BOOLEAN<<8):  D2->xBoolean.value = S->xFloat.value; break;
+	case DAO_BOOLEAN|(DAO_INTEGER<<8):  D2->xInteger.value = S->xBoolean.value; break;
+	case DAO_INTEGER|(DAO_INTEGER<<8):  D2->xInteger.value = S->xInteger.value; break;
+	case DAO_FLOAT  |(DAO_INTEGER<<8):  D2->xInteger.value = S->xFloat.value; break;
+	case DAO_BOOLEAN|(DAO_FLOAT  <<8):  D2->xFloat.value   = S->xBoolean.value; break;
+	case DAO_INTEGER|(DAO_FLOAT  <<8):  D2->xFloat.value   = S->xInteger.value; break;
+	case DAO_FLOAT  |(DAO_FLOAT  <<8):  D2->xFloat.value   = S->xFloat.value; break;
+	case DAO_COMPLEX|(DAO_COMPLEX<<8):  D2->xComplex.value = S->xComplex.value; break;
+	default : DaoValue_Move( S, D, NULL ); return;
+	}
+}
 
 #ifdef DAO_USE_CODE_STATE
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
@@ -1498,18 +1562,20 @@ CallEntry:
 			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETVH ){
 			value = dataVH[vmc->a]->activeValues[vmc->b];
-			GC_Assign( & locVars[vmc->c], value );
+			/* To reuse value objects and avoid extra allocations: */
+			DaoProcess_CopyMove( value, & locVars[vmc->c] );
 		}OPNEXT() OPCASE( GETVS ){
 			value = upValues[vmc->b]->value;
-			GC_Assign( & locVars[vmc->c], value );
+			DaoProcess_CopyMove( value, & locVars[vmc->c] );
 		}OPNEXT() OPCASE( GETVO ){
-			GC_Assign( & locVars[vmc->c], dataVO[vmc->b] );
+			value = dataVO[vmc->b];
+			DaoProcess_CopyMove( value, & locVars[vmc->c] );
 		}OPNEXT() OPCASE( GETVK ){
 			value = clsVars->items.pVar[vmc->b]->value;
-			GC_Assign( & locVars[vmc->c], value );
+			DaoProcess_CopyMove( value, & locVars[vmc->c] );
 		}OPNEXT() OPCASE( GETVG ){
 			value = glbVars->items.pVar[vmc->b]->value;
-			GC_Assign( & locVars[vmc->c], value );
+			DaoProcess_CopyMove( value, & locVars[vmc->c] );
 		}OPNEXT() OPCASE( GETI ) OPCASE( GETDI ) OPCASE( GETMI ){
 			DaoProcess_DoGetItem( self, vmc );
 			goto CheckException;
@@ -1547,7 +1613,8 @@ CallEntry:
 			DaoProcess_DoSetField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
-			if( (vA = locVars[vmc->a]) ){
+			vA = locVars[vmc->a];
+			if( vA ){
 				/*
 				// mt.run(3){ mt.critical{} }: the inner functional will be compiled as
 				// a LOAD and RETURN, but the inner functional will not return anything,
@@ -1732,6 +1799,13 @@ CallEntry:
 			if( self->thread->vmpause ) DaoProcess_PauseThread( self );
 #endif
 			DaoProcess_DoCall( self, vmc );
+			if( vmc->code == DVM_MCALL && self->status != DAO_PROCESS_STACKED ){
+				/*
+				// Remove reference count introduced by DVM_LOAD,
+				// so that the value object could be reused.
+				*/
+				DaoValue_Clear( & self->stackValues[self->topFrame->stackBase + vmc->a + 1] );
+			}
 			goto CheckException;
 		}OPNEXT() OPCASE( ROUTINE ){
 			self->activeCode = vmc;
