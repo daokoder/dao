@@ -279,10 +279,19 @@ DaoBoolean* DaoBoolean_New( dao_boolean value )
 #endif
 	return self;
 }
+
+DaoBoolean DaoBoolean_Wrap( dao_boolean value )
+{
+	DaoBoolean result = { DAO_BOOLEAN, 0, 0, 0, 1, 0 };
+	result.value = value;
+	return result;
+}
+
 dao_boolean DaoBoolean_Get( DaoBoolean *self )
 {
 	return self->value;
 }
+
 void DaoBoolean_Set( DaoBoolean *self, dao_boolean value )
 {
 	self->value = value != 0;
@@ -453,6 +462,13 @@ DaoInteger* DaoInteger_New( dao_integer value )
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
+}
+
+DaoInteger DaoInteger_Wrap( dao_integer value )
+{
+	DaoInteger result = { DAO_INTEGER, 0, 0, 0, 1, 0 };
+	result.value = value;
+	return result;
 }
 
 dao_integer DaoInteger_Get( DaoInteger *self )
@@ -667,10 +683,19 @@ DaoFloat* DaoFloat_New( dao_float value )
 #endif
 	return self;
 }
+
+DaoFloat DaoFloat_Wrap( dao_float value )
+{
+	DaoFloat result = { DAO_FLOAT, 0, 0, 0, 1, 0.0f };
+	result.value = value;
+	return result;
+}
+
 dao_float DaoFloat_Get( DaoFloat *self )
 {
 	return self->value;
 }
+
 void DaoFloat_Set( DaoFloat *self, dao_float value )
 {
 	self->value = value;
@@ -860,6 +885,7 @@ DaoComplex* DaoComplex_New( dao_complex value )
 #endif
 	return self;
 }
+
 DaoComplex* DaoComplex_New2( dao_float real, dao_float imag )
 {
 	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
@@ -871,6 +897,15 @@ DaoComplex* DaoComplex_New2( dao_float real, dao_float imag )
 #endif
 	return self;
 }
+
+DaoComplex DaoComplex_Wrap( dao_float real, dao_float imag )
+{
+	DaoComplex result = { DAO_COMPLEX, 0, 0, 0, 1, {0.0, 0.0} };
+	result.value.real = real;
+	result.value.imag = imag;
+	return result;
+}
+
 dao_complex  DaoComplex_Get( DaoComplex *self )
 {
 	return self->value;
@@ -5831,23 +5866,32 @@ DaoType* DaoCtype_CheckGetField( DaoType *self, DaoString *name, DaoRoutine *ctx
 	}else if( value ){
 		res = DaoNamespace_GetType( ctx->nameSpace, value );
 	}
-	return res;
+	if( res ) return res;
+
+	return DaoValue_CheckGetField( self, name );
 }
 
 DaoValue* DaoCtype_DoGetField( DaoValue *self, DaoString *name, DaoProcess *proc )
 {
 	DaoType *type = self->xCtype.classType;
-	return DaoType_FindValue( type, name->value );
+	DaoValue *value = DaoType_FindValue( type, name->value );
+	DaoRoutine *rout;
+
+	if( value ) return value;
+
+	return DaoValue_DoGetField( self, type, name, proc );
 }
 
 int DaoCtype_CheckSetField( DaoType *self, DaoString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "." );
+
 	DString_Append( buffer, name->value );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
 	DString_Delete( buffer );
+
 	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
 	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_VALUE;

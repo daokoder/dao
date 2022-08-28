@@ -238,7 +238,6 @@ typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
-typedef struct DaoInterBase    DaoInterBase;
 typedef struct DaoInterface    DaoInterface;
 typedef struct DaoCinType      DaoCinType;
 typedef struct DaoCinValue     DaoCinValue;
@@ -763,19 +762,23 @@ DAO_DLL int DString_Change( DString *self, const char *pat, const char *target, 
 
 
 DAO_DLL DaoBoolean* DaoBoolean_New( dao_boolean value );
+DAO_DLL DaoBoolean  DaoBoolean_Wrap( dao_boolean value );
 DAO_DLL dao_boolean DaoBoolean_Get( DaoBoolean *self );
 DAO_DLL void        DaoBoolean_Set( DaoBoolean *self, dao_boolean value );
 
 DAO_DLL DaoInteger* DaoInteger_New( dao_integer value );
+DAO_DLL DaoInteger  DaoInteger_Wrap( dao_integer value );
 DAO_DLL dao_integer DaoInteger_Get( DaoInteger *self );
 DAO_DLL void        DaoInteger_Set( DaoInteger *self, dao_integer value );
 
 DAO_DLL DaoFloat*   DaoFloat_New( dao_float value );
+DAO_DLL DaoFloat    DaoFloat_Wrap( dao_float value );
 DAO_DLL dao_float   DaoFloat_Get( DaoFloat *self );
 DAO_DLL void        DaoFloat_Set( DaoFloat *self, dao_float value );
 
 DAO_DLL DaoComplex* DaoComplex_New( dao_complex value );
 DAO_DLL DaoComplex* DaoComplex_New2( dao_float real, dao_float imag );
+DAO_DLL DaoComplex  DaoComplex_Wrap( dao_float real, dao_float imag );
 DAO_DLL dao_complex DaoComplex_Get( DaoComplex *self );
 DAO_DLL void        DaoComplex_Set( DaoComplex *self, dao_complex value );
 
