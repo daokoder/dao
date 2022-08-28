@@ -1237,7 +1237,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	}else if( at->tid == DAO_PAR_NAMED && code == DVM_GETDI ){
 		ct = opb ? (DaoType*) at->aux : VMS->typeString; // TODO;
 	}else if( at->tid >= DAO_BOOLEAN && at->tid <= DAO_COMPLEX ){
-		ct = at->core->CheckGetItem( at, & bt, 1, self->routine );
+		if( at->core->CheckGetItem ){
+			ct = at->core->CheckGetItem( at, & bt, 1, self->routine );
+		}
 		if( ct == NULL ) goto InvalidIndex;
 	}else if( at->tid == DAO_STRING ){
 		ct = at->core->CheckGetItem( at, & bt, 1, self->routine );
