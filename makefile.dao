@@ -339,7 +339,7 @@ if( DaoMake::IsDir( "modules/image" ) )   daovm_auxlib_objs.AddDefinition( "DAO_
 #
 ###########################################################################
 
-if( DaoMake::IsDir( "modules/ast" ) ){
+if( DaoMake::IsDir( "modules/ast" ) && DaoMake::IsDir( "modules/ast/source" ) ){
 	ast = daovm.AddDirectory( "ast", "modules/ast" );
 	ast.AddDependency( daovm_dll )
 }

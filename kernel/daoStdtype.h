@@ -48,8 +48,8 @@ struct DaoNone
 {
 	DAO_VALUE_CORE;
 };
+
 DAO_DLL DaoValue *dao_none_value;
-DAO_DLL DaoNone* DaoNone_New();
 
 
 
@@ -59,8 +59,11 @@ struct DaoBoolean
 
 	dao_boolean value;
 };
+
 DAO_DLL DaoValue *dao_false_value;
 DAO_DLL DaoValue *dao_true_value;
+
+DAO_DLL DaoBoolean DaoBoolean_Wrap( dao_boolean value );
 
 
 
@@ -71,6 +74,8 @@ struct DaoInteger
 	dao_integer value;
 };
 
+DAO_DLL DaoInteger DaoInteger_Wrap( dao_integer value );
+
 
 
 struct DaoFloat
@@ -79,6 +84,8 @@ struct DaoFloat
 
 	dao_float value;
 };
+
+DAO_DLL DaoFloat DaoFloat_Wrap( dao_float value );
 
 
 
@@ -89,6 +96,8 @@ struct DaoComplex
 	dao_complex value;
 };
 
+DAO_DLL DaoComplex DaoComplex_Wrap( dao_float real, dao_float imag );
+
 
 
 struct DaoString
@@ -97,6 +106,7 @@ struct DaoString
 
 	DString  *value;
 };
+
 DAO_DLL DaoString* DaoString_Copy( DaoString *self );
 DAO_DLL void DaoString_Delete( DaoString *self );
 
