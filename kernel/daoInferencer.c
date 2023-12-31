@@ -3155,10 +3155,6 @@ SkipChecking:
 			routine->body->useNonLocal = 1;
 			break;
 		case DAO_CODE_MOVE :
-			if( code == DVM_LOAD ){
-				tt = DaoType_GetAutoCastType( at );
-				if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
-			}
 			break;
 		case DAO_CODE_GETF :
 		case DAO_CODE_GETI :

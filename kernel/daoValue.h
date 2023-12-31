@@ -105,7 +105,6 @@ DAO_DLL void DaoValue_Clear( DaoValue **self );
 DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 DAO_DLL int DaoValue_CompareExt( DaoValue *left, DaoValue *right, DMap *cycmap );
 
-DAO_DLL void DaoValue_Assign( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst );
 DAO_DLL void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D, int nocopying );
